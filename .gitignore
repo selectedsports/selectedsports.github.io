@@ -1,4 +1,14 @@
-﻿node_modules
-dist
+﻿node_modules/
+dist/
 .env
-.DS_Store
+*.exe
+*.zip
+*.mp4
+*.pdf
+*.xlsx
+*.htm
+*.php
+api-keys
+sql
+node_modules/
+dist/
