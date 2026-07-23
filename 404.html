@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Selected Sports</title>
+  <script>
+    var path = window.location.pathname;
+    var query = window.location.search;
+    var redirectUrl = "/?p=" + encodeURIComponent(path + query);
+    window.location.replace(redirectUrl);
+  </script>
+</head>
+<body>Redirecting...</body>
+</html>
