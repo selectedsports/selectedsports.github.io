@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Selected Sports</string>
+    <string name="title_activity_main">Selected Sports</string>
+    <string name="package_name">com.selectedsports.app</string>
+    <string name="custom_url_scheme">com.selectedsports.app</string>
+</resources>
