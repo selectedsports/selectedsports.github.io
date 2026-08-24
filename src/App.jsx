@@ -9,7 +9,7 @@ import PublicAuctionView from "./components/PublicAuctionView.jsx"
 import PublicAuctionRegister from "./components/PublicAuctionRegister.jsx"
 import { fetchMatches } from "./db.js"
 import { ADMIN_PHONE } from "./constants.js"
-import { Spinner } from "./components/ui.jsx"
+import { Spinner, ProfileCompletionModal, isProfileIncomplete } from "./components/ui.jsx"
 
 function restoreGitHubPagesPath() {
   const params = new URLSearchParams(window.location.search)
@@ -109,9 +109,12 @@ export default function App() {
       {screen==="register"     && <RegisterScreen onSuccess={() => setScreen("registered")} onBack={() => setScreen("home")}/>}
       {screen==="registered"   && <RegistrationSubmittedScreen onBack={() => setScreen("home")}/>}
       {screen==="login"        && <UnifiedLoginScreen onAdminSuccess={handleLogin} onPlayerSuccess={handleLogin} onBack={() => setScreen("home")} onRegister={() => setScreen("register")}/>}
-      {screen==="portal"       && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}
-      {screen==="portal"       && !isAdmin && isPro && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
-      {screen==="portal"       && !isAdmin && !isPro && (
+      {screen==="portal"       && loggedPlayer && !isAdmin && isProfileIncomplete(loggedPlayer) && (
+        <ProfileCompletionModal player={loggedPlayer} onComplete={(updated) => { setPlayer(updated); saveSession(isPro ? "pro" : "player", updated) }}/>
+      )}
+      {screen==="portal"       && loggedPlayer && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}
+      {screen==="portal"       && loggedPlayer && !isAdmin && isPro && !isProfileIncomplete(loggedPlayer) && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
+      {screen==="portal"       && loggedPlayer && !isAdmin && !isPro && !isProfileIncomplete(loggedPlayer) && (
         loadingMatches
           ? <div style={{ minHeight:"100vh",background:"#FBF3E7",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>
           : <PlayerPortal player={loggedPlayer} matches={matches} onLogout={handleLogout}/>

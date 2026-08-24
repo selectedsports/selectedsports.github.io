@@ -519,6 +519,85 @@ export function DirectMessagesPanel({ player, onClose }) {
   )
 }
 
+// ── Mandatory profile completion (shared across Player/Pro/Admin portals) ──
+import { updatePlayer as _updatePlayerForCompletion, uploadProfilePhoto as _uploadPhotoForCompletion } from "../db.js"
+import { PhotoUploadField as _PhotoUploadFieldForCompletion } from "./PhotoCropModal.jsx"
+
+export function isProfileIncomplete(p) {
+  if (!p) return false
+  return !p.city || !p.birth_date || !p.jersey_number || !p.jersey_size || !p.profile_image_url
+}
+
+export function ProfileCompletionModal({ player, onComplete }) {
+  const [city, setCity] = useState(player.city || "")
+  const [birthDate, setBirthDate] = useState(player.birth_date || "")
+  const [jerseyNumber, setJerseyNumber] = useState(player.jersey_number || "")
+  const [jerseySize, setJerseySize] = useState(player.jersey_size || "")
+  const [photoFile, setPhotoFile] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(player.profile_image_url || "")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+
+  const iS = { width:"100%", padding:"12px 13px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:15, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
+  const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }
+
+  const submit = async () => {
+    setError("")
+    if (!city.trim()) { setError("Please enter your city."); return }
+    if (!birthDate) { setError("Please enter your date of birth."); return }
+    if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
+    if (!jerseySize) { setError("Please select your jersey size."); return }
+    if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
+    setBusy(true)
+    try {
+      let photoUrl = photoPreview
+      if (photoFile) photoUrl = await _uploadPhotoForCompletion(photoFile, player.phone)
+      await _updatePlayerForCompletion(player.id, player.name, player.phone, player.pin, city.trim(), {
+        birthDate, profileImageUrl: photoUrl, jerseyNumber: jerseyNumber.trim(), jerseySize
+      })
+      onComplete({ ...player, city: city.trim(), birth_date: birthDate, jersey_number: jerseyNumber.trim(), jersey_size: jerseySize, profile_image_url: photoUrl })
+    } catch(e) { setError(e.message) }
+    setBusy(false)
+  }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.6)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:900, padding:16 }}>
+      <div style={{ background:"#FFFFFF", borderRadius:18, padding:"24px 20px", width:400, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxSizing:"border-box" }}>
+        <div style={{ fontWeight:800, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:4 }}>Complete Your Profile</div>
+        <div style={{ fontSize:13, color:"#64748B", marginBottom:18 }}>Just a few details before you continue — this only takes a minute.</div>
+
+        <div style={{ display:"flex", justifyContent:"center", marginBottom:16 }}>
+          <_PhotoUploadFieldForCompletion photoPreview={photoPreview} onPhotoSaved={(file, dataUrl) => { setPhotoFile(file); setPhotoPreview(dataUrl) }}/>
+        </div>
+
+        <label style={lS}>City</label>
+        <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Pune" style={{ ...iS, marginBottom:14 }}/>
+
+        <label style={lS}>Date of Birth</label>
+        <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={new Date().toISOString().split("T")[0]} style={{ ...iS, marginBottom:14 }}/>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
+          <div>
+            <label style={lS}>Jersey Number</label>
+            <input value={jerseyNumber} onChange={e => setJerseyNumber(e.target.value.replace(/[^0-9]/g, "").slice(0, 3))} inputMode="numeric" placeholder="e.g. 7" style={iS}/>
+          </div>
+          <div>
+            <label style={lS}>Jersey Size</label>
+            <select value={jerseySize} onChange={e => setJerseySize(e.target.value)} style={iS}>
+              <option value="">Select</option>
+              {["S","M","L","XL","XXL"].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+
+        {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:14 }}>{error}</div>}
+
+        <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Saving..." : "Save & Continue"}</button>
+      </div>
+    </div>
+  )
+}
+
 export function DirectMessagesButton({ player }) {
   const [open, setOpen] = useState(false)
   const [count, setCount] = useState(0)

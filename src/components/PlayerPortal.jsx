@@ -120,6 +120,11 @@ export default function PlayerPortal({ player, matches, onLogout }) {
     if (!pForm.firstName.trim()) { alert("First name required"); return }
     if (!pForm.lastName.trim()) { alert("Last name required"); return }
     if (pForm.pin.length !== 4) { alert("PIN must be 4 digits"); return }
+    if (!pForm.city.trim()) { alert("City is required"); return }
+    if (!pForm.birthDate) { alert("Date of birth is required"); return }
+    if (!pForm.jerseyNumber.trim()) { alert("Jersey number is required"); return }
+    if (!pForm.jerseySize) { alert("Jersey size is required"); return }
+    if (!pForm.photoFile && !pForm.photoPreview) { alert("Profile photo is required"); return }
     setPSaving(true)
     try {
       let photoUrl = pForm.photoPreview
@@ -204,7 +209,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
       )}
 
       <div style={{ maxWidth:660, margin:"0 auto", padding:isMobile?"14px 12px":"22px 16px" }}>
-        <StatsBanner stats={stats} isMobile={isMobile}/>
+        {tab === "dashboard" && <StatsBanner stats={stats} isMobile={isMobile}/>}
 
                 {tab === "dashboard" && (() => {
           const hour = new Date().getHours()
