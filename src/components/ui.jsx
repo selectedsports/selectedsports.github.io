@@ -1,3 +1,4 @@
+import { aColor, initials } from "../constants.js"
 import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye } from "lucide-react"
 export function Logo({ size = 36 }) {
   return (
@@ -611,3 +612,4 @@ export function DirectMessagesButton({ player }) {
     </>
   )
 }
+
