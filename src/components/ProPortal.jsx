@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Users, MapPin, Swords, CircleDot, User, Calendar, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2 } from "lucide-react"
+import { Users, MapPin, Swords, CircleDot, User, Calendar, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
 import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
@@ -264,7 +264,7 @@ export default function ProPortal({ player, onLogout }) {
     setDefaultGroundId(id)
     try { id ? localStorage.setItem("ss_default_ground_" + player.id, id) : localStorage.removeItem("ss_default_ground_" + player.id) } catch {}
   }
-  const [proView, setProView] = useState("matches")
+  const [proView, setProView] = useState("dashboard")
   const [menuOpen, setMenuOpen] = useState(false)
   const [groupPlayers, setGroupPlayers] = useState([])
   const [invites, setInvites] = useState([])
@@ -376,7 +376,7 @@ export default function ProPortal({ player, onLogout }) {
       {/* PRO_HEADER_V1 */}
       <div style={{ background:"#FFFFFF", height:56, borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", padding:"0 16px", gap:12, position:"sticky", top:0, zIndex:200 }}>
         <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
-        <div onClick={()=>{ setDetail(null); setInvDetail(null); setProView("matches") }} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
+        <div onClick={()=>{ setDetail(null); setInvDetail(null); setProView("dashboard") }} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
         <div onClick={()=>setProView("profile")} style={{ cursor:"pointer" }}><Av name={player.name} id={player.id} sz={28}/></div>
       </div>
 
@@ -401,7 +401,7 @@ export default function ProPortal({ player, onLogout }) {
       )}
 
       <div style={{ maxWidth: 660, margin: "0 auto", padding: isMobile ? "14px 12px" : "22px 16px" }}>
-        {proView === "matches" && (() => {
+        {proView === "dashboard" && (() => {
           const upcomingMatches = matches.filter(m => m.status !== "completed" && m.status !== "cancelled")
           const previewMatches = upcomingMatches.slice(0, 3)
           return (
@@ -436,7 +436,7 @@ export default function ProPortal({ player, onLogout }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>Upcoming Matches</h2>
                 {upcomingMatches.length > 3 && (
-                  <button onClick={() => setProView("allMatches")} style={{ background: "none", border: "none", color: "#166534", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>View All \u2192</button>
+                  <button onClick={() => setProView("matches")} style={{ background: "none", border: "none", color: "#166534", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>View All \u2192</button>
                 )}
               </div>
 
@@ -503,7 +503,7 @@ export default function ProPortal({ player, onLogout }) {
           )
         })()}
 
-        {proView === "allMatches" && (() => {
+        {proView === "matches" && (() => {
           const tabbedMatches = matches.filter(m => {
             if (matchesTab === "hosted") return m.status !== "completed" && m.status !== "cancelled"
             if (matchesTab === "past") return m.status === "completed"
@@ -511,7 +511,7 @@ export default function ProPortal({ player, onLogout }) {
           })
           return (
             <div>
-              <button onClick={() => setProView("matches")} style={{ background: "none", border: "none", color: "#166534", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 14, display: "flex", alignItems: "center", gap: 4 }}>← Dashboard</button>
+              <button onClick={() => setProView("dashboard")} style={{ background: "none", border: "none", color: "#166534", fontSize: 13, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 14, display: "flex", alignItems: "center", gap: 4 }}>← Dashboard</button>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
                 <h2 style={{ margin: 0, fontSize: isMobile ? 18 : 22, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>My Matches</h2>
@@ -931,6 +931,11 @@ export default function ProPortal({ player, onLogout }) {
                     <button onClick={async () => {
                       if (!pForm.firstName.trim()) { alert("First name required"); return }
                       if (!pForm.lastName.trim()) { alert("Last name required"); return }
+                      if (!pForm.city.trim()) { alert("City is required"); return }
+                      if (!pForm.birthDate) { alert("Date of birth is required"); return }
+                      if (!pForm.jerseyNumber.trim()) { alert("Jersey number is required"); return }
+                      if (!pForm.jerseySize) { alert("Jersey size is required"); return }
+                      if (!pForm.photoFile && !pForm.photoPreview) { alert("Profile photo is required"); return }
                       try {
                         let photoUrl = pForm.photoPreview
                         if (pForm.photoFile) photoUrl = await uploadProfilePhoto(pForm.photoFile, pForm.phone)
@@ -1004,7 +1009,7 @@ export default function ProPortal({ player, onLogout }) {
           </div>
         )
       })()}
-      {proView === "matches" && invites.length > 0 && (
+      {proView === "dashboard" && invites.length > 0 && (
         <div style={{ marginTop: 24, maxWidth: 660, margin: "24px auto 0", padding: isMobile ? "0 12px" : "0 16px" }}>
           <h2 style={{ margin: "0 0 14px", fontSize: isMobile ? 18 : 22, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", display:"flex", alignItems:"center", gap:9 }}><Mail size={isMobile?18:20}/> Invited Matches</h2>
           <div style={{ display:"flex", gap:6, marginBottom:12 }}>
@@ -1055,7 +1060,7 @@ export default function ProPortal({ player, onLogout }) {
 
       {/* PRO_BOTTOM_NAV_BAR_V1 */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
-        {[["matches","Matches",Swords],["players","Players",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",User]].map(([k,v,Icon]) => (
+        {[["dashboard","Home",Home],["matches","Matches",Swords],["players","Players",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",User]].map(([k,v,Icon]) => (
           <button key={k} onClick={()=>setProView(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:proView===k?"#166534":"#94A3B8" }}>
             <Icon size={20}/>
             <span style={{ fontSize:10, fontWeight:proView===k?700:500 }}>{v}</span>

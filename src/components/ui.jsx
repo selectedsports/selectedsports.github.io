@@ -1,4 +1,3 @@
-import { aColor, initials } from "../constants.js"
 import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye } from "lucide-react"
 export function Logo({ size = 36 }) {
   return (
@@ -103,7 +102,7 @@ export function StatsBanner({ stats, isMobile }) {
   const items = [
     { icon: Swords, label: "Matches", value: niceRound(stats.matches) },
     ...(stats.players !== undefined ? [{ icon: UsersIcon, label: "Players", value: niceRound(stats.players) }] : []),
-    { icon: MapPin, label: "Venues", value: niceRound(stats.venues) },
+    { icon: MapPin, label: "Grounds", value: niceRound(stats.venues) },
   ]
   return (
     <div style={{ display: "flex", gap: isMobile ? 8 : 12, marginBottom: 16 }}>
