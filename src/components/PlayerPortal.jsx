@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock, CheckCircle2, XCircle, Hourglass, Zap, Clipboard, CalendarPlus, LogOut, Phone, Bell as BellIcon, CreditCard } from "lucide-react"
+import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock, CheckCircle2, XCircle, Hourglass, Zap, Clipboard, CalendarPlus, LogOut, Phone, Bell as BellIcon, CreditCard, Home } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , StatsBanner, Bell, MessageInbox, LeaderboardPage, ProRequestCard, RoleBadge} from "./ui.jsx"
 import { fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, sendMessage, setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch, subscribeToChat , updatePlayer, fetchContributions, fetchStats, fetchPlayerStats, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds, updatePlayerRole, uploadProfilePhoto} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
@@ -95,7 +95,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
   const [showBanner, setShowBanner] = useState(true)
   const [stats, setStats] = useState(null)
   useEffect(() => { fetchPlayerStats(player.id).then(setStats).catch(()=>{}) }, [])
-  const [tab, setTab] = useState("matches")
+  const [tab, setTab] = useState("dashboard")
   const [matchFilter, setMatchFilter] = useState("upcoming")
   const [menuOpen, setMenuOpen] = useState(false)
   const [contribTotal, setContribTotal] = useState(0)
@@ -182,7 +182,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
       {/* PLAYER_HEADER_V1 */}
       <div style={{ background:"#FFFFFF", height:56, borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", padding:"0 16px", gap:12, position:"sticky", top:0, zIndex:200 }}>
         <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
-        <div onClick={()=>setTab("matches")} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
+        <div onClick={()=>setTab("dashboard")} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
         <div onClick={()=>setTab("profile")} style={{ cursor:"pointer" }}><Av name={player.name} id={player.id} sz={28}/></div>
       </div>
 
@@ -205,6 +205,110 @@ export default function PlayerPortal({ player, matches, onLogout }) {
 
       <div style={{ maxWidth:660, margin:"0 auto", padding:isMobile?"14px 12px":"22px 16px" }}>
         <StatsBanner stats={stats} isMobile={isMobile}/>
+
+                {tab === "dashboard" && (() => {
+          const hour = new Date().getHours()
+          const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
+          const firstNameD = (player.name || "Player").split(" ")[0]
+          const todayStr = new Date().toISOString().split("T")[0]
+          const pending = myMatches.filter(r => r.myStatus === "pending")
+          const confirmedD = myMatches.filter(r => r.myStatus === "confirmed")
+          const waitlistD = myMatches.filter(r => r.myStatus === "waitlist")
+          const declinedD = myMatches.filter(r => r.myStatus === "declined")
+          const upcomingD = myMatches.filter(r => r.match.status !== "completed")
+          const todaysMatch = myMatches.find(r => r.match.date === todayStr && r.match.status !== "cancelled")
+
+          return (
+            <div>
+              {/* Greeting header */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, fontFamily:"var(--font-head)" }}>{greeting}, {firstNameD}</div>
+                <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>{dayName(todayStr)} · {pending.length > 0 ? `${pending.length} invite${pending.length>1?"s":""} awaiting your response` : `${upcomingD.length} upcoming match${upcomingD.length!==1?"es":""}`}</div>
+              </div>
+
+              {/* Pending invites - quick respond */}
+              {pending.length > 0 && (
+                <div style={{ marginBottom:20 }}>
+                  <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:8 }}><BellIcon size={16} color="#166534"/> Needs Your Response</div>
+                  <div style={{ display:"grid", gap:10 }}>
+                    {pending.map(({ match: m }) => (
+                      <Card key={m.id} style={{ padding:"14px 16px" }}>
+                        <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:4 }}>{matchTitle(m)}</div>
+                        <div style={{ color:"#64748B", fontSize:12, display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                          <span><Calendar size={12} style={{verticalAlign:"-2px"}}/> {fmtDate(m.date)}</span>
+                          <span><Clock size={12} style={{verticalAlign:"-2px"}}/> {m.time_slot}</span>
+                        </div>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                          <button onClick={async () => { await setPlayerStatus(m.id, player.id, "confirmed"); window.location.reload() }} style={{ padding:"11px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, cursor:"pointer", fontWeight:700, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><CheckCircle2 size={15}/> Available</button>
+                          <button onClick={async () => { await setPlayerStatus(m.id, player.id, "declined"); window.location.reload() }} style={{ padding:"11px", borderRadius:10, background:"rgba(231,76,60,0.12)", border:"1px solid rgba(239,68,68,0.3)", color:"#EF4444", fontSize:13, cursor:"pointer", fontWeight:700, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><XCircle size={15}/> Can't Make It</button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Today's match */}
+              {todaysMatch && (
+                <div style={{ marginBottom:20 }}>
+                  <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Today's Match</div>
+                  <Card style={{ padding:"14px 16px", cursor:"pointer", border:"1.5px solid #166534", background:"rgba(34,197,94,0.06)" }} onClick={() => loadDetail(todaysMatch.match)}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchTitle(todaysMatch.match)}</div>
+                        <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:5 }}><Clock size={12}/> {todaysMatch.match.time_slot} · <MapPin size={12}/> {todaysMatch.match.ground}</div>
+                      </div>
+                      <span style={{ background:"#166534", color:"#FFFFFF", borderRadius:999, padding:"5px 12px", fontSize:11, fontWeight:700, flexShrink:0 }}>Today</span>
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Stat cards */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Your Status</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
+                  {[
+                    { label:"Confirmed", v:confirmedD.length, c:"#166534" },
+                    { label:"Waitlist",  v:waitlistD.length,  c:"#B8860B" },
+                    { label:"Pending",   v:pending.length,    c:"#166534" },
+                    { label:"Declined",  v:declinedD.length,  c:"#EF4444" },
+                  ].map((s,i) => (
+                    <div key={i} style={{ textAlign:"center", padding:"12px 4px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:12 }}>
+                      <div style={{ fontSize:18, fontWeight:800, color:s.c, fontFamily:"var(--font-head)" }}>{s.v}</div>
+                      <div style={{ fontSize:9, color:"#94A3B8", marginTop:2, textTransform:"uppercase", letterSpacing:0.3 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick actions */}
+              <div style={{ marginBottom:20 }}>
+                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Quick Actions</div>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+                  {[
+                    { label:"My Matches",  icon:Users,    action:()=>setTab("matches") },
+                    { label:"Leaderboard", icon:Trophy,   action:()=>setTab("leaderboard") },
+                    { label:"My Profile",  icon:UserIcon, action:()=>setTab("profile") },
+                  ].map((a,i) => (
+                    <button key={i} onClick={a.action} style={{ padding:"16px 8px", borderRadius:14, background:"#FFFFFF", border:"1.5px solid #E2E8F0", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}><a.icon size={17} color="#166534"/></div>
+                      <div style={{ fontSize:11, fontWeight:700, color:"#0F172A", fontFamily:"var(--font-head)" }}>{a.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {myMatches.length === 0 && (
+                <Card style={{ padding:"40px 24px", textAlign:"center" }}>
+                  <div style={{ marginBottom:12, display:"flex", justifyContent:"center" }}><Calendar size={40} color="#F1F5F9"/></div>
+                  <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", marginBottom:6, fontFamily:"var(--font-head)" }}>No matches yet</div>
+                  <div style={{ color:"#64748B", fontSize:13 }}>When an organizer invites you to a match, it'll show up here.</div>
+                </Card>
+              )}
+            </div>
+          )
+        })()}
 
                 {tab === "leaderboard" && <LeaderboardPage isMobile={isMobile} myId={player.id}/>}
         {tab === "profile" && (() => {
@@ -375,8 +479,10 @@ export default function PlayerPortal({ player, matches, onLogout }) {
           )
         })()}
 
-        {tab === "matches" && <h2 style={{ margin:"0 0 4px", fontSize:isMobile?17:20, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>My Matches</h2>}
-        {(() => {
+        {tab === "matches" && (
+          <>
+          <h2 style={{ margin:"0 0 4px", fontSize:isMobile?17:20, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>My Matches</h2>
+          {(() => {
           const pending = myMatches.filter(r => r.myStatus === "pending")
           if (pending.length === 0 || !showBanner) return null
           return (
@@ -459,11 +565,13 @@ export default function PlayerPortal({ player, matches, onLogout }) {
           </>
           )
         })()}
+          </>
+        )}
       </div>
 
       {/* PLAYER_BOTTOM_NAV_BAR_V1 */}
       <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
-        {[["matches","Matches",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",UserIcon]].map(([k,v,Icon]) => (
+        {[["dashboard","Home",Home],["matches","Matches",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",UserIcon]].map(([k,v,Icon]) => (
           <button key={k} onClick={()=>setTab(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:tab===k?"#166534":"#94A3B8" }}>
             <Icon size={20}/>
             <span style={{ fontSize:10, fontWeight:tab===k?700:500 }}>{v}</span>
