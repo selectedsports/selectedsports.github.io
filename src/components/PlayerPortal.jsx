@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock, CheckCircle2, XCircle, Hourglass, Zap, Clipboard, CalendarPlus, LogOut, Phone, Bell as BellIcon, CreditCard, Home } from "lucide-react"
+import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock, CheckCircle2, XCircle, Hourglass, Zap, Clipboard, CalendarPlus, LogOut, Phone, Bell as BellIcon, CreditCard, Home, ChevronRight } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , StatsBanner, Bell, MessageInbox, LeaderboardPage, ProRequestCard, RoleBadge} from "./ui.jsx"
 import { fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, sendMessage, setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch, subscribeToChat , updatePlayer, fetchContributions, fetchStats, fetchPlayerStats, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds, updatePlayerRole, uploadProfilePhoto} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
@@ -228,7 +228,15 @@ export default function PlayerPortal({ player, matches, onLogout }) {
               {/* Greeting header */}
               <div style={{ marginBottom:20 }}>
                 <div style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, fontFamily:"var(--font-head)" }}>{greeting}, {firstNameD}</div>
-                <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>{dayName(todayStr)} · {pending.length > 0 ? `${pending.length} invite${pending.length>1?"s":""} awaiting your response` : `${upcomingD.length} upcoming match${upcomingD.length!==1?"es":""}`}</div>
+                <div style={{ fontSize:13, color:"#64748B", marginTop:4, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Calendar size={13}/> {dayName(todayStr)}</span>
+                  <span>·</span>
+                  {pending.length > 0 ? (
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><BellIcon size={13}/> {pending.length} invite{pending.length>1?"s":""} awaiting your response</span>
+                  ) : (
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={13}/> {upcomingD.length} upcoming match{upcomingD.length!==1?"es":""}</span>
+                  )}
+                </div>
               </div>
 
               {/* Pending invites - quick respond */}
@@ -258,12 +266,26 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                 <div style={{ marginBottom:20 }}>
                   <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Today's Match</div>
                   <Card style={{ padding:"14px 16px", cursor:"pointer", border:"1.5px solid #166534", background:"rgba(34,197,94,0.06)" }} onClick={() => loadDetail(todaysMatch.match)}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <div>
-                        <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchTitle(todaysMatch.match)}</div>
-                        <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:5 }}><Clock size={12}/> {todaysMatch.match.time_slot} · <MapPin size={12}/> {todaysMatch.match.ground}</div>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0, flex:1 }}>
+                        <Av name={matchTitle(todaysMatch.match)} id={todaysMatch.match.id} sz={38}/>
+                        <div style={{ minWidth:0 }}>
+                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchTitle(todaysMatch.match)}</div>
+                          <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:5 }}><Clock size={12}/> {todaysMatch.match.time_slot} · <MapPin size={12}/> {todaysMatch.match.ground}</div>
+                        </div>
                       </div>
+                      {(() => {
+                        const joined = (todaysMatch.matchPlayers || []).filter(mp => mp.status === "confirmed").length
+                        const cap = todaysMatch.match.max_players || 0
+                        return (
+                          <div style={{ textAlign:"center", flexShrink:0 }}>
+                            <div style={{ fontWeight:700, fontSize:14, color:"#166534", fontFamily:"var(--font-head)" }}>{joined}/{cap || "—"}</div>
+                            <div style={{ fontSize:10, color:"#94A3B8" }}>Joined</div>
+                          </div>
+                        )
+                      })()}
                       <span style={{ background:"#166534", color:"#FFFFFF", borderRadius:999, padding:"5px 12px", fontSize:11, fontWeight:700, flexShrink:0 }}>Today</span>
+                      <ChevronRight size={16} color="#94A3B8" style={{ flexShrink:0 }}/>
                     </div>
                   </Card>
                 </div>
@@ -274,14 +296,15 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                 <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Your Status</div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
                   {[
-                    { label:"Confirmed", v:confirmedD.length, c:"#166534" },
-                    { label:"Waitlist",  v:waitlistD.length,  c:"#B8860B" },
-                    { label:"Pending",   v:pending.length,    c:"#166534" },
-                    { label:"Declined",  v:declinedD.length,  c:"#EF4444" },
+                    { label:"Confirmed", sub:"Matches you're in", v:confirmedD.length, c:"#166534" },
+                    { label:"Waitlist",  sub:"On the fence", v:waitlistD.length,  c:"#B8860B" },
+                    { label:"Pending",   sub:"Awaiting reply", v:pending.length,    c:"#166534" },
+                    { label:"Declined",  sub:"Not attending", v:declinedD.length,  c:"#EF4444" },
                   ].map((s,i) => (
                     <div key={i} style={{ textAlign:"center", padding:"12px 4px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:12 }}>
                       <div style={{ fontSize:18, fontWeight:800, color:s.c, fontFamily:"var(--font-head)" }}>{s.v}</div>
-                      <div style={{ fontSize:9, color:"#94A3B8", marginTop:2, textTransform:"uppercase", letterSpacing:0.3 }}>{s.label}</div>
+                      <div style={{ fontSize:9, color:"#0F172A", marginTop:2, fontWeight:700, textTransform:"uppercase", letterSpacing:0.3 }}>{s.label}</div>
+                      <div style={{ fontSize:8, color:"#94A3B8", marginTop:1 }}>{s.sub}</div>
                     </div>
                   ))}
                 </div>

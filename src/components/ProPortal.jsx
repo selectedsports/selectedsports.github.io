@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Users, MapPin, Swords, CircleDot, User, Calendar, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home } from "lucide-react"
+import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
 import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
@@ -412,31 +412,36 @@ export default function ProPortal({ player, onLogout }) {
                 <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
                 <span style={{ color: isActive ? "#166534" : "#EF4444", fontSize: 11, background: isActive ? "rgba(22,101,52,0.12)" : "rgba(231,76,60,0.12)", padding: "2px 9px", borderRadius: 999, fontWeight: 800 }}>{isActive ? "PRO MEMBER" : "SUBSCRIPTION EXPIRED"}</span>
               </div>
+              <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Calendar size={12}/> {fmtDate(new Date().toISOString().split("T")[0])}</span>
+                <span>·</span>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={12}/> {upcomingMatches.length} upcoming match{upcomingMatches.length!==1?"es":""}</span>
+              </div>
             </div>
 
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, fontFamily:"var(--font-head)" }}>Your Overview</div>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
-              <div style={{ padding: "14px 8px", background: "rgba(34,197,94,0.08)", borderRadius: 12, border: "1.5px solid rgba(34,197,94,0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)" }}>{stats?.matches ?? 0}</div>
-                <div style={{ fontSize: 9, color: "#166534", fontWeight: 700 }}>MATCHES HOSTED</div>
-              </div>
-              <div style={{ padding: "14px 8px", background: "rgba(15,110,86,0.08)", borderRadius: 12, border: "1.5px solid rgba(15,110,86,0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#0F6E56", fontFamily: "var(--font-head)" }}>{playerStats?.matches ?? 0}</div>
-                <div style={{ fontSize: 9, color: "#0F6E56", fontWeight: 700 }}>MATCHES PLAYED</div>
-              </div>
-              <div style={{ padding: "14px 8px", background: "rgba(246,196,83,0.12)", borderRadius: 12, border: "1.5px solid rgba(246,196,83,0.3)", textAlign: "center" }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#B8860B", fontFamily: "var(--font-head)" }}>{stats?.players ?? 0}</div>
-                <div style={{ fontSize: 9, color: "#B8860B", fontWeight: 700 }}>PLAYERS MANAGED</div>
-              </div>
-              <div style={{ padding: "14px 8px", background: "rgba(245,158,11,0.08)", borderRadius: 12, border: "1.5px solid rgba(246,196,83,0.15)", textAlign: "center" }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#B8860B", fontFamily: "var(--font-head)" }}>{stats?.venues ?? 0}</div>
-                <div style={{ fontSize: 9, color: "#B8860B", fontWeight: 700 }}>VENUES</div>
-              </div>
+              {[
+                { icon:Calendar, v:stats?.matches ?? 0, label:"Matches Hosted", sub:"Matches you organized", bg:"rgba(34,197,94,0.08)", border:"rgba(34,197,94,0.3)", c:"#166534" },
+                { icon:Swords, v:playerStats?.matches ?? 0, label:"Matches Played", sub:"Matches you joined", bg:"rgba(15,110,86,0.08)", border:"rgba(15,110,86,0.3)", c:"#0F6E56" },
+                { icon:UsersRound, v:stats?.players ?? 0, label:"Players Managed", sub:"Across your matches", bg:"rgba(246,196,83,0.12)", border:"rgba(246,196,83,0.3)", c:"#B8860B" },
+                { icon:MapPin, v:stats?.venues ?? 0, label:"Grounds", sub:"Grounds you've used", bg:"rgba(245,158,11,0.08)", border:"rgba(246,196,83,0.15)", c:"#B8860B" },
+              ].map((s,i) => (
+                <div key={i} style={{ padding: "14px 14px", background: s.bg, borderRadius: 14, border: `1.5px solid ${s.border}` }}>
+                  <div style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,0.6)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:8 }}><s.icon size={14} color={s.c}/></div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: s.c, fontFamily: "var(--font-head)" }}>{s.v}</div>
+                  <div style={{ fontSize: 11, color: "#0F172A", fontWeight: 700, marginTop:2 }}>{s.label}</div>
+                  <div style={{ fontSize: 9, color: "#94A3B8", marginTop:1 }}>{s.sub}</div>
+                </div>
+              ))}
             </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <h2 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>Upcoming Matches</h2>
                 {upcomingMatches.length > 3 && (
-                  <button onClick={() => setProView("matches")} style={{ background: "none", border: "none", color: "#166534", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>View All \u2192</button>
+                  <button onClick={() => setProView("matches")} style={{ background: "none", border: "none", color: "#166534", fontSize: 12, fontWeight: 700, cursor: "pointer", display:"flex", alignItems:"center", gap:3 }}>View All <ChevronRight size={14}/></button>
                 )}
               </div>
 
@@ -451,13 +456,15 @@ export default function ProPortal({ player, onLogout }) {
                   {previewMatches.map(m => (
                     <Card key={m.id} onClick={() => loadDetail(m)} style={{ padding: "16px", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
-                        <div style={{ flex: 1 }}>
+                        <Av name={matchTitle(m)} id={m.id} sz={38}/>
+                        <div style={{ flex: 1, minWidth:0 }}>
                           <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A", fontFamily: "var(--font-head)" }}>{matchTitle(m)}</div>
                           <div style={{ fontSize: 12, color: "#64748B", marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}><Calendar size={12} /> {fmtDate(m.date)}</div>
-                          <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>⏰ {m.time_slot}</div>
+                          <div style={{ fontSize: 12, color: "#64748B", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><Clock size={12}/> {m.time_slot}</div>
                           <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2, display: "flex", alignItems: "center", gap: 4 }}><MapPin size={12} /> {m.ground}</div>
                         </div>
-                        <span style={{ background: "#166534", color: "#0F172A", borderRadius: 7, padding: "4px 11px", fontSize: 11, fontWeight: 700, textTransform: "capitalize", display: "inline-block" }}>{m.status}</span>
+                        <span style={{ background: "#166534", color: "#0F172A", borderRadius: 7, padding: "4px 11px", fontSize: 11, fontWeight: 700, textTransform: "capitalize", display: "inline-block", flexShrink:0 }}>{m.status}</span>
+                        <ChevronRight size={16} color="#94A3B8" style={{ flexShrink:0, marginTop:2 }}/>
                       </div>
                       {(() => {
                         const joined = matchCounts[m.id] || 0
@@ -484,10 +491,17 @@ export default function ProPortal({ player, onLogout }) {
               <div style={{ marginBottom: 20 }}>
                 <h2 style={{ margin: "0 0 12px", fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>Quick Actions</h2>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  <button onClick={() => setShowSchedule(true)} disabled={!active} style={{ padding: "16px 6px", borderRadius: 12, background: "#F8FAF8", border: "1.5px solid #E2E8F0", color: "#0F172A", fontSize: 12, fontWeight: 800, cursor: active ? "pointer" : "not-allowed", fontFamily: "var(--font-head)", opacity: active ? 1 : 0.5 }}>＋ Schedule Match</button>
-                  <button onClick={() => setProView("players")} style={{ padding: "16px 6px", borderRadius: 12, background: "#F8FAF8", border: "1.5px solid #E2E8F0", color: "#0F172A", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><Users size={13}/> My Players</button>
-                  <button onClick={() => setShowCreateAuction(true)} disabled={!active} style={{ padding: "16px 6px", borderRadius: 12, background: "#F8FAF8", border: "1.5px solid #E2E8F0", color: "#0F172A", fontSize: 12, fontWeight: 800, cursor: active ? "pointer" : "not-allowed", fontFamily: "var(--font-head)", opacity: active ? 1 : 0.5 }}>🏆 New Auction</button>
-                  <button onClick={() => setProView("auctions")} style={{ padding: "16px 6px", borderRadius: 12, background: "#F8FAF8", border: "1.5px solid #E2E8F0", color: "#0F172A", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)" }}>📋 My Auctions</button>
+                  {[
+                    { label:"Schedule Match", icon:Plus, action:()=>setShowSchedule(true), disabled:!active },
+                    { label:"My Players", icon:Users, action:()=>setProView("players"), disabled:false },
+                    { label:"New Auction", icon:Trophy, action:()=>setShowCreateAuction(true), disabled:!active },
+                    { label:"My Auctions", icon:ClipboardList, action:()=>setProView("auctions"), disabled:false },
+                  ].map((a,i) => (
+                    <button key={i} onClick={a.action} disabled={a.disabled} style={{ padding: "16px 8px", borderRadius: 14, background: "#F8FAF8", border: "1.5px solid #E2E8F0", cursor: a.disabled ? "not-allowed" : "pointer", opacity: a.disabled ? 0.5 : 1, display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}><a.icon size={17} color="#166534"/></div>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>{a.label}</div>
+                    </button>
+                  ))}
                 </div>
               </div>
 
