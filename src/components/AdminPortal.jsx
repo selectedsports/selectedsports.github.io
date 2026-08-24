@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
@@ -2132,6 +2132,15 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [editForm,setEditForm]=useState({firstName:"",lastName:"",phone:"",pin:"",role:"player",city:"",birthDate:"",jerseyNumber:"",jerseySize:"",photoFile:null,photoPreview:""})
   const [newPin,setNewPin]=useState("")
   const [busy,setBusy]=useState(false)
+  const [search,setSearch]=useState("")
+  const [tab,setTab]=useState("all")
+  const [sortBy,setSortBy]=useState("name")
+  const [sortOpen,setSortOpen]=useState(false)
+  const [filtersOpen,setFiltersOpen]=useState(false)
+  const [cityFilter,setCityFilter]=useState("")
+  const [openMenuId,setOpenMenuId]=useState(null)
+  const [lbRaw,setLbRaw]=useState([])
+  useEffect(()=>{ fetchLeaderboard().then(setLbRaw).catch(()=>{}) },[])
   const selectedPlayer=players.find(p=>p.id===selectedId)||null
   const iS={width:"100%",padding:"11px 12px",borderRadius:9,border:"1.5px solid #e5e7eb",fontSize:14,outline:"none",background:"#fafafa",boxSizing:"border-box",fontFamily:"var(--font-body)"}
   const lS={fontSize:12,color:"#6b7280",display:"block",marginBottom:5,fontWeight:600}
@@ -2166,22 +2175,159 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const delSubmit=async()=>{
     setBusy(true);try{const {deletePlayer}=await import("../db.js");await deletePlayer(delP.id);setDelP(null);setSelectedId(null);onRefresh()}catch(e){alert(e.message)};setBusy(false)
   }
+
+  // Real matches-played per player, derived from confirmed+completed match history (same source as Leaderboard)
+  const matchCountMap = {}
+  lbRaw.forEach(r => { if (r.player_id) matchCountMap[r.player_id] = (matchCountMap[r.player_id]||0) + 1 })
+  const rankOrder = Object.entries(matchCountMap).sort((a,b)=>b[1]-a[1]).map(([id])=>id)
+  const rankMap = {}
+  rankOrder.forEach((id,i)=>{ rankMap[id] = i+1 })
+
+  const registeredCount = players.length
+  const proCount = players.filter(p=>p.role==="pro").length
+  const adminCount = players.filter(p=>p.role==="organizer"||p.role==="founder").length
+  const normalCount = players.filter(p=>!p.role||p.role==="player").length
+  const cities = Array.from(new Set(players.map(p=>p.city).filter(Boolean))).sort()
+
+  const tabFiltered = players.filter(p => {
+    if (tab==="player") return !p.role || p.role==="player"
+    if (tab==="pro") return p.role==="pro"
+    if (tab==="admin") return p.role==="organizer" || p.role==="founder"
+    return true
+  })
+  const q = search.trim().toLowerCase()
+  const searchFiltered = tabFiltered.filter(p => {
+    if (cityFilter && p.city !== cityFilter) return false
+    if (!q) return true
+    return (p.name||"").toLowerCase().includes(q) || (p.phone||"").includes(q)
+  })
+  const sortedPlayers = [...searchFiltered].sort((a,b) => {
+    if (sortBy==="matches") return (matchCountMap[b.id]||0) - (matchCountMap[a.id]||0)
+    if (sortBy==="rank") return (rankMap[a.id]||9999) - (rankMap[b.id]||9999)
+    return (a.name||"").localeCompare(b.name||"")
+  })
+
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <h2 style={{color:"#0F172A",fontSize:isMobile?17:20,fontWeight:800,margin:0,fontFamily:"var(--font-head)"}}>Players ({players.length})</h2>
-        <Btn variant="green" size={isMobile?"sm":"md"} onClick={()=>setShowAdd(true)}>+ Add Player</Btn>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
+        <div>
+          <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Players</h2>
+          <div style={{fontSize:13,color:"#64748B",marginTop:4}}>Manage all registered players on Selected Sports</div>
+        </div>
+        <button onClick={()=>setShowAdd(true)} style={{padding:"10px 16px",borderRadius:12,background:"#166534",border:"none",color:"#FFFFFF",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}><Plus size={15}/> Add Player</button>
       </div>
-      <SearchDropdown
-        options={players}
-        value={selectedId}
-        onChange={id=>setSelectedId(id===selectedId?null:id)}
-        placeholder="🔍 Search player by name or phone..."
-        renderOption={o=><div style={{display:"flex",alignItems:"center",gap:10}}><Av name={o.name} id={o.id} sz={32}/><div><div style={{fontWeight:700,fontSize:13}}>{o.name}</div><div style={{fontSize:11,color:"#9ca3af"}}>📱 {o.phone||"No phone"}</div></div></div>}
-        renderSelected={o=><div style={{display:"flex",alignItems:"center",gap:8}}><Av name={o.name} id={o.id} sz={24}/><span style={{fontWeight:700,fontSize:13}}>{o.name}</span></div>}
-      />
-      {selectedPlayer?(
-        <div style={{marginTop:12}}>
+
+      {/* Stat cards */}
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:16,marginBottom:20}}>
+        {[
+          {icon:UsersRound, v:registeredCount, label:"Registered Players", link:"View all players", action:()=>setTab("all")},
+          {icon:Star, v:proCount, label:"PRO Players", link:"View PRO players", action:()=>setTab("pro")},
+          {icon:ShieldCheck, v:adminCount, label:"Admin", link:"View admins", action:()=>setTab("admin")},
+          {icon:UserIcon, v:normalCount, label:"Normal Players", link:"View players", action:()=>setTab("player")},
+        ].map((c,i)=>(
+          <div key={i} onClick={c.action} style={{padding:"18px", background:"#FFFFFF", borderRadius:16, border:"1px solid #E2E8F0", cursor:"pointer"}}>
+            <div style={{width:34,height:34,borderRadius:10,background:"rgba(34,197,94,0.1)",display:"flex",alignItems:"center",justifyContent:"center",marginBottom:10}}><c.icon size={17} color="#166534"/></div>
+            <div style={{fontSize:isMobile?22:28,fontWeight:900,color:"#0F172A",fontFamily:"var(--font-head)",lineHeight:1}}>{c.v}</div>
+            <div style={{fontSize:12,color:"#64748B",marginTop:4,fontWeight:600}}>{c.label}</div>
+            <div style={{fontSize:11,color:"#166534",marginTop:6,fontWeight:700,display:"flex",alignItems:"center",gap:3}}>{c.link} <ChevronRight size={12}/></div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search + Filters + Sort */}
+      <div style={{display:"flex",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{flex:1, minWidth:200, position:"relative"}}>
+          <SearchIcon size={16} color="#94A3B8" style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, phone or team..." style={{width:"100%",padding:"12px 14px 12px 40px",borderRadius:12,border:"1.5px solid #E2E8F0",fontSize:13,outline:"none",background:"#FFFFFF",boxSizing:"border-box",fontFamily:"var(--font-body)"}}/>
+        </div>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setFiltersOpen(o=>!o)} style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #E2E8F0",background:filtersOpen||cityFilter?"rgba(22,101,52,0.08)":"#FFFFFF",color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><SlidersHorizontal size={15}/> Filters{cityFilter?" (1)":""}</button>
+          {filtersOpen && (
+            <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:200,padding:"12px 14px"}}>
+              <div style={{fontSize:12,color:"#64748B",fontWeight:600,marginBottom:8}}>City</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <button onClick={()=>setCityFilter("")} style={{padding:"6px 12px",borderRadius:999,border:!cityFilter?"none":"1px solid #E2E8F0",background:!cityFilter?"#166534":"#FFFFFF",color:!cityFilter?"#FFFFFF":"#64748B",fontSize:12,fontWeight:600,cursor:"pointer"}}>Any</button>
+                {cities.map(c=>(
+                  <button key={c} onClick={()=>setCityFilter(c)} style={{padding:"6px 12px",borderRadius:999,border:cityFilter===c?"none":"1px solid #E2E8F0",background:cityFilter===c?"#166534":"#FFFFFF",color:cityFilter===c?"#FFFFFF":"#64748B",fontSize:12,fontWeight:600,cursor:"pointer"}}>{c}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setSortOpen(o=>!o)} style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #E2E8F0",background:"#FFFFFF",color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><ArrowUpDown size={14}/> Sort</button>
+          {sortOpen && (
+            <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:140,overflow:"hidden"}}>
+              {[["name","Name (A-Z)"],["matches","Most Matches"],["rank","Rank"]].map(([k,label])=>(
+                <button key={k} onClick={()=>{setSortBy(k);setSortOpen(false)}} style={{width:"100%",padding:"10px 14px",border:"none",background:sortBy===k?"rgba(34,197,94,0.08)":"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:sortBy===k?700:500}}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filter pills */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        {[["all",`All (${registeredCount})`],["player",`Players (${normalCount})`],["pro",`PRO (${proCount})`],["admin",`Admin (${adminCount})`]].map(([k,label])=>(
+          <button key={k} onClick={()=>setTab(k)} style={{padding:"9px 16px",borderRadius:999,border:tab===k?"none":"1.5px solid #E2E8F0",background:tab===k?"#166534":"#FFFFFF",color:tab===k?"#FFFFFF":"#0F172A",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>
+        ))}
+      </div>
+
+      {/* Table */}
+      {sortedPlayers.length===0 ? (
+        <Card style={{padding:"40px 24px",textAlign:"center"}}>
+          <div style={{color:"#6b7280",fontSize:13}}>No players match your search or filters.</div>
+        </Card>
+      ) : (
+        <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+          {!isMobile && (
+            <div style={{display:"flex",alignItems:"center",padding:"12px 16px",background:"#F8FAF8",borderBottom:"1px solid #E2E8F0",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:0.4}}>
+              <div style={{flex:1}}>Player</div>
+              <div style={{width:90,textAlign:"center"}}>Role</div>
+              <div style={{width:80,textAlign:"center"}}>Matches</div>
+              <div style={{width:60,textAlign:"center"}}>Rank</div>
+              <div style={{width:80,textAlign:"center"}}>Status</div>
+              <div style={{width:36}}/>
+            </div>
+          )}
+          {sortedPlayers.map((p,i) => {
+            const isPending = p.approved === false
+            const matches = matchCountMap[p.id] || 0
+            const rank = rankMap[p.id]
+            return (
+              <div key={p.id} onClick={()=>setSelectedId(id=>id===p.id?null:p.id)} style={{display:"flex",alignItems:"center",padding:"14px 16px",background:selectedId===p.id?"rgba(34,197,94,0.05)":"#FFFFFF",borderTop:i===0?"none":"1px solid #F1F5F9",cursor:"pointer",flexWrap:isMobile?"wrap":"nowrap",gap:isMobile?10:0}}>
+                <div style={{flex:1,display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                  <Av name={p.name} id={p.id} sz={40}/>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:14,color:"#0F172A"}}>{p.name}</div>
+                    <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",alignItems:"center",gap:4}}><Phone size={11}/> {p.phone||"No phone"}</div>
+                    {p.city && <div style={{fontSize:12,color:"#94A3B8",marginTop:1,display:"flex",alignItems:"center",gap:4}}><MapPin size={11}/> {p.city}</div>}
+                  </div>
+                </div>
+                <div style={{width:isMobile?"auto":90,textAlign:"center"}}><RoleBadge role={p.role||"player"} size="sm"/></div>
+                <div style={{width:isMobile?"auto":80,textAlign:"center",fontSize:14,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>{matches}{isMobile && <span style={{fontSize:10,color:"#94A3B8",fontWeight:500}}> matches</span>}</div>
+                <div style={{width:isMobile?"auto":60,textAlign:"center",fontSize:13,fontWeight:800,color:rank===1?"#B8860B":"#64748B",fontFamily:"var(--font-head)"}}>{rank?`#${rank}`:"—"}</div>
+                <div style={{width:isMobile?"auto":80,textAlign:"center"}}>
+                  <span style={{background:isPending?"rgba(245,158,11,0.12)":"rgba(34,197,94,0.12)",color:isPending?"#B8860B":"#166534",borderRadius:999,padding:"4px 10px",fontSize:11,fontWeight:700}}>{isPending?"Pending":"Active"}</span>
+                </div>
+                <div style={{width:36,display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={e=>e.stopPropagation()}>
+                  <button onClick={()=>setOpenMenuId(id=>id===p.id?null:p.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><MoreVertical size={16} color="#94A3B8"/></button>
+                  {openMenuId===p.id && (
+                    <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
+                      <button onClick={()=>{const parts=(p.name||"").trim().split(/\s+/);setEditP(p);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:p.phone||"",pin:p.pin,role:p.role||"player",city:p.city||"",birthDate:p.birth_date||"",jerseyNumber:p.jersey_number||"",jerseySize:p.jersey_size||"",photoFile:null,photoPreview:p.profile_image_url||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Edit</button>
+                      <button onClick={()=>{setPinP(p);setNewPin("");setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#B8860B",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Change PIN</button>
+                      <button onClick={()=>{setDelP(p);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid #F1F5F9"}}>Remove</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {selectedPlayer && (
+        <div style={{marginTop:16}}>
           <div style={{background:"#f0fdf4",borderRadius:16,padding:"16px 18px",border:"2px solid #166534"}}>
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
               <Av name={selectedPlayer.name} id={selectedPlayer.id} sz={52}/>
@@ -2199,10 +2345,6 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
             </div>
             <ContributionsSection player={selectedPlayer} isMobile={isMobile}/>
           </div>
-        </div>
-      ):(
-        <div style={{marginTop:12,padding:"14px 16px",background:"#f9fafb",borderRadius:12,border:"1.5px solid #e5e7eb",textAlign:"center",color:"#9ca3af",fontSize:13}}>
-          Search or select a player above to view details
         </div>
       )}
       {showAdd&&<div style={mStyle}><div style={mBox}>
