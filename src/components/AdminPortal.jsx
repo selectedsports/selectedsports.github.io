@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
@@ -2122,6 +2122,103 @@ function ContributionsSection({ player, isMobile }) {
   )
 }
 
+// ─── Player Profile (full page) ─── real data only: no batting/bowling stats,
+// no radar chart, no per-match runs/wickets/win-loss, no MVP awards or team
+// captaincy — none of that exists in the data model. Shows what's actually tracked.
+function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit, isMobile }) {
+  const [history, setHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(true)
+  useEffect(() => {
+    fetchPlayerMatchHistory(player.id).then(setHistory).catch(()=>{}).finally(()=>setLoadingHistory(false))
+  }, [player.id])
+
+  const isPending = player.approved === false
+  const teamsPlayed = Array.from(new Set(history.flatMap(m => [m.team, m.our_team]).filter(Boolean)))
+  const memberSince = player.created_at ? new Date(player.created_at).toLocaleDateString("en-IN", { month:"short", year:"numeric" }) : null
+
+  return (
+    <div>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", padding:0, marginBottom:18, display:"flex", alignItems:"center", gap:4 }}><ArrowLeft size={15}/> Back to Players</button>
+
+      <div style={{ display:"flex", flexWrap:"wrap", gap:20, alignItems:"flex-start", marginBottom:20 }}>
+        <div style={{ display:"flex", gap:16, alignItems:"flex-start", flex:1, minWidth:260 }}>
+          <Av name={player.name} id={player.id} sz={80}/>
+          <div>
+            <div style={{ fontSize:isMobile?20:26, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>{player.name}</div>
+            <div style={{ marginTop:6 }}><RoleBadge role={player.role||"player"}/></div>
+            <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3 }}>
+              {player.phone && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><Phone size={13}/> {player.phone}</div>}
+              {player.city && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><MapPin size={13}/> {player.city}</div>}
+            </div>
+            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+              <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700, color:isPending?"#B8860B":"#166534" }}><div style={{ width:8, height:8, borderRadius:"50%", background:isPending?"#B8860B":"#166534" }}/> {isPending?"Pending Approval":"Active Player"}</span>
+              {memberSince && <><span style={{ color:"#E2E8F0" }}>|</span><span style={{ fontSize:12, color:"#94A3B8" }}>Member since {memberSince}</span></>}
+            </div>
+          </div>
+        </div>
+        <button onClick={onEdit} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>Edit Player</button>
+      </div>
+
+      {/* Real stats only */}
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr 1fr":"repeat(3,1fr)", gap:14, marginBottom:24, padding:"18px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16 }}>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><Calendar size={18} color="#166534"/></div>
+          <div style={{ fontSize:isMobile?18:24, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchesPlayed}</div>
+          <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>Matches Played</div>
+        </div>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><BarChart3 size={18} color="#166534"/></div>
+          <div style={{ fontSize:isMobile?18:24, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>{points} <span style={{ fontSize:11, fontWeight:700, color:"#94A3B8" }}>PTS</span></div>
+          <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>Total Points</div>
+        </div>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:6 }}><Trophy size={18} color="#B8860B"/></div>
+          <div style={{ fontSize:isMobile?18:24, fontWeight:900, color:rank===1?"#B8860B":"#0F172A", fontFamily:"var(--font-head)" }}>{rank?`#${rank}`:"—"}</div>
+          <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>Current Rank</div>
+        </div>
+      </div>
+
+      {/* Recent Matches — real, no runs/wickets/win-loss since that data doesn't exist yet */}
+      <div style={{ marginBottom:24 }}>
+        <div style={{ fontWeight:700, fontSize:15, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Recent Matches</div>
+        {loadingHistory ? <Spinner/> : history.length===0 ? (
+          <Card style={{ padding:"28px 16px", textAlign:"center" }}>
+            <div style={{ color:"#94A3B8", fontSize:13 }}>No confirmed matches yet.</div>
+          </Card>
+        ) : (
+          <div style={{ display:"grid", gap:8 }}>
+            {history.slice(0,6).map(m => (
+              <Card key={m.id} style={{ padding:"12px 16px", display:"flex", alignItems:"center", gap:12 }}>
+                <TeamAv name={m.team} logo={null} size={34}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:13, color:"#0F172A" }}>{matchTitle(m)}</div>
+                  <div style={{ fontSize:11, color:"#64748B", marginTop:2, display:"flex", alignItems:"center", gap:5 }}><Calendar size={11}/> {fmtDate(m.date)} · <MapPin size={11}/> {m.ground}</div>
+                </div>
+                <span style={{ background:m.status==="completed"?"#F1F5F9":m.status==="cancelled"?"rgba(239,68,68,0.12)":"rgba(34,197,94,0.12)", color:m.status==="completed"?"#64748B":m.status==="cancelled"?"#EF4444":"#166534", borderRadius:999, padding:"4px 10px", fontSize:11, fontWeight:700, textTransform:"capitalize", flexShrink:0 }}>{m.status}</span>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Teams — derived from real match history, no captaincy/join-date since no roster relationship exists */}
+      {teamsPlayed.length > 0 && (
+        <div>
+          <div style={{ fontWeight:700, fontSize:15, color:"#0F172A", marginBottom:12, fontFamily:"var(--font-head)" }}>Teams Played For</div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            {teamsPlayed.map(t => (
+              <div key={t} style={{ padding:"10px 16px", borderRadius:12, border:"1px solid #E2E8F0", background:"#FFFFFF", display:"flex", alignItems:"center", gap:10 }}>
+                <TeamAv name={t} logo={null} size={28}/>
+                <span style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [showAdd,setShowAdd]=useState(false)
   const [editP,setEditP]=useState(null)
@@ -2139,6 +2236,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [filtersOpen,setFiltersOpen]=useState(false)
   const [cityFilter,setCityFilter]=useState("")
   const [openMenuId,setOpenMenuId]=useState(null)
+  const [viewProfileId,setViewProfileId]=useState(null)
   const [lbRaw,setLbRaw]=useState([])
   useEffect(()=>{ fetchLeaderboard().then(setLbRaw).catch(()=>{}) },[])
   const selectedPlayer=players.find(p=>p.id===selectedId)||null
@@ -2206,9 +2304,22 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
     if (sortBy==="rank") return (rankMap[a.id]||9999) - (rankMap[b.id]||9999)
     return (a.name||"").localeCompare(b.name||"")
   })
+  const viewProfilePlayer = viewProfileId ? players.find(p=>p.id===viewProfileId) : null
 
   return (
     <div>
+      {viewProfilePlayer ? (
+        <PlayerProfileView
+          player={viewProfilePlayer}
+          matchesPlayed={matchCountMap[viewProfilePlayer.id]||0}
+          rank={rankMap[viewProfilePlayer.id]}
+          points={(matchCountMap[viewProfilePlayer.id]||0) * 20}
+          onBack={()=>setViewProfileId(null)}
+          onEdit={()=>{const parts=(viewProfilePlayer.name||"").trim().split(/\s+/);setEditP(viewProfilePlayer);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:viewProfilePlayer.phone||"",pin:viewProfilePlayer.pin,role:viewProfilePlayer.role||"player",city:viewProfilePlayer.city||"",birthDate:viewProfilePlayer.birth_date||"",jerseyNumber:viewProfilePlayer.jersey_number||"",jerseySize:viewProfilePlayer.jersey_size||"",photoFile:null,photoPreview:viewProfilePlayer.profile_image_url||""})}}
+          isMobile={isMobile}
+        />
+      ) : (
+      <>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
         <div>
           <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Players</h2>
@@ -2314,7 +2425,8 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
                   <button onClick={()=>setOpenMenuId(id=>id===p.id?null:p.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><MoreVertical size={16} color="#94A3B8"/></button>
                   {openMenuId===p.id && (
                     <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
-                      <button onClick={()=>{const parts=(p.name||"").trim().split(/\s+/);setEditP(p);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:p.phone||"",pin:p.pin,role:p.role||"player",city:p.city||"",birthDate:p.birth_date||"",jerseyNumber:p.jersey_number||"",jerseySize:p.jersey_size||"",photoFile:null,photoPreview:p.profile_image_url||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Edit</button>
+                      <button onClick={()=>{setViewProfileId(p.id);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>View Profile</button>
+                      <button onClick={()=>{const parts=(p.name||"").trim().split(/\s+/);setEditP(p);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:p.phone||"",pin:p.pin,role:p.role||"player",city:p.city||"",birthDate:p.birth_date||"",jerseyNumber:p.jersey_number||"",jerseySize:p.jersey_size||"",photoFile:null,photoPreview:p.profile_image_url||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid #F1F5F9"}}>Edit</button>
                       <button onClick={()=>{setPinP(p);setNewPin("");setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#B8860B",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Change PIN</button>
                       <button onClick={()=>{setDelP(p);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid #F1F5F9"}}>Remove</button>
                     </div>
@@ -2346,6 +2458,8 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
             <ContributionsSection player={selectedPlayer} isMobile={isMobile}/>
           </div>
         </div>
+      )}
+      </>
       )}
       {showAdd&&<div style={mStyle}><div style={mBox}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{margin:0,fontSize:16,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Add New Player</h3><button onClick={()=>setShowAdd(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>×</button></div>

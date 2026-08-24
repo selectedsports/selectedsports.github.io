@@ -386,6 +386,12 @@ export async function fetchProStats(proId) {
   return { matches: matchIds.length, players: uniquePlayers, venues: venueCount || 0 }
 }
 // Player stats: matches they were confirmed for, unique venues they played at
+export async function fetchPlayerMatchHistory(playerId) {
+  const { data, error } = await supabase.from("match_players").select("status, matches(id, date, time_slot, ground, team, our_team, status, type)").eq("player_id", playerId).eq("status", "confirmed")
+  if (error) throw error
+  return (data || []).map(r => r.matches).filter(Boolean).sort((a, b) => new Date(b.date) - new Date(a.date))
+}
+
 export async function fetchPlayerStats(playerId) {
   const { data: mps } = await supabase.from("match_players").select("match_id, status").eq("player_id", playerId).eq("status", "confirmed")
   const matchIds = (mps || []).map(x => x.match_id)
