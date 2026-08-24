@@ -509,27 +509,13 @@ export async function markMessagesRead(playerId) {
 // ── Leaderboard ────────────────────────────────────────────────────────────────
 // Ranks all players by total confirmed matches played, across the whole app.
 export async function fetchLeaderboard() {
+  // Returns raw rows (one per confirmed player-match), not pre-aggregated,
+  // so the UI can filter by season/role and recompute rankings without refetching.
   // Only completed matches count, so confirming into a future/never-played
-  // match can't inflate rank. Ties (same matchesPlayed) are broken by who
-  // confirmed earliest overall — rewards long-standing, consistent players.
-  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role), matches!inner(status)").eq("status", "confirmed").eq("matches.status", "completed")
+  // match can't inflate rank. Ties are broken by who confirmed earliest overall.
+  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role), matches!inner(status, date)").eq("status", "confirmed").eq("matches.status", "completed")
   if (error) throw error
-  const map = {}
-  ;(data || []).forEach(r => {
-    const p = r.players
-    if (!p) return
-    if (!map[p.id]) map[p.id] = { id: p.id, name: p.name, city: p.city, role: p.role, matchesPlayed: 0, earliestConfirmedAt: r.created_at }
-    map[p.id].matchesPlayed++
-    if (r.created_at && (!map[p.id].earliestConfirmedAt || r.created_at < map[p.id].earliestConfirmedAt)) {
-      map[p.id].earliestConfirmedAt = r.created_at
-    }
-  })
-  return Object.values(map).sort((a, b) => {
-    if (b.matchesPlayed !== a.matchesPlayed) return b.matchesPlayed - a.matchesPlayed
-    if (!a.earliestConfirmedAt) return 1
-    if (!b.earliestConfirmedAt) return -1
-    return new Date(a.earliestConfirmedAt) - new Date(b.earliestConfirmedAt)
-  })
+  return data || []
 }
 
 
