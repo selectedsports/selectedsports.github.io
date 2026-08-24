@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
@@ -780,22 +780,34 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
   const [detail, setDetail]   = useState(null)
   const [loading, setLoading] = useState(false)
   const [filter, setFilter]   = useState(initialFilter||"all")
+  const [search, setSearch]   = useState("")
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [groundFilter, setGroundFilter] = useState("")
+  const [openMenuId, setOpenMenuId] = useState(null)
+  const [busyAction, setBusyAction] = useState(false)
 
   useEffect(()=>{ if(initialFilter) setFilter(initialFilter) },[initialFilter])
   useEffect(()=>{ if(selId){ const m=matches.find(m=>m.id===selId); if(m) loadMatch(m) } },[selId])
 
   const adminId = loggedPlayer?.id
   const proIds = new Set(players.filter(p=>p.role==="pro").map(p=>p.id))
-  const filtered =
+  const statusFiltered =
     filter==="all"   ? matches :
     filter==="mine"  ? matches.filter(m=>!m.created_by || m.created_by===adminId) :
     filter==="pro"   ? matches.filter(m=>m.created_by && proIds.has(m.created_by)) :
     matches.filter(m=>m.status===filter)
+  const q = search.trim().toLowerCase()
+  const filtered = statusFiltered.filter(m => {
+    if (groundFilter && m.ground !== groundFilter) return false
+    if (!q) return true
+    return matchTitle(m).toLowerCase().includes(q) || (m.team||"").toLowerCase().includes(q) || (m.our_team||"").toLowerCase().includes(q) || (m.ground||"").toLowerCase().includes(q)
+  })
   const countFor = k =>
     k==="all"  ? matches.length :
     k==="mine" ? matches.filter(m=>!m.created_by || m.created_by===adminId).length :
     k==="pro"  ? matches.filter(m=>m.created_by && proIds.has(m.created_by)).length :
     matches.filter(m=>m.status===k).length
+  const todayStr = new Date().toISOString().split("T")[0]
 
   const loadMatch = async m => {
     setLoading(true)
@@ -812,21 +824,44 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
   return (
     <div>
       <BackBtn onBack={()=>onNavigate("dashboard")}/>
-      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
-        <h2 style={{ color:"#0F172A",fontSize:isMobile?17:20,fontWeight:800,margin:0,fontFamily:"var(--font-head)" }}>Matches</h2>
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12 }}>
+        <div>
+          <h2 style={{ color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)" }}>Matches</h2>
+          <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Manage and organize all platform matches</div>
+        </div>
         {(settings?.subscription_expiry && new Date(settings.subscription_expiry) >= new Date())
-          ? <Btn variant="green" size={isMobile?"sm":"md"} onClick={()=>setShowNew(true)}>+ Schedule</Btn>
-          : <div onClick={()=>alert("Scheduling requires an active subscription.\nContact admin to renew.")} style={{ padding:isMobile?"7px 12px":"8px 16px",borderRadius:9,background:"#f3f4f6",border:"1.5px solid #e5e7eb",color:"#9ca3af",fontSize:isMobile?12:13,cursor:"pointer",fontWeight:600 }}>🔒 Subscribe</div>
+          ? <button onClick={()=>setShowNew(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> Create Match</button>
+          : <div onClick={()=>alert("Scheduling requires an active subscription.\nContact admin to renew.")} style={{ padding:isMobile?"7px 12px":"8px 16px",borderRadius:9,background:"#f3f4f6",border:"1.5px solid #e5e7eb",color:"#9ca3af",fontSize:isMobile?12:13,cursor:"pointer",fontWeight:600, flexShrink:0 }}><Lock size={12} style={{verticalAlign:"-2px"}}/> Subscribe</div>
         }
       </div>
-      {/* Filter tabs */}
-      <div style={{ display:"flex",gap:6,marginBottom:14,background:"#F8FAF8",borderRadius:10,padding:4,border:"1.5px solid #e5e7eb" }}>
-        {[["all","All"],["mine","Mine"],["pro","Pro"],["upcoming","Upcoming"],["completed","Played"]].map(([k,v])=>(
-          <button key={k} onClick={()=>setFilter(k)} style={{ flex:1,padding:"7px 4px",borderRadius:7,border:"none",background:filter===k?"#FFFFFF":"transparent",color:filter===k?"#0F172A":"#6b7280",fontSize:isMobile?10:12,cursor:"pointer",fontWeight:filter===k?700:400,fontFamily:"var(--font-body)" }}>
-            {v} {k!=="all"&&<span style={{ opacity:0.7 }}>({countFor(k)})</span>}
-          </button>
+
+      {/* Filter pills */}
+      <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+        {[["all","All",null],["mine",`My Matches (${countFor("mine")})`,null],["pro",`Pro Matches (${countFor("pro")})`,null],["upcoming",`Upcoming (${countFor("upcoming")})`,null],["completed",`Completed (${countFor("completed")})`,null]].map(([k,label]) => (
+          <button key={k} onClick={()=>setFilter(k)} style={{ padding:"9px 16px", borderRadius:999, border:filter===k?"none":"1.5px solid #E2E8F0", background:filter===k?"#166534":"#FFFFFF", color:filter===k?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-body)", whiteSpace:"nowrap" }}>{label}</button>
         ))}
       </div>
+
+      {/* Search + Filters */}
+      <div style={{ display:"flex", gap:10, marginBottom:16 }}>
+        <div style={{ flex:1, position:"relative" }}>
+          <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search matches by name, team or ground..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+        </div>
+        <button onClick={()=>setFiltersOpen(o=>!o)} style={{ padding:"12px 16px", borderRadius:12, border:"1.5px solid #E2E8F0", background:filtersOpen||groundFilter?"rgba(22,101,52,0.08)":"#FFFFFF", color:"#0F172A", fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><SlidersHorizontal size={15}/> Filters{groundFilter?" (1)":""}</button>
+      </div>
+
+      {filtersOpen && (
+        <Card style={{ padding:"14px 16px", marginBottom:16 }}>
+          <div style={{ fontSize:12, color:"#64748B", fontWeight:600, marginBottom:8 }}>Ground</div>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            <button onClick={()=>setGroundFilter("")} style={{ padding:"6px 12px", borderRadius:999, border:!groundFilter?"none":"1px solid #E2E8F0", background:!groundFilter?"#166534":"#FFFFFF", color:!groundFilter?"#FFFFFF":"#64748B", fontSize:12, fontWeight:600, cursor:"pointer" }}>Any ground</button>
+            {grounds.map(g => (
+              <button key={g.id} onClick={()=>setGroundFilter(g.name)} style={{ padding:"6px 12px", borderRadius:999, border:groundFilter===g.name?"none":"1px solid #E2E8F0", background:groundFilter===g.name?"#166534":"#FFFFFF", color:groundFilter===g.name?"#FFFFFF":"#64748B", fontSize:12, fontWeight:600, cursor:"pointer" }}>{g.name}</button>
+            ))}
+          </div>
+        </Card>
+      )}
       {filtered.length===0?(
         <Card style={{ padding:"40px 24px",textAlign:"center" }}>
           <div style={{ fontSize:44,marginBottom:10 }}>🏏</div>
@@ -835,24 +870,31 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
         </Card>
       ):(
         <div style={{ display:"grid",gap:10 }}>
-          {filtered.map(m=>(
-            <div key={m.id} onClick={()=>loadMatch(m)} style={{ background:"#F8FAF8",borderRadius:18,padding:isMobile?"15px 16px":"18px 22px",cursor:"pointer",border:"1.5px solid #e5e7eb",boxShadow:"0 4px 14px rgba(30,79,175,0.15)",WebkitTapHighlightColor:"rgba(0,0,0,0.05)" }}>
-              <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+          {filtered.map(m=>{
+            const isLive = m.status==="upcoming" && m.date===todayStr
+            const statusLabel = isLive ? "Live" : m.status
+            const statusStyle = isLive
+              ? { background:"rgba(37,99,235,0.12)", color:"#2563EB" }
+              : m.status==="upcoming" ? { background:"rgba(34,197,94,0.12)", color:"#166534" }
+              : m.status==="completed" ? { background:"#F1F5F9", color:"#64748B" }
+              : { background:"rgba(239,68,68,0.12)", color:"#EF4444" }
+            return (
+            <div key={m.id} onClick={()=>loadMatch(m)} style={{ background:"#FFFFFF",borderRadius:18,padding:isMobile?"15px 16px":"18px 22px",cursor:"pointer",border:"1.5px solid #e5e7eb",boxShadow:"0 4px 14px rgba(15,23,42,0.05)",WebkitTapHighlightColor:"rgba(0,0,0,0.05)" }}>
+              <div style={{ display:"flex",alignItems:"flex-start",gap:12 }}>
                 <TeamAv name={m.team} logo={m.team_logo} size={isMobile?40:48}/>
                 <div style={{ flex:1,minWidth:0 }}>
                   <div style={{ fontWeight:800,color:"#0F172A",fontSize:isMobile?13:15,fontFamily:"var(--font-head)" }}>{matchTitle(m)}</div>
-                  <div style={{ color:"#6b7280",fontSize:11,marginTop:2 }}>{fmtDate(m.date)} · {m.time_slot}</div>
-                  <div style={{ color:"#9ca3af",fontSize:11,marginTop:1, display:"flex", alignItems:"center", gap:4 }}><MapPin size={11}/> {m.ground}</div>
+                  <div style={{ color:"#64748B",fontSize:12,marginTop:3, display:"flex", alignItems:"center", gap:5 }}><Calendar size={11}/> {fmtDate(m.date)} · <Clock size={11}/> {m.time_slot}</div>
+                  <div style={{ color:"#94A3B8",fontSize:12,marginTop:2, display:"flex", alignItems:"center", gap:4 }}><MapPin size={11}/> {m.ground}</div>
                     {(() => {
                       const joined = matchCounts[m.id] || 0
                       const cap = m.max_players || 0
                       const pct = cap > 0 ? Math.min(100, Math.round((joined / cap) * 100)) : 0
-                      const left = Math.max(0, cap - joined)
                       return (
                         <div style={{ marginTop:8 }} data-adminCardBar>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
-                            <span style={{ fontSize:11, fontWeight:700, color:"#065f46" }}>{joined}/{cap} joined</span>
-                            <span style={{ fontSize:11, fontWeight:600, color:left>0?"#166534":"#991b1b" }}>{left>0?left+" left":"Full"}</span>
+                            <span style={{ fontSize:12, fontWeight:600, color:"#64748B", display:"inline-flex", alignItems:"center", gap:5 }}><Users size={12}/> {joined} / {cap||"—"} players joined</span>
+                            <span style={{ fontSize:12, fontWeight:700, color:"#166534" }}>{pct}%</span>
                           </div>
                           <div style={{ height:6, background:"#e5e7eb", borderRadius:5, overflow:"hidden" }}>
                             <div style={{ width:pct+"%", height:"100%", background:pct>=100?"#166534":"linear-gradient(90deg,#6ee7b7,#166534)", borderRadius:5 }}/>
@@ -860,16 +902,33 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
                         </div>
                       )
                     })()}
-                  {m.created_by && (()=>{ const creator = players.find(p=>p.id===m.created_by); return creator && creator.role==="pro" ? <div style={{ color:"#7c3aed",fontSize:11,marginTop:3,fontWeight:700 }}>⭐ Scheduled by {creator.name}</div> : null })()}
+                  {m.created_by && (()=>{ const creator = players.find(p=>p.id===m.created_by); return creator && creator.role==="pro" ? <div style={{ color:"#7c3aed",fontSize:11,marginTop:5,fontWeight:700 }}>⭐ Scheduled by {creator.name}</div> : null })()}
                 </div>
-                <div style={{ display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end",flexShrink:0 }}>
+                <div style={{ display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",flexShrink:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                    <span style={{ ...statusStyle, borderRadius:999, padding:"5px 12px", fontSize:11, fontWeight:700, textTransform:"capitalize", display:"inline-block" }}>{statusLabel}</span>
+                    <ChevronRight size={16} color="#94A3B8"/>
+                  </div>
+                  <div style={{ position:"relative" }} onClick={e=>e.stopPropagation()}>
+                    <button onClick={()=>setOpenMenuId(id=>id===m.id?null:m.id)} style={{ background:"none", border:"none", cursor:"pointer", padding:4, display:"flex" }}><MoreVertical size={16} color="#94A3B8"/></button>
+                    {openMenuId===m.id && (
+                      <div style={{ position:"absolute", top:"100%", right:0, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:160, overflow:"hidden" }}>
+                        {m.status==="upcoming" && (
+                          <button disabled={busyAction} onClick={async()=>{ setBusyAction(true); try{ await updateMatchStatus(m.id,"completed"); onRefresh() } catch(e){alert(e.message)} setBusyAction(false); setOpenMenuId(null) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}><CheckCircle2 size={14}/> Mark Completed</button>
+                        )}
+                        {m.status==="upcoming" && (
+                          <button disabled={busyAction} onClick={async()=>{ if(!window.confirm("Cancel this match?")) return; setBusyAction(true); try{ await updateMatchStatus(m.id,"cancelled"); onRefresh() } catch(e){alert(e.message)} setBusyAction(false); setOpenMenuId(null) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"none", textAlign:"left", fontSize:13, color:"#B8860B", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}><XCircle size={14}/> Cancel Match</button>
+                        )}
+                        <button disabled={busyAction} onClick={async()=>{ if(!window.confirm("Delete this match permanently? This cannot be undone.")) return; setBusyAction(true); try{ await deleteMatch(m.id); onRefresh() } catch(e){alert(e.message)} setBusyAction(false); setOpenMenuId(null) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"none", textAlign:"left", fontSize:13, color:"#EF4444", cursor:"pointer", display:"flex", alignItems:"center", gap:8, borderTop:"1px solid #F1F5F9" }}><Trash2 size={14}/> Delete Match</button>
+                      </div>
+                    )}
+                  </div>
                   {!isMobile&&<Tag col="gray">{m.type}</Tag>}
                   {m.link_active&&<Tag col="green"><LinkIcon size={11} style={{verticalAlign:"-1px"}}/></Tag>}
-                  <span style={{ background:m.status==="upcoming"?"#166534":m.status==="completed"?"#64748B":"#EF4444", color:"#FFFFFF", borderRadius:999, padding:"4px 12px", fontSize:11, fontWeight:700, textTransform:"capitalize", display:"inline-block" }}>{m.status}</span>
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
       {showNew&&<NewMatchModal grounds={grounds} teams={teams} onClose={()=>setShowNew(false)} onCreated={()=>{setShowNew(false);onRefresh()}} isMobile={isMobile}/>}
