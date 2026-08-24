@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3 } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
@@ -344,6 +344,11 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
   useEffect(() => { loadProRequests() }, [])
   const [activity, setActivity] = useState([])
   useEffect(() => { fetchRecentActivity(8).then(setActivity).catch(() => {}) }, [])
+  const [dashMatchCounts, setDashMatchCounts] = useState({})
+  useEffect(() => { fetchMatchCounts(matches.map(m => m.id)).then(setDashMatchCounts).catch(() => {}) }, [matches])
+  const [activityExpanded, setActivityExpanded] = useState(false)
+  const [requestsExpanded, setRequestsExpanded] = useState(false)
+  const ACTIVITY_ICON = { match_created: Calendar, match_completed: CheckCircle2, player_approved: UserPlus, auction_sold: Trophy }
   const decideProRequest = async (req, approve) => {
     try {
       if (approve) await approveProRequest(req.id, req.player_id)
@@ -360,10 +365,10 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
   const BLUE = "#14532D"
   const BLUE_BG = "rgba(22,101,52,0.1)"
   const stats = [
-    { label:"Players", v:players.length, icon:Users, action:()=>onNavigate("players") },
-    { label:"Matches",  v:matches.length, icon:Calendar, action:()=>onNavigate("matches") },
-    { label:"Grounds",  v:grounds.length, icon:MapPin, action:()=>onNavigate("grounds") },
-    { label:"Teams",    v:teams.length,   icon:Landmark, action:()=>onNavigate("teams") },
+    { label:"Players", sub:"Registered Players", v:players.length, icon:Users, action:()=>onNavigate("players") },
+    { label:"Matches",  sub:"Total Matches", v:matches.length, icon:Calendar, action:()=>onNavigate("matches") },
+    { label:"Grounds",  sub:"Available Grounds", v:grounds.length, icon:MapPin, action:()=>onNavigate("grounds") },
+    { label:"Teams",    sub:"Total Teams", v:teams.length,   icon:UsersRound, action:()=>onNavigate("teams") },
   ]
 
   const cardStyle = { background:"#FFFFFF", borderRadius:18, padding:"24px", border:"1px solid #E2E8F0", boxShadow:"0 6px 24px rgba(15,23,42,0.06)" }
@@ -378,37 +383,62 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
       {/* Greeting header */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, fontFamily:"var(--font-head)" }}>{greeting}, {(loggedPlayer?.name||"Admin").split(" ")[0]}</div>
-        <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>{dayName(todayStr)} · {todaysMatches.length} match{todaysMatches.length!==1?"es":""} today · {upcoming.length} upcoming</div>
+        <div style={{ fontSize:13, color:"#64748B", marginTop:4, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Calendar size={13}/> {dayName(todayStr)}, {fmtDate(todayStr)}</span>
+          <span>·</span>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Clock size={13}/> {todaysMatches.length} match{todaysMatches.length!==1?"es":""} today</span>
+          <span>·</span>
+          <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={13}/> {upcoming.length} upcoming</span>
+        </div>
       </div>
 
       {todaysMatches.length > 0 && (
         <div style={{ marginBottom:24 }}>
-          <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", marginBottom:14, fontFamily:"var(--font-head)" }}>Today's Matches</div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Today's Matches</div>
+            <button onClick={()=>onNavigate("matches")} style={{ background:"none", border:"none", color:BLUE, fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>View All <ChevronRight size={14}/></button>
+          </div>
           <div style={{ display:"grid", gap:10 }}>
-            {todaysMatches.map(m => (
-              <div key={m.id} onClick={()=>onNavigate("matches", m.id)} style={{ padding:"14px 16px", borderRadius:14, border:`1.5px solid ${BLUE}`, background:BLUE_BG, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <div>
-                  <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchTitle(m)}</div>
-                  <div style={{ fontSize:12, color:"#64748B", marginTop:2, display:"flex", alignItems:"center", gap:5 }}><Clock size={12}/> {m.time_slot} · <MapPin size={12}/> {m.ground}</div>
+            {todaysMatches.map(m => {
+              const joined = dashMatchCounts[m.id] || 0
+              const cap = m.max_players || 0
+              return (
+                <div key={m.id} onClick={()=>onNavigate("matches", m.id)} style={{ padding:"14px 16px", borderRadius:14, border:`1.5px solid ${BLUE}`, background:BLUE_BG, cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0, flex:1 }}>
+                    <Av name={matchTitle(m)} id={m.id} sz={38}/>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{matchTitle(m)}</div>
+                      <div style={{ fontSize:12, color:"#64748B", marginTop:2, display:"flex", alignItems:"center", gap:5 }}><Clock size={12}/> {m.time_slot} · <MapPin size={12}/> {m.ground}</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"center", flexShrink:0 }}>
+                    <div style={{ fontWeight:700, fontSize:14, color:BLUE, fontFamily:"var(--font-head)" }}>{joined}/{cap || "—"}</div>
+                    <div style={{ fontSize:10, color:"#94A3B8" }}>Joined</div>
+                  </div>
+                  <span style={{ background:BLUE, color:"#FFFFFF", borderRadius:999, padding:"5px 12px", fontSize:11, fontWeight:700, flexShrink:0 }}>Today</span>
+                  <ChevronRight size={16} color="#94A3B8" style={{ flexShrink:0 }}/>
                 </div>
-                <span style={{ background:BLUE, color:"#FFFFFF", borderRadius:999, padding:"5px 12px", fontSize:11, fontWeight:700, flexShrink:0 }}>Today</span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
 
-      {/* Stat Cards — unified blue icon/number per design system */}
+      {/* Stat Cards — Platform Overview, matching mockup: icon circle, big number, label, sub-label, chevron */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+        <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Platform Overview</div>
+      </div>
       <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:24, marginBottom:24 }}>
         {stats.map((c,i) => (
-          <div key={i} onClick={c.action} style={{ ...cardStyle, cursor:"pointer", transition:"transform 0.25s, box-shadow 0.25s, border-color 0.25s" }}
+          <div key={i} onClick={c.action} style={{ ...cardStyle, cursor:"pointer", transition:"transform 0.25s, box-shadow 0.25s, border-color 0.25s", position:"relative" }}
             onMouseEnter={e=>{ e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 12px 32px rgba(15,23,42,0.1)"; e.currentTarget.style.borderColor=BLUE }}
             onMouseLeave={e=>{ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 6px 24px rgba(15,23,42,0.06)"; e.currentTarget.style.borderColor="#E2E8F0" }}>
             <div style={{ width:36, height:36, borderRadius:10, background:BLUE_BG, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}><c.icon size={18} color={BLUE}/></div>
             <div style={{ fontSize:isMobile?24:30, fontWeight:700, color:BLUE, fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
-            <div style={{ fontSize:13, color:"#64748B", marginTop:4, fontWeight:500 }}>{c.label}</div>
-            <div style={{ fontSize:11, color:BLUE, marginTop:6, fontWeight:600 }}>Tap to view →</div>
+            <div style={{ fontSize:13, color:"#0F172A", marginTop:4, fontWeight:600 }}>{c.label}</div>
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>{c.sub}</div>
+            <ChevronRight size={16} color={BLUE} style={{ position:"absolute", bottom:16, right:16 }}/>
           </div>
         ))}
       </div>
@@ -417,18 +447,26 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: "#0F172A", marginBottom: 14, fontFamily: "var(--font-head)", display:"flex", alignItems:"center", gap:8 }}><ShieldCheck size={17} color={BLUE}/> Pro Access Requests</div>
           <div style={{ display:"grid", gap:12 }}>
-            {proRequests.map(req => (
+            {(requestsExpanded ? proRequests : proRequests.slice(0,3)).map(req => (
               <div key={req.id} style={{ ...cardStyle, padding:"14px 16px", display:"flex", alignItems:"center", gap:12 }}>
-                <Av name={req.players?.name || "Player"} id={req.player_id} sz={34}/>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:600, fontSize:13, color:"#0F172A" }}>{req.players?.name || "Player"}</div>
-                  <div style={{ fontSize:11, color:"#64748B" }}>wants to schedule matches (Pro access)</div>
+                <Av name={req.players?.name || "Player"} id={req.player_id} sz={38}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontWeight:700, fontSize:14, color:"#0F172A" }}>{req.players?.name || "Player"}</span>
+                    <span style={{ background:"rgba(184,134,11,0.12)", color:"#B8860B", fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:999, textTransform:"uppercase", letterSpacing:0.3 }}>Pro Access</span>
+                  </div>
+                  <div style={{ fontSize:12, color:"#64748B", marginTop:2 }}>Wants to become a Pro organizer · Requested {timeAgo(req.created_at)}</div>
                 </div>
-                <button onClick={()=>decideProRequest(req, true)} style={{ padding:"6px 12px", borderRadius:8, background:"#22C55E", border:"none", color:"#FFFFFF", fontSize:12, cursor:"pointer", fontWeight:600 }}>Approve</button>
-                <button onClick={()=>decideProRequest(req, false)} style={{ padding:"6px 12px", borderRadius:8, background:"#FFFFFF", border:"1px solid #EF4444", color:"#EF4444", fontSize:12, cursor:"pointer", fontWeight:600 }}>Reject</button>
+                <button onClick={()=>decideProRequest(req, true)} style={{ padding:"7px 14px", borderRadius:8, background:"#22C55E", border:"none", color:"#FFFFFF", fontSize:12, cursor:"pointer", fontWeight:600, flexShrink:0 }}>Approve</button>
+                <button onClick={()=>decideProRequest(req, false)} style={{ padding:"7px 14px", borderRadius:8, background:"#FFFFFF", border:"1px solid #EF4444", color:"#EF4444", fontSize:12, cursor:"pointer", fontWeight:600, flexShrink:0 }}>Reject</button>
               </div>
             ))}
           </div>
+          {proRequests.length > 3 && (
+            <button onClick={()=>setRequestsExpanded(e=>!e)} style={{ width:"100%", padding:"8px", borderRadius:12, border:"1px solid #E2E8F0", background:"transparent", color:BLUE, fontSize:12, cursor:"pointer", fontWeight:600, marginTop:8 }}>
+              {requestsExpanded ? "Show less" : `+${proRequests.length - 3} more`}
+            </button>
+          )}
         </div>
       )}
 
@@ -513,7 +551,7 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
           </div>
         </div>
 
-        {/* Recent Activity — real feed */}
+        {/* Recent Activity — real feed, icon-per-type */}
         <div style={cardStyle}>
           <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", marginBottom:14, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:8 }}><Clock size={17} color={BLUE}/> Recent Activity</div>
           {activity.length === 0 ? (
@@ -524,18 +562,23 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
             </div>
           ) : (
             <div>
-              {activity.map((a, i) => (
-                <div key={a.id} style={{ display:"flex", gap:12, marginBottom: i === activity.length - 1 ? 0 : 12 }}>
-                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0 }}>
-                    <div style={{ width:10, height:10, borderRadius:"50%", background:BLUE }}/>
-                    {i !== activity.length - 1 && <div style={{ width:1, flex:1, background:"#E2E8F0", marginTop:4 }}/>}
+              {(activityExpanded ? activity : activity.slice(0,5)).map((a) => {
+                const Icon = ACTIVITY_ICON[a.action] || Clock
+                return (
+                  <div key={a.id} style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:12 }}>
+                    <div style={{ width:28, height:28, borderRadius:"50%", background:BLUE_BG, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Icon size={14} color={BLUE}/></div>
+                    <div style={{ flex:1, minWidth:0, display:"flex", justifyContent:"space-between", gap:8 }}>
+                      <div style={{ fontWeight:600, fontSize:13, color:"#0F172A" }}>{a.summary}</div>
+                      <div style={{ fontSize:11, color:"#94A3B8", flexShrink:0, whiteSpace:"nowrap" }}>{timeAgo(a.created_at)}</div>
+                    </div>
                   </div>
-                  <div style={{ flex:1, minWidth:0, paddingBottom:6 }}>
-                    <div style={{ fontWeight:600, fontSize:13, color:"#0F172A" }}>{a.summary}</div>
-                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:1 }}>{timeAgo(a.created_at)}</div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
+              {activity.length > 5 && (
+                <button onClick={()=>setActivityExpanded(e=>!e)} style={{ width:"100%", padding:"8px", borderRadius:12, border:"1px solid #E2E8F0", background:"transparent", color:BLUE, fontSize:12, cursor:"pointer", fontWeight:600, marginTop:2 }}>
+                  {activityExpanded ? "Show less" : `+${activity.length - 5} more`}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -546,9 +589,9 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
         <div style={{ fontWeight:700, fontSize:16, color:"#0F172A", marginBottom:14, fontFamily:"var(--font-head)" }}>Quick Actions</div>
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:14 }}>
           {[
-            { label:"Create Match", icon:Calendar, action:()=>setShowNew(true) },
-            { label:"Add Player",   icon:Users,    action:()=>onNavigate("players") },
-            { label:"Create Team",  icon:Landmark, action:()=>onNavigate("teams") },
+            { label:"Create Match", icon:Plus, action:()=>setShowNew(true) },
+            { label:"Add Player",   icon:UserPlus, action:()=>onNavigate("players") },
+            { label:"Create Team",  icon:UsersRound, action:()=>onNavigate("teams") },
             { label:"Add Ground",   icon:MapPin,   action:()=>onNavigate("grounds") },
           ].map((a,i) => (
             <button key={i} onClick={a.action} style={{ ...cardStyle, padding:"18px 12px", cursor:"pointer", border:"1.5px solid #E2E8F0", display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}
