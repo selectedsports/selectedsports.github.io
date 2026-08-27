@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
@@ -306,7 +306,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
         {page==="dashboard" && <Dashboard invites={invites} onOpenInvite={loadInvDetail} onInviteRespond={async (mid, s) => { try { await confirmPlayerToMatch(mid, loggedPlayer.id, s); loadInvites() } catch(e) { alert(e.message) } }} matches={matches} players={players} grounds={grounds} teams={teams} settings={settings} loggedPlayer={loggedPlayer} onNavigate={navigate} onRefresh={load} isMobile={isMobile}/>}
         {page==="matches"   && <MatchesPage matches={matches} players={players} grounds={grounds} teams={teams} selId={selId} initialFilter={matchFilter} settings={settings} loggedPlayer={loggedPlayer} onNavigate={navigate} onRefresh={load} isMobile={isMobile}/>}
         {page==="players"   && <><BackBtn onBack={()=>navigate("dashboard")}/><PlayersPage players={players} onRefresh={load} isMobile={isMobile} isFounder={isFounder}/></>}
-        {page==="teams"     && <><BackBtn onBack={()=>navigate("dashboard")}/><TeamsPage teams={teams} onRefresh={load} isMobile={isMobile}/></>}
+        {page==="teams"     && <><BackBtn onBack={()=>navigate("dashboard")}/><TeamsPage teams={teams} matches={matches} onRefresh={load} isMobile={isMobile}/></>}
         {page==="grounds"   && <><BackBtn onBack={()=>navigate("dashboard")}/><GroundsPage grounds={grounds} onRefresh={load} isMobile={isMobile}/></>}
         {page==="auction"   && <><BackBtn onBack={()=>navigate("dashboard")}/><AuctionPage isMobile={isMobile} isFounder={isFounder}/></>}
         {page==="leaderboard" && <><BackBtn onBack={()=>navigate("dashboard")}/><LeaderboardPage isMobile={isMobile} myId={loggedPlayer?.id}/></>}
@@ -1032,14 +1032,16 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                     </button>
                   )
                 })()}
-                <div style={{ color:"#0F172A",fontSize:12,fontWeight:700,marginBottom:8 }}>🔗 Invite unlisted players</div>
-                <div style={{ color:"#94A3B8",fontSize:11,marginBottom:10,lineHeight:1.5 }}>Share this link with anyone not in your player list. They can register and join this match.</div>
-                <button onClick={async()=>{
-                  const msg = waPublicLink(m, BASE_URL)
-                  if (!linkActive) { await toggleMatchLink(m.id, true); setLinkActive(true) }
-                  if (navigator.share) { try { await navigator.share({ title:"Match Invite", text:msg }) } catch {} }
-                  else { window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank") }
-                }} style={{ width:"100%",padding:"11px",borderRadius:9,background:"#166534",border:"none",color:"#0F172A",fontSize:13,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>📤 Share Public Invite Link</button>
+                <div style={{ padding:"12px 14px", background:"rgba(245,158,11,0.08)", border:"1.5px solid rgba(245,158,11,0.3)", borderRadius:10, marginBottom:14 }}>
+                  <div style={{ color:"#B8860B", fontSize:12, fontWeight:800, marginBottom:6, display:"flex", alignItems:"center", gap:6 }}><AlertTriangle size={14}/> Public link — anyone can join</div>
+                  <div style={{ color:"#7A4F13", fontSize:11, marginBottom:10, lineHeight:1.5 }}>This link isn't tied to one person — if it gets forwarded, anyone who clicks it can register and confirm themselves into the squad, even players you never invited. For a controlled squad, use <strong>Invite Players</strong> below instead.</div>
+                  <button onClick={async()=>{
+                    const msg = waPublicLink(m, BASE_URL)
+                    if (!linkActive) { await toggleMatchLink(m.id, true); setLinkActive(true) }
+                    if (navigator.share) { try { await navigator.share({ title:"Match Invite", text:msg }) } catch {} }
+                    else { window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank") }
+                  }} style={{ width:"100%",padding:"11px",borderRadius:9,background:"#B8860B",border:"none",color:"#FFFFFF",fontSize:13,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>📤 Share Public Invite Link Anyway</button>
+                </div>
               </div>
               <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
                 {/* Group 1: Invite & notify */}
@@ -1052,7 +1054,7 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                       if (!linkActive) { await toggleMatchLink(m.id, true); setLinkActive(true) }
                       if (navigator.share) { try { await navigator.share({ title:"Match Invite", text:msg }) } catch {} }
                       else { window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank") }
-                    }} style={{ padding:"9px 14px",borderRadius:9,background:"rgba(37,211,102,0.2)",border:"1px solid rgba(74,222,128,0.4)",color:"#166534",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>📤 Share Invite</button>
+                    }} title="Includes a forwardable link — recipients can pass it on to others" style={{ padding:"9px 14px",borderRadius:9,background:"rgba(37,211,102,0.2)",border:"1px solid rgba(74,222,128,0.4)",color:"#166534",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>📤 Share Invite ⚠️</button>
                     <button onClick={async()=>{
                       const msg = waReminder(m, matchPlayers) + "\n\n" + BASE_URL + "/join/" + m.invite_token
                       if (navigator.share) { try { await navigator.share({ title:"Match Reminder", text:msg }) } catch {} }
@@ -1397,7 +1399,8 @@ export function NotifyModal({ match, matchPlayers, players, onClose, onRefresh, 
             {saving ? "Saving..." : `Invite Selected (${selectedCount})`}
           </button>
         </div>
-        <div style={{ marginTop:10, display:"flex", gap:8 }}>
+        <div style={{ marginTop:10, fontSize:10, color:"#B8860B", display:"flex", alignItems:"center", gap:4 }}><AlertTriangle size={11}/> These buttons below still include a forwardable link — prefer inviting selected players above for a controlled squad.</div>
+        <div style={{ marginTop:6, display:"flex", gap:8 }}>
           <button onClick={async()=>{
             const msg = waInviteWithLink(match, BASE_URL)
             if (navigator.share) {
@@ -1414,7 +1417,7 @@ export function NotifyModal({ match, matchPlayers, players, onClose, onRefresh, 
   )
 }
 
-function TeamsPage({ teams, onRefresh, isMobile }) {
+function TeamsPage({ teams, matches, onRefresh, isMobile }) {
   const [showAdd,setShowAdd]=useState(false)
   const [editT,setEditT]=useState(null)
   const [delT,setDelT]=useState(null)
@@ -1422,6 +1425,12 @@ function TeamsPage({ teams, onRefresh, isMobile }) {
   const [busy,setBusy]=useState(false)
   const [addName,setAddName]=useState("")
   const [editName,setEditName]=useState("")
+  const [search,setSearch]=useState("")
+  const [sortBy,setSortBy]=useState("name")
+  const [sortOpen,setSortOpen]=useState(false)
+  const [openMenuId,setOpenMenuId]=useState(null)
+  const [lbRaw,setLbRaw]=useState([])
+  useEffect(()=>{ fetchLeaderboard().then(setLbRaw).catch(()=>{}) },[])
   const selectedTeam=teams.find(t=>t.id===selectedId)||null
   const iS={width:"100%",padding:"11px 12px",borderRadius:9,border:"1.5px solid #e5e7eb",fontSize:14,outline:"none",background:"#fafafa",boxSizing:"border-box",fontFamily:"var(--font-body)"}
   const mStyle={position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",zIndex:300}
@@ -1439,22 +1448,129 @@ function TeamsPage({ teams, onRefresh, isMobile }) {
   const delSubmit=async()=>{
     setBusy(true);try{await deleteTeam(delT.id);setDelT(null);setSelectedId(null);onRefresh()}catch(e){alert(e.message)};setBusy(false)
   }
+
+  // Real per-team stats derived from actual match history — teams have no
+  // persistent roster in the schema, so "players on a team" means unique
+  // players who've actually been confirmed into a match under that name.
+  const matchCountByTeam = {}
+  const playersByTeam = {}
+  matches.forEach(m => {
+    ;[m.team, m.our_team].filter(Boolean).forEach(name => {
+      matchCountByTeam[name] = (matchCountByTeam[name]||0) + 1
+    })
+  })
+  lbRaw.forEach(r => {
+    const names = [r.matches?.team, r.matches?.our_team].filter(Boolean)
+    names.forEach(name => {
+      if (!playersByTeam[name]) playersByTeam[name] = new Set()
+      if (r.player_id) playersByTeam[name].add(r.player_id)
+    })
+  })
+
+  const totalPlayers = new Set(lbRaw.map(r=>r.player_id).filter(Boolean)).size
+  const mostActive = Object.entries(matchCountByTeam).sort((a,b)=>b[1]-a[1])[0]
+
+  const q = search.trim().toLowerCase()
+  const filtered = teams.filter(t => !q || t.name.toLowerCase().includes(q))
+  const sortedTeams = [...filtered].sort((a,b) => {
+    if (sortBy==="matches") return (matchCountByTeam[b.name]||0) - (matchCountByTeam[a.name]||0)
+    if (sortBy==="players") return (playersByTeam[b.name]?.size||0) - (playersByTeam[a.name]?.size||0)
+    return (a.name||"").localeCompare(b.name||"")
+  })
+
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <h2 style={{color:"#0F172A",fontSize:isMobile?17:20,fontWeight:800,margin:0,fontFamily:"var(--font-head)"}}>Teams ({teams.length})</h2>
-        <Btn variant="green" size={isMobile?"sm":"md"} onClick={()=>{setAddName("");setShowAdd(true)}}>+ Add Team</Btn>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
+        <div>
+          <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Teams</h2>
+          <div style={{fontSize:13,color:"#64748B",marginTop:4}}>Manage all teams on Selected Sports</div>
+        </div>
+        <button onClick={()=>{setAddName("");setShowAdd(true)}} style={{padding:"10px 16px",borderRadius:12,background:"#166534",border:"none",color:"#FFFFFF",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}><Plus size={15}/> Create Team</button>
       </div>
-      <SearchDropdown
-        options={teams}
-        value={selectedId}
-        onChange={id=>setSelectedId(id===selectedId?null:id)}
-        placeholder="Search team by name..."
-        renderOption={o=><div style={{display:"flex",alignItems:"center",gap:10}}><TeamAv name={o.name} logo={o.logo_url} size={32}/><span style={{fontWeight:700,fontSize:13}}>{o.name}</span></div>}
-        renderSelected={o=><div style={{display:"flex",alignItems:"center",gap:8}}><TeamAv name={o.name} logo={o.logo_url} size={24}/><span style={{fontWeight:700,fontSize:13}}>{o.name}</span></div>}
-      />
-      {selectedTeam ? (
-        <div style={{marginTop:12}}>
+
+      {/* Search + Sort */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:200,position:"relative"}}>
+          <SearchIcon size={16} color="#94A3B8" style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by team name..." style={{width:"100%",padding:"12px 14px 12px 40px",borderRadius:12,border:"1.5px solid #E2E8F0",fontSize:13,outline:"none",background:"#FFFFFF",boxSizing:"border-box",fontFamily:"var(--font-body)"}}/>
+        </div>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setSortOpen(o=>!o)} style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #E2E8F0",background:"#FFFFFF",color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><ArrowUpDown size={14}/> Sort</button>
+          {sortOpen && (
+            <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
+              {[["name","Name (A-Z)"],["matches","Most Matches"],["players","Most Players"]].map(([k,label])=>(
+                <button key={k} onClick={()=>{setSortBy(k);setSortOpen(false)}} style={{width:"100%",padding:"10px 14px",border:"none",background:sortBy===k?"rgba(34,197,94,0.08)":"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:sortBy===k?700:500}}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stat row */}
+      <div style={{display:"flex",background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:16,marginBottom:20,overflow:"hidden"}}>
+        {[
+          {icon:UsersRound, v:teams.length, label:"Total Teams"},
+          {icon:Calendar, v:Object.values(matchCountByTeam).reduce((a,b)=>a+b,0), label:"Team Match Appearances"},
+          {icon:Users, v:totalPlayers, label:"Total Players"},
+        ].map((c,i)=>(
+          <div key={i} style={{flex:1, padding:"18px 16px", display:"flex", alignItems:"center", gap:12, borderRight:i<2?"1px solid #F1F5F9":"none"}}>
+            <c.icon size={20} color="#166534"/>
+            <div>
+              <div style={{fontSize:isMobile?18:22,fontWeight:900,color:"#0F172A",fontFamily:"var(--font-head)",lineHeight:1}}>{c.v}</div>
+              <div style={{fontSize:11,color:"#64748B",marginTop:2}}>{c.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      {sortedTeams.length===0 ? (
+        <Card style={{padding:"40px 24px",textAlign:"center"}}>
+          <div style={{color:"#6b7280",fontSize:13}}>No teams match your search.</div>
+        </Card>
+      ) : (
+        <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+          {!isMobile && (
+            <div style={{display:"flex",alignItems:"center",padding:"12px 16px",background:"#F8FAF8",borderBottom:"1px solid #E2E8F0",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:0.4}}>
+              <div style={{flex:1}}>Team</div>
+              <div style={{width:90,textAlign:"center"}}>Players</div>
+              <div style={{width:90,textAlign:"center"}}>Matches</div>
+              <div style={{width:36}}/>
+            </div>
+          )}
+          {sortedTeams.map((t,i) => (
+            <div key={t.id} onClick={()=>setSelectedId(id=>id===t.id?null:t.id)} style={{display:"flex",alignItems:"center",padding:"14px 16px",background:selectedId===t.id?"rgba(34,197,94,0.05)":"#FFFFFF",borderTop:i===0?"none":"1px solid #F1F5F9",cursor:"pointer",flexWrap:isMobile?"wrap":"nowrap",gap:isMobile?10:0}}>
+              <div style={{flex:1,display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                <TeamAv name={t.name} logo={t.logo_url} size={40}/>
+                <div style={{fontWeight:700,fontSize:14,color:"#0F172A"}}>{t.name}</div>
+              </div>
+              <div style={{width:isMobile?"auto":90,textAlign:"center",fontSize:14,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>{playersByTeam[t.name]?.size||0}{isMobile && <span style={{fontSize:10,color:"#94A3B8",fontWeight:500}}> players</span>}</div>
+              <div style={{width:isMobile?"auto":90,textAlign:"center",fontSize:14,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>{matchCountByTeam[t.name]||0}{isMobile && <span style={{fontSize:10,color:"#94A3B8",fontWeight:500}}> matches</span>}</div>
+              <div style={{width:36,display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={e=>e.stopPropagation()}>
+                <button onClick={()=>setOpenMenuId(id=>id===t.id?null:t.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><MoreVertical size={16} color="#94A3B8"/></button>
+                {openMenuId===t.id && (
+                  <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:140,overflow:"hidden"}}>
+                    <button onClick={()=>{setEditT(t);setEditName(t.name);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer"}}>Edit Name</button>
+                    <button onClick={()=>{setDelT(t);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",borderTop:"1px solid #F1F5F9"}}>Delete</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {mostActive && (
+        <Card style={{marginTop:20, padding:"16px 18px"}}>
+          <div style={{fontWeight:700,fontSize:14,color:"#0F172A",marginBottom:10,fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:8}}><BarChart3 size={16} color="#166534"/> Team Insights</div>
+          <div style={{fontSize:12,color:"#64748B"}}>Most Active Team</div>
+          <div style={{fontSize:15,fontWeight:800,color:"#166534",fontFamily:"var(--font-head)"}}>{mostActive[0]}</div>
+          <div style={{fontSize:11,color:"#94A3B8"}}>{mostActive[1]} match appearance{mostActive[1]!==1?"s":""}</div>
+        </Card>
+      )}
+
+      {selectedTeam && (
+        <div style={{marginTop:16}}>
           <div style={{background:"#f0fdf4",borderRadius:16,padding:"16px 18px",border:"2px solid #166534"}}>
             <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14}}>
               <TeamAv name={selectedTeam.name} logo={selectedTeam.logo_url} size={56}/>
@@ -1468,10 +1584,6 @@ function TeamsPage({ teams, onRefresh, isMobile }) {
               <button onClick={()=>setDelT(selectedTeam)} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff5f5",color:"#991b1b",fontSize:13,cursor:"pointer",fontWeight:700}}>Delete</button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div style={{marginTop:12,padding:"14px 16px",background:"#f9fafb",borderRadius:12,border:"1.5px solid #e5e7eb",textAlign:"center",color:"#9ca3af",fontSize:13}}>
-          Search or select a team above to manage it
         </div>
       )}
       {showAdd&&<div style={mStyle}><div style={mBox}>
