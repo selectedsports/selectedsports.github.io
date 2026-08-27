@@ -1051,7 +1051,6 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                     <button onClick={()=>setShowNotify(true)} style={{ padding:"9px 14px",borderRadius:9,background:"rgba(15,110,86,0.15)",border:"1px solid rgba(15,110,86,0.35)",color:"#0F6E56",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>🔒 Invite Players</button>
                     <button onClick={async()=>{
                       const msg = waInviteWithLink(m, BASE_URL)
-                      if (!linkActive) { await toggleMatchLink(m.id, true); setLinkActive(true) }
                       if (navigator.share) { try { await navigator.share({ title:"Match Invite", text:msg }) } catch {} }
                       else { window.open("https://wa.me/?text="+encodeURIComponent(msg), "_blank") }
                     }} title="Includes a forwardable link — recipients can pass it on to others" style={{ padding:"9px 14px",borderRadius:9,background:"rgba(37,211,102,0.2)",border:"1px solid rgba(74,222,128,0.4)",color:"#166534",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>📤 Share Invite ⚠️</button>

@@ -53,7 +53,6 @@ export default function PublicInvitePage({ token }) {
       try {
         const m = await fetchMatchByToken(token)
         if (!m) { setError("Match not found."); setLoading(false); return }
-        if (!m.link_active) { setError("This invite link is no longer active."); setLoading(false); return }
         if (m.status !== "upcoming") { setError("This match has already been completed or cancelled."); setLoading(false); return }
         setMatch(m)
         setStep("check")
@@ -72,15 +71,21 @@ export default function PublicInvitePage({ token }) {
   }
 
   // After identifying the player (login or register), check if they've already responded.
-  // If yes -> go straight to matchview (with their real status). If no -> go to availability.
+  // If yes -> go straight to matchview (with their real status). If no -> only let them
+  // self-confirm if they were actually invited (a match_players row already exists for
+  // them, e.g. from "Invite Players") OR the organizer explicitly opened this match to
+  // the public. Otherwise, this is a forwarded link reaching someone who was never
+  // invited — block that, per the organizer's control over who's in the squad.
   const routeAfterAuth = async (playerObj) => {
     const rows = await loadSquad()
     const mine = rows.find(r => r.player_id === playerObj.id)
     if (mine && (mine.status === "confirmed" || mine.status === "declined" || mine.status === "waitlist")) {
       setMyStatus(mine.status)
       setStep("matchview")
-    } else {
+    } else if (mine || match.link_active) {
       setStep("availability")
+    } else {
+      setStep("notInvited")
     }
   }
 
@@ -116,7 +121,7 @@ export default function PublicInvitePage({ token }) {
       const newPlayer = await addPlayer(fullName, cleaned, pin)
       setFoundPlayer(newPlayer)
       saveSession(roleFor(newPlayer), newPlayer)
-      setStep("availability") // brand new player — never responded, no need to check
+      setStep(match.link_active ? "availability" : "notInvited") // brand new player — can only self-join if this match is open to the public
     } catch(e) { alert("Registration failed: " + e.message) }
     setBusy(false)
   }
@@ -219,6 +224,16 @@ export default function PublicInvitePage({ token }) {
       <button onClick={register} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:12, background:"linear-gradient(135deg,#166534,#0F172A)", border:"none", color:"#0F172A", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)" }}>
         {busy ? "Registering..." : "Register & Continue →"}
       </button>
+    </div>
+  )
+
+  // ── Step: Not invited — identified themselves, but no invite exists and this
+  // match isn't open to the public. Likely a forwarded link. ─────────────────
+  if (step === "notInvited") return wrap(
+    <div style={{ textAlign:"center" }}>
+      <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+      <h2 style={{ color:"#0F172A", fontFamily:"var(--font-head)", fontSize:17, fontWeight:700, margin:"0 0 8px" }}>You haven't been invited to this match</h2>
+      <p style={{ color:"#64748B", fontSize:13, lineHeight:1.6, marginBottom:4 }}>This invite link was shared with specific players only. If you'd like to join, please ask the organizer to add you.</p>
     </div>
   )
 
