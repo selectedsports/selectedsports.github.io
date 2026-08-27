@@ -231,9 +231,9 @@ export default function PublicInvitePage({ token }) {
   // match isn't open to the public. Likely a forwarded link. ─────────────────
   if (step === "notInvited") return wrap(
     <div style={{ textAlign:"center" }}>
-      <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
-      <h2 style={{ color:"#0F172A", fontFamily:"var(--font-head)", fontSize:17, fontWeight:700, margin:"0 0 8px" }}>You haven't been invited to this match</h2>
-      <p style={{ color:"#64748B", fontSize:13, lineHeight:1.6, marginBottom:4 }}>This invite link was shared with specific players only. If you'd like to join, please ask the organizer to add you.</p>
+      <div style={{ fontSize:40, marginBottom:12 }}>🏏🚫</div>
+      <h2 style={{ color:"#0F172A", fontFamily:"var(--font-head)", fontSize:17, fontWeight:700, margin:"0 0 8px" }}>Caught out!</h2>
+      <p style={{ color:"#64748B", fontSize:13, lineHeight:1.6, marginBottom:4 }}>Nice try sneaking into someone else's invite link, but this squad isn't taking walk-ins today. If you actually want to play, ask the organizer to invite you properly — like everyone else had to.</p>
     </div>
   )
 

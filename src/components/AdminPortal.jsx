@@ -988,7 +988,9 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                 <div style={{ display:"flex",gap:6,marginTop:10,flexWrap:"wrap" }}>
                   <span style={{ background:m.type==="internal"?"#0F766E":"#FBBF24", color:"#FFFFFF", borderRadius:7, padding:"4px 11px", fontSize:11, fontWeight:700, display:"inline-block" }}>{m.type==="internal"?"Internal 9v9":"External"}</span>
                   <span style={{ background:m.status==="upcoming"?"#166534":m.status==="completed"?"#64748B":"#EF4444", color:"#FFFFFF", borderRadius:999, padding:"4px 12px", fontSize:11, fontWeight:700, textTransform:"capitalize", display:"inline-block" }}>{m.status}</span>
-                  {linkActive&&<Tag col="green"><LinkIcon size={11} style={{verticalAlign:"-1px"}}/> Link active</Tag>}
+                  <button onClick={handleToggleLink} disabled={toggling} style={{ background:linkActive?"rgba(34,197,94,0.12)":"rgba(148,163,184,0.15)", border:linkActive?"1px solid rgba(34,197,94,0.35)":"1px solid #E2E8F0", color:linkActive?"#166534":"#64748B", borderRadius:999, padding:"4px 11px", fontSize:11, fontWeight:700, cursor:toggling?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", gap:5 }}>
+                    <LinkIcon size={11}/> Public link {toggling ? "..." : linkActive ? "ON — tap to turn off" : "OFF — tap to turn on"}
+                  </button>
                 </div>
               </div>
             </div>
