@@ -134,6 +134,9 @@ export function MessageInbox({ messages, onClose, player }) {
   const [replyText, setReplyText] = useState("")
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [squadMatchId, setSquadMatchId] = useState(null)
+  const [squadRows, setSquadRows] = useState([])
+  const [squadLoading, setSquadLoading] = useState(false)
   const sendReply = async () => {
     if (!replyText.trim() || !player) return
     setSending(true)
@@ -147,6 +150,54 @@ export function MessageInbox({ messages, onClose, player }) {
     } catch(e) { alert(e.message) }
     setSending(false)
   }
+  // "Squad full" messages carry a hidden [[match:ID]] marker so we can show
+  // the real roster instead of just the plain notification text.
+  const parseMatchRef = (text) => {
+    const match = text.match(/\[\[match:([a-zA-Z0-9-]+)\]\]/)
+    return { clean: text.replace(/\[\[match:[a-zA-Z0-9-]+\]\]/, "").trim(), matchId: match ? match[1] : null }
+  }
+  const openSquad = async (matchId) => {
+    setSquadMatchId(matchId)
+    setSquadLoading(true)
+    try { setSquadRows(await fetchMatchPlayers(matchId)) } catch(e) { alert(e.message) }
+    setSquadLoading(false)
+  }
+  if (squadMatchId) {
+    const confirmed = squadRows.filter(r => r.status === "confirmed")
+    const waitlist = squadRows.filter(r => r.status === "waitlist")
+    return (
+      <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:16 }}>
+        <div onClick={e=>e.stopPropagation()} style={{ background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:16, maxWidth:420, width:"100%", maxHeight:"80vh", overflowY:"auto", padding:20, boxShadow:"0 24px 60px rgba(15,23,42,0.35)" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <button onClick={()=>setSquadMatchId(null)} style={{ background:"transparent", border:"none", fontSize:13, fontWeight:700, color:"#166534", cursor:"pointer", display:"flex", alignItems:"center", gap:4, padding:0 }}><ArrowLeft size={15}/> Back</button>
+            <button onClick={onClose} style={{ background:"transparent", border:"none", fontSize:20, cursor:"pointer", color:"#64748B" }}>×</button>
+          </div>
+          {squadLoading ? <Spinner/> : (
+            <>
+              <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Confirmed ({confirmed.length})</div>
+              <div style={{ marginBottom:18 }}>
+                {confirmed.length === 0 ? <div style={{ color:"#94A3B8", fontSize:12 }}>No one confirmed yet.</div> : confirmed.map(r => (
+                  <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0" }}>
+                    <Av name={r.players?.name || "Player"} id={r.player_id} sz={28}/>
+                    <span style={{ fontSize:13, color:"#0F172A", fontWeight:600 }}>{r.players?.name || "Player"}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontWeight:700, fontSize:14, color:"#B8860B", marginBottom:10, fontFamily:"var(--font-head)" }}>Waitlist ({waitlist.length})</div>
+              <div>
+                {waitlist.length === 0 ? <div style={{ color:"#94A3B8", fontSize:12 }}>No one on the waitlist.</div> : waitlist.map(r => (
+                  <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"7px 0" }}>
+                    <Av name={r.players?.name || "Player"} id={r.player_id} sz={28}/>
+                    <span style={{ fontSize:13, color:"#0F172A", fontWeight:600 }}>{r.players?.name || "Player"}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
   return (
     <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:16 }}>
       <div onClick={e=>e.stopPropagation()} style={{ background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:16, maxWidth:420, width:"100%", maxHeight:"80vh", overflowY:"auto", padding:20, boxShadow:"0 24px 60px rgba(15,23,42,0.35)" }}>
@@ -155,12 +206,18 @@ export function MessageInbox({ messages, onClose, player }) {
           <button onClick={onClose} style={{ background:"transparent", border:"none", fontSize:20, cursor:"pointer", color:"#64748B" }}>×</button>
         </div>
         {messages.length === 0 && <div style={{ color:"#64748B", fontSize:13, textAlign:"center", padding:"20px 0" }}>No messages yet.</div>}
-        {messages.map(m => (
-          <div key={m.id} style={{ padding:"12px 0", borderBottom:"1px solid #E2E8F0" }}>
-            <div style={{ fontSize:13, color:"#0F172A", lineHeight:1.5 }}>{m.message}</div>
-            <div style={{ fontSize:11, color:"#64748B", marginTop:5 }}>From {m.sender} · {m.created_at ? new Date(m.created_at).toLocaleString() : ""}</div>
-          </div>
-        ))}
+        {messages.map(m => {
+          const { clean, matchId } = parseMatchRef(m.message)
+          return (
+            <div key={m.id} onClick={matchId ? ()=>openSquad(matchId) : undefined} style={{ padding:"12px 0", borderBottom:"1px solid #E2E8F0", cursor:matchId?"pointer":"default" }}>
+              <div style={{ fontSize:13, color:"#0F172A", lineHeight:1.5 }}>{clean}</div>
+              <div style={{ fontSize:11, color:"#64748B", marginTop:5, display:"flex", alignItems:"center", gap:6 }}>
+                From {m.sender} · {m.created_at ? new Date(m.created_at).toLocaleString() : ""}
+                {matchId && <span style={{ color:"#166534", fontWeight:700, display:"flex", alignItems:"center", gap:2 }}>· View squad <ChevronRight size={11}/></span>}
+              </div>
+            </div>
+          )
+        })}
         {player && (
           <div style={{ marginTop:14, paddingTop:14, borderTop:"1.5px solid #E2E8F0" }}>
             <div style={{ fontSize:12, fontWeight:700, color:"#0F172A", marginBottom:8 }}>Reply to Admin</div>
@@ -493,7 +550,7 @@ export function ProRequestCard({ player }) {
   )
 }
 
-import { fetchMyConversations, fetchConversation, sendDirectMessage, markConversationRead, countUnreadDirectMessages, fetchMyOrganizers, fetchMyConfirmedPlayers, fetchPlayers, fetchAdminPlayerId } from "../db.js"
+import { fetchMyConversations, fetchConversation, sendDirectMessage, markConversationRead, countUnreadDirectMessages, fetchMyOrganizers, fetchMyConfirmedPlayers, fetchPlayers, fetchAdminPlayerId, fetchMatchPlayers } from "../db.js"
 
 export function DirectMessagesPanel({ player, onClose }) {
   const [convos, setConvos] = useState([])
