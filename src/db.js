@@ -229,10 +229,26 @@ export async function removePlayerFromMatch(match_id, player_id) {
   await promoteFromWaitlist(match_id)
 }
 export async function setPlayerStatus(match_id, player_id, status) {
-  const { error } = await supabase.from("match_players").update({ status, responded_at: new Date().toISOString() }).eq("match_id", match_id).eq("player_id", player_id)
+  let finalStatus = status
+  // Enforce the squad cap here too — this function is what the "Available"
+  // buttons (Player Portal, Pro's own invites, Admin's quick confirm) call,
+  // and it previously had no capacity check at all, unlike confirmPlayerToMatch.
+  if (status === "confirmed") {
+    const { data: match } = await supabase.from("matches").select("max_players").eq("id", match_id).single()
+    const cap = match?.max_players || 0
+    if (cap > 0) {
+      const { data: existing } = await supabase.from("match_players").select("status").eq("match_id", match_id).eq("player_id", player_id).maybeSingle()
+      if (!existing || existing.status !== "confirmed") {
+        const { count } = await supabase.from("match_players").select("id", { count: "exact", head: true }).eq("match_id", match_id).eq("status", "confirmed")
+        if ((count || 0) >= cap) finalStatus = "waitlist"
+      }
+    }
+  }
+  const { error } = await supabase.from("match_players").update({ status: finalStatus, responded_at: new Date().toISOString() }).eq("match_id", match_id).eq("player_id", player_id)
   if (error) throw error
   // If this player is no longer confirmed, a spot may have opened
   if (status !== "confirmed") await promoteFromWaitlist(match_id)
+  return finalStatus
 }
 export async function fetchPublicResponses(match_id) {
   const { data, error } = await supabase.from("public_responses").select("*").eq("match_id", match_id).order("created_at")
@@ -519,7 +535,7 @@ export async function fetchLeaderboard() {
   // so the UI can filter by season/role and recompute rankings without refetching.
   // Only completed matches count, so confirming into a future/never-played
   // match can't inflate rank. Ties are broken by who confirmed earliest overall.
-  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role), matches!inner(status, date)").eq("status", "confirmed").eq("matches.status", "completed")
+  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role), matches!inner(status, date, team, our_team)").eq("status", "confirmed").eq("matches.status", "completed")
   if (error) throw error
   return data || []
 }
