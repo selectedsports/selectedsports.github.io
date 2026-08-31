@@ -307,7 +307,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
         {page==="matches"   && <MatchesPage matches={matches} players={players} grounds={grounds} teams={teams} selId={selId} initialFilter={matchFilter} settings={settings} loggedPlayer={loggedPlayer} onNavigate={navigate} onRefresh={load} isMobile={isMobile}/>}
         {page==="players"   && <><BackBtn onBack={()=>navigate("dashboard")}/><PlayersPage players={players} onRefresh={load} isMobile={isMobile} isFounder={isFounder}/></>}
         {page==="teams"     && <><BackBtn onBack={()=>navigate("dashboard")}/><TeamsPage teams={teams} matches={matches} onRefresh={load} isMobile={isMobile}/></>}
-        {page==="grounds"   && <><BackBtn onBack={()=>navigate("dashboard")}/><GroundsPage grounds={grounds} onRefresh={load} isMobile={isMobile}/></>}
+        {page==="grounds"   && <><BackBtn onBack={()=>navigate("dashboard")}/><GroundsPage grounds={grounds} matches={matches} onRefresh={load} isMobile={isMobile}/></>}
         {page==="auction"   && <><BackBtn onBack={()=>navigate("dashboard")}/><AuctionPage isMobile={isMobile} isFounder={isFounder}/></>}
         {page==="leaderboard" && <><BackBtn onBack={()=>navigate("dashboard")}/><LeaderboardPage isMobile={isMobile} myId={loggedPlayer?.id}/></>}
       </div>
@@ -1654,6 +1654,11 @@ function AuctionPage({ isMobile, isFounder }) {
   const [viewingTeam, setViewingTeam] = useState(null)
   const [allAuctions, setAllAuctions] = useState([])
   const [loadingAuctions, setLoadingAuctions] = useState(true)
+  const [auctionSearch, setAuctionSearch] = useState("")
+  const [auctionSort, setAuctionSort] = useState("date")
+  const [auctionSortOpen, setAuctionSortOpen] = useState(false)
+  const [poolSearch, setPoolSearch] = useState("")
+  const [teamSearch, setTeamSearch] = useState("")
 
   const loadAuctions = async () => {
     setLoadingAuctions(true)
@@ -1736,17 +1741,41 @@ function AuctionPage({ isMobile, isFounder }) {
 
   if (loading) return <Spinner/>
 
+  const liveCount = allAuctions.filter(a => a.status === "live").length
+  const completedCount = allAuctions.filter(a => a.status === "completed").length
+  const pendingPaymentCount = allAuctions.filter(a => a.payment_status === "pending").length
+
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, gap:12 }}>
         <div>
           {managingAuction && (
             <button onClick={()=>{ setManagingAuction(null); setSubTab("today") }} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", padding:0, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>← All Auctions</button>
           )}
-          <h2 style={{ color:"#0F172A", fontSize:isMobile?17:20, fontWeight:800, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auction Control Panel"}</h2>
+          <h2 style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auctions"}</h2>
+          {!managingAuction && <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Manage all auctions on Selected Sports</div>}
         </div>
-        <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"9px 16px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", flexShrink:0 }}>+ New Auction</button>
+        <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> New Auction</button>
       </div>
+
+      {!managingAuction && (
+        <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:20, overflow:"hidden", flexWrap:"wrap" }}>
+          {[
+            { icon:Trophy, v:allAuctions.length, label:"Total Auctions" },
+            { icon:Zap, v:liveCount, label:"Live Now" },
+            { icon:CheckCircle2, v:completedCount, label:"Completed" },
+            { icon:Wallet, v:pendingPaymentCount, label:"Pending Payment" },
+          ].map((c,i)=>(
+            <div key={i} style={{ flex:"1 1 25%", minWidth:130, padding:"18px 16px", display:"flex", alignItems:"center", gap:12, borderRight:i<3?"1px solid #F1F5F9":"none" }}>
+              <c.icon size={20} color="#166534"/>
+              <div>
+                <div style={{ fontSize:isMobile?18:22, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
+                <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>{c.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {managingAuction && isFounder && (
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"12px 16px", borderRadius:12, background:regOpen?"rgba(34,197,94,0.08)":"rgba(231,76,60,0.08)", border:`1.5px solid ${regOpen?"rgba(34,197,94,0.3)":"rgba(231,76,60,0.2)"}`, marginBottom:18 }}>
@@ -1758,25 +1787,50 @@ function AuctionPage({ isMobile, isFounder }) {
         </div>
       )}
 
-      <div style={{ display:"flex", gap:8, marginBottom:18, borderBottom:"1.5px solid #E2E8F0", flexWrap:"wrap" }}>
+      <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
         {(managingAuction
           ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"]]
           : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
         ).map(([v, label]) => (
-          <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"10px 4px", background:"none", border:"none", borderBottom:subTab===v?"2.5px solid #166534":"2.5px solid transparent", color:subTab===v?"#166534":"#94A3B8", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}>{label}</button>
+          <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
         ))}
       </div>
 
       {(subTab === "today" || subTab === "upcoming") && (() => {
         const todayStr = new Date().toISOString().split("T")[0]
-        const list = allAuctions.filter(a => {
+        const dateFiltered = allAuctions.filter(a => {
           if (!a.auction_date) return subTab === "upcoming" // undated auctions show under Upcoming
           return subTab === "today" ? a.auction_date === todayStr : a.auction_date > todayStr
+        })
+        const q = auctionSearch.trim().toLowerCase()
+        const searched = dateFiltered.filter(a => !q || a.name.toLowerCase().includes(q) || (a.players?.name||"").toLowerCase().includes(q) || (a.location||"").toLowerCase().includes(q))
+        const list = [...searched].sort((a,b) => {
+          if (auctionSort === "name") return a.name.localeCompare(b.name)
+          if (auctionSort === "teams") return (b.max_teams||0) - (a.max_teams||0)
+          return (a.auction_date||"9999") < (b.auction_date||"9999") ? -1 : 1
         })
         const statusColor = { free:"#166534", paid:"#166534", pending:"#B8860B", rejected:"#EF4444" }
         const opColor = { setup:"#94A3B8", live:"#22C55E", completed:"#0F172A" }
         if (loadingAuctions) return <Spinner/>
-        return list.length === 0 ? (
+        return (
+          <>
+            <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+              <div style={{ flex:1, minWidth:200, position:"relative" }}>
+                <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                <input value={auctionSearch} onChange={e=>setAuctionSearch(e.target.value)} placeholder="Search auctions by name or organizer..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+              </div>
+              <div style={{ position:"relative" }}>
+                <button onClick={()=>setAuctionSortOpen(o=>!o)} style={{ padding:"12px 16px", borderRadius:12, border:"1.5px solid #E2E8F0", background:"#FFFFFF", color:"#0F172A", fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><ArrowUpDown size={14}/> Sort</button>
+                {auctionSortOpen && (
+                  <div style={{ position:"absolute", top:"100%", right:0, marginTop:4, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:12, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:150, overflow:"hidden" }}>
+                    {[["date","Date"],["name","Name (A-Z)"],["teams","Most Teams"]].map(([k,label])=>(
+                      <button key={k} onClick={()=>{setAuctionSort(k);setAuctionSortOpen(false)}} style={{ width:"100%", padding:"10px 14px", border:"none", background:auctionSort===k?"rgba(34,197,94,0.08)":"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", fontWeight:auctionSort===k?700:500 }}>{label}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {list.length === 0 ? (
           <Card style={{ padding:"32px 16px", textAlign:"center" }}>
             <div style={{ fontSize:14, color:"#64748B" }}>No {subTab === "today" ? "auctions today" : "upcoming auctions"}.</div>
           </Card>
@@ -1803,6 +1857,8 @@ function AuctionPage({ isMobile, isFounder }) {
               </Card>
             )})}
           </div>
+        )}
+          </>
         )
       })()}
 
@@ -1821,47 +1877,99 @@ function AuctionPage({ isMobile, isFounder }) {
         </div>
       )}
 
-      {subTab === "players" && (
-        auctionPlayers.length === 0 ? (
-          <Card style={{ padding:"32px 16px", textAlign:"center" }}>
-            <div style={{ fontSize:14, color:"#64748B" }}>No players have registered for the auction yet.</div>
-            <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Share the public auction registration link to start collecting entries.</div>
-          </Card>
-        ) : (
-          <div style={{ display:"grid", gap:10 }}>
-            {auctionPlayers.map(p => (
-              <Card key={p.id} style={{ padding:"14px 16px" }}>
-                <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
-                  <Av name={p.name} id={p.id} sz={38}/>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
-                    <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
-                  </div>
-                  <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+      {subTab === "players" && (() => {
+        const soldCount = auctionPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
+        const totalBase = auctionPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
+        const q = poolSearch.trim().toLowerCase()
+        const filteredPool = auctionPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+        return (
+        <div>
+          <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
+            {[
+              { icon:Users, v:auctionPlayers.length, label:"Total Players" },
+              { icon:CheckCircle2, v:soldCount, label:"Sold" },
+              { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
+            ].map((c,i)=>(
+              <div key={i} style={{ flex:"1 1 33%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<2?"1px solid #F1F5F9":"none" }}>
+                <c.icon size={17} color="#166534"/>
+                <div>
+                  <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
+                  <div style={{ fontSize:10, color:"#64748B", marginTop:2 }}>{c.label}</div>
                 </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontSize:12, color:"#64748B", fontWeight:600 }}>Base Price ₹</span>
-                  <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [p.id]: e.target.value})} onBlur={()=>savePrice(p.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px" }}/>
-                </div>
-              </Card>
+              </div>
             ))}
           </div>
-        )
-      )}
-
-      {subTab === "teams" && (
-        <div>
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:14 }}>
-            <Btn variant="green" size={isMobile?"sm":"md"} onClick={openAddTeam}>+ Add Team</Btn>
+          <div style={{ position:"relative", marginBottom:14 }}>
+            <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+            <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search players by name or role..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
           </div>
-          {auctionTeams.length === 0 ? (
+          {filteredPool.length === 0 ? (
             <Card style={{ padding:"32px 16px", textAlign:"center" }}>
-              <div style={{ fontSize:14, color:"#64748B" }}>No teams set up yet.</div>
-              <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Add each team and set their starting purse before the auction begins.</div>
+              <div style={{ fontSize:14, color:"#64748B" }}>{auctionPlayers.length === 0 ? "No players have registered for the auction yet." : "No players match your search."}</div>
+              {auctionPlayers.length === 0 && <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Share the public auction registration link to start collecting entries.</div>}
             </Card>
           ) : (
             <div style={{ display:"grid", gap:10 }}>
-              {auctionTeams.map(t => (
+              {filteredPool.map(p => (
+                <Card key={p.id} style={{ padding:"14px 16px" }}>
+                  <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
+                    <Av name={p.name} id={p.id} sz={38}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
+                      <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
+                    </div>
+                    <ChevronRight size={16} color="#94A3B8"/>
+                    <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+                  </div>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <span style={{ fontSize:12, color:"#64748B", fontWeight:600 }}>Base Price ₹</span>
+                    <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [p.id]: e.target.value})} onBlur={()=>savePrice(p.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px" }}/>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+        )
+      })()}
+
+      {subTab === "teams" && (() => {
+        const totalPurse = auctionTeams.reduce((s,t) => s + (Number(t.purse_total)||0), 0)
+        const totalRemaining = auctionTeams.reduce((s,t) => s + (Number(t.purse_remaining)||0), 0)
+        const q = teamSearch.trim().toLowerCase()
+        const filteredTeams = auctionTeams.filter(t => !q || t.name.toLowerCase().includes(q) || (t.owner_name||"").toLowerCase().includes(q))
+        return (
+        <div>
+          <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
+            {[
+              { icon:UsersRound, v:auctionTeams.length, label:"Total Teams" },
+              { icon:Wallet, v:`₹${totalPurse.toLocaleString("en-IN")}`, label:"Total Purse Pool" },
+              { icon:CheckCircle2, v:`₹${totalRemaining.toLocaleString("en-IN")}`, label:"Remaining" },
+            ].map((c,i)=>(
+              <div key={i} style={{ flex:"1 1 33%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<2?"1px solid #F1F5F9":"none" }}>
+                <c.icon size={17} color="#166534"/>
+                <div>
+                  <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
+                  <div style={{ fontSize:10, color:"#64748B", marginTop:2 }}>{c.label}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+            <div style={{ flex:1, position:"relative" }}>
+              <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+              <input value={teamSearch} onChange={e=>setTeamSearch(e.target.value)} placeholder="Search teams by name or owner..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+            </div>
+            <button onClick={openAddTeam} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><Plus size={15}/> Add Team</button>
+          </div>
+          {filteredTeams.length === 0 ? (
+            <Card style={{ padding:"32px 16px", textAlign:"center" }}>
+              <div style={{ fontSize:14, color:"#64748B" }}>{auctionTeams.length === 0 ? "No teams set up yet." : "No teams match your search."}</div>
+              {auctionTeams.length === 0 && <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Add each team and set their starting purse before the auction begins.</div>}
+            </Card>
+          ) : (
+            <div style={{ display:"grid", gap:10 }}>
+              {filteredTeams.map(t => (
                 <Card key={t.id} style={{ padding:"14px 16px" }}>
                   <div onClick={()=>setViewingTeam(t)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
                     <TeamAv name={t.name} logo={null} size={38}/>
@@ -1873,6 +1981,7 @@ function AuctionPage({ isMobile, isFounder }) {
                       <div style={{ fontWeight:800, fontSize:15, color:"#166534", fontFamily:"var(--font-head)" }}>₹{t.purse_remaining}</div>
                       <div style={{ fontSize:10, color:"#94A3B8" }}>of ₹{t.purse_total}</div>
                     </div>
+                    <ChevronRight size={16} color="#94A3B8"/>
                     <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#64748B", padding:4 }}>Edit</button>
                     <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
                   </div>
@@ -1881,23 +1990,31 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {subTab === "live" && <AuctionLiveConsole isMobile={isMobile} auctionPlayers={auctionPlayers} auctionTeams={auctionTeams} onPoolChange={load} auctionId={managingAuction?.id || null}/>}
 
       {subTab === "payments" && isFounder && (
         pendingPayments.length === 0 ? (
           <Card style={{ padding:"32px 16px", textAlign:"center" }}>
+            <Wallet size={28} color="#E2E8F0" style={{ marginBottom:10 }}/>
             <div style={{ fontSize:14, color:"#64748B" }}>No pending auction payments.</div>
           </Card>
         ) : (
-          <div style={{ display:"grid", gap:10 }}>
+          <div style={{ display:"grid", gap:12 }}>
             {pendingPayments.map(a => (
-              <Card key={a.id} style={{ padding:"14px 16px" }}>
-                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{a.name}</div>
-                <div style={{ fontSize:12, color:"#94A3B8", marginTop:2 }}>Organizer: {a.players?.name || "Unknown"} ({a.players?.phone || "—"})</div>
-                <div style={{ fontSize:12, color:"#94A3B8" }}>{a.plan_tier} · up to {a.max_teams} teams · ₹{a.amount_due}</div>
-                <div style={{ display:"flex", gap:8, marginTop:10 }}>
+              <Card key={a.id} style={{ padding:"16px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+                  <div style={{ width:38, height:38, borderRadius:10, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Wallet size={18} color="#B8860B"/></div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{a.name}</div>
+                    <div style={{ fontSize:12, color:"#94A3B8", marginTop:2 }}>Organizer: {a.players?.name || "Unknown"} ({a.players?.phone || "—"})</div>
+                  </div>
+                  <span style={{ background:"rgba(184,134,11,0.12)", color:"#B8860B", fontSize:15, fontWeight:800, padding:"4px 12px", borderRadius:8, fontFamily:"var(--font-head)", flexShrink:0 }}>₹{a.amount_due}</span>
+                </div>
+                <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>{a.plan_tier} · up to {a.max_teams} teams</div>
+                <div style={{ display:"flex", gap:8 }}>
                   <button onClick={()=>doApprovePayment(a.id)} style={{ flex:1, padding:"9px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer" }}>Approve</button>
                   <button onClick={()=>doRejectPayment(a.id)} style={{ flex:1, padding:"9px", borderRadius:8, border:"1px solid #EF4444", background:"#FFFFFF", color:"#EF4444", fontSize:12, fontWeight:700, cursor:"pointer" }}>Reject</button>
                 </div>
@@ -2066,18 +2183,21 @@ function AuctionPage({ isMobile, isFounder }) {
   )
 }
 
-function GroundsPage({ grounds, onRefresh, isMobile }) {
+function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
   const [showAdd,setShowAdd]=useState(false)
   const [editG,setEditG]=useState(null)
   const [delG,setDelG]=useState(null)
   const [selectedId,setSelectedId]=useState(null)
   const [busy,setBusy]=useState(false)
+  const [search,setSearch]=useState("")
+  const [sortBy,setSortBy]=useState("name")
+  const [sortOpen,setSortOpen]=useState(false)
+  const [openMenuId,setOpenMenuId]=useState(null)
   const empty={name:"",location:"",maps_link:"",notes:""}
   const [form,setForm]=useState(empty)
   const [editForm,setEditForm]=useState(empty)
   const selectedGround=grounds.find(g=>g.id===selectedId)||null
   const iS={width:"100%",padding:"11px 12px",borderRadius:9,border:"1.5px solid #e5e7eb",fontSize:14,outline:"none",background:"#fafafa",boxSizing:"border-box",fontFamily:"var(--font-body)"}
-  const lS={fontSize:12,color:"#6b7280",display:"block",marginBottom:5,fontWeight:600}
   const mStyle={position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",zIndex:300}
   const mBox={background:"#F8FAF8",borderRadius:isMobile?"20px 20px 0 0":20,padding:isMobile?"22px 18px":28,width:"100%",maxWidth:isMobile?"100%":480,maxHeight:isMobile?"95vh":"auto",overflowY:"auto",boxSizing:"border-box"}
   const addSubmit=async()=>{
@@ -2091,38 +2211,130 @@ function GroundsPage({ grounds, onRefresh, isMobile }) {
   const delSubmit=async()=>{
     setBusy(true);try{await deleteGround(delG.id);setDelG(null);setSelectedId(null);onRefresh()}catch(e){alert(e.message)};setBusy(false)
   }
+
+  // Real per-ground stats derived from actual match history — grounds have no
+  // capacity/status/booking-calendar fields in the schema, so we only show
+  // what's genuinely trackable: how many matches have used this ground, and
+  // the next upcoming one (if any).
+  const todayStr = new Date().toISOString().split("T")[0]
+  const matchCountByGround = {}
+  const nextMatchByGround = {}
+  matches.forEach(m => {
+    if (!m.ground) return
+    matchCountByGround[m.ground] = (matchCountByGround[m.ground]||0) + 1
+    if (m.status === "upcoming" && m.date >= todayStr) {
+      const cur = nextMatchByGround[m.ground]
+      if (!cur || m.date < cur.date) nextMatchByGround[m.ground] = m
+    }
+  })
+  const totalMatchAppearances = Object.values(matchCountByGround).reduce((a,b)=>a+b,0)
+  const groundsWithUpcoming = Object.keys(nextMatchByGround).length
+
+  const q = search.trim().toLowerCase()
+  const filtered = grounds.filter(g => !q || g.name.toLowerCase().includes(q) || (g.location||"").toLowerCase().includes(q))
+  const sortedGrounds = [...filtered].sort((a,b) => {
+    if (sortBy==="matches") return (matchCountByGround[b.name]||0) - (matchCountByGround[a.name]||0)
+    return (a.name||"").localeCompare(b.name||"")
+  })
+
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <h2 style={{color:"#0F172A",fontSize:isMobile?17:20,fontWeight:800,margin:0,fontFamily:"var(--font-head)"}}>Grounds ({grounds.length})</h2>
-        <Btn variant="green" size={isMobile?"sm":"md"} onClick={()=>{setForm(empty);setShowAdd(true)}}>+ Add Ground</Btn>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
+        <div>
+          <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Grounds</h2>
+          <div style={{fontSize:13,color:"#64748B",marginTop:4}}>Manage all grounds and venues</div>
+        </div>
+        <button onClick={()=>{setForm(empty);setShowAdd(true)}} style={{padding:"10px 16px",borderRadius:12,background:"#166534",border:"none",color:"#FFFFFF",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}><Plus size={15}/> Add Ground</button>
       </div>
-      <SearchDropdown
-        options={grounds.map(g=>({...g,label:g.name+" — "+g.location}))}
-        value={selectedId}
-        onChange={id=>setSelectedId(id===selectedId?null:id)}
-        placeholder="Search ground by name or location..."
-        renderOption={o=>(
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:32,height:32,borderRadius:8,background:"#f0fdf4",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,border:"1px solid #bbf7d0"}}>📍</div>
-            <div><div style={{fontWeight:700,fontSize:13}}>{o.name}</div><div style={{fontSize:11,color:"#9ca3af"}}>{o.location}</div></div>
+
+      {/* Search + Sort */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:200,position:"relative"}}>
+          <SearchIcon size={16} color="#94A3B8" style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search grounds by name or location..." style={{width:"100%",padding:"12px 14px 12px 40px",borderRadius:12,border:"1.5px solid #E2E8F0",fontSize:13,outline:"none",background:"#FFFFFF",boxSizing:"border-box",fontFamily:"var(--font-body)"}}/>
+        </div>
+        <div style={{position:"relative"}}>
+          <button onClick={()=>setSortOpen(o=>!o)} style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #E2E8F0",background:"#FFFFFF",color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><ArrowUpDown size={14}/> Sort</button>
+          {sortOpen && (
+            <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:12,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
+              {[["name","Name (A-Z)"],["matches","Most Matches"]].map(([k,label])=>(
+                <button key={k} onClick={()=>{setSortBy(k);setSortOpen(false)}} style={{width:"100%",padding:"10px 14px",border:"none",background:sortBy===k?"rgba(34,197,94,0.08)":"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",fontWeight:sortBy===k?700:500}}>{label}</button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stat row */}
+      <div style={{display:"flex",background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:16,marginBottom:20,overflow:"hidden",flexWrap:"wrap"}}>
+        {[
+          {icon:MapPin, v:grounds.length, label:"Total Grounds"},
+          {icon:Calendar, v:totalMatchAppearances, label:"Match Appearances"},
+          {icon:CheckCircle2, v:groundsWithUpcoming, label:"With Upcoming Match"},
+        ].map((c,i)=>(
+          <div key={i} style={{flex:"1 1 33%", minWidth:150, padding:"18px 16px", display:"flex", alignItems:"center", gap:12, borderRight:i<2?"1px solid #F1F5F9":"none"}}>
+            <c.icon size={20} color="#166534"/>
+            <div>
+              <div style={{fontSize:isMobile?18:22,fontWeight:900,color:"#0F172A",fontFamily:"var(--font-head)",lineHeight:1}}>{c.v}</div>
+              <div style={{fontSize:11,color:"#64748B",marginTop:2}}>{c.label}</div>
+            </div>
           </div>
-        )}
-        renderSelected={o=>(
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:14}}>📍</span>
-            <span style={{fontWeight:700,fontSize:13}}>{o.name} — {o.location}</span>
-          </div>
-        )}
-      />
-      {selectedGround ? (
-        <div style={{marginTop:12}}>
+        ))}
+      </div>
+
+      {/* Table */}
+      {sortedGrounds.length===0 ? (
+        <Card style={{padding:"40px 24px",textAlign:"center"}}>
+          <div style={{color:"#6b7280",fontSize:13}}>No grounds match your search.</div>
+        </Card>
+      ) : (
+        <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+          {!isMobile && (
+            <div style={{display:"flex",alignItems:"center",padding:"12px 16px",background:"#F8FAF8",borderBottom:"1px solid #E2E8F0",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:0.4}}>
+              <div style={{flex:1}}>Ground</div>
+              <div style={{width:80,textAlign:"center"}}>Matches</div>
+              <div style={{width:160,textAlign:"right"}}>Next Match</div>
+              <div style={{width:36}}/>
+            </div>
+          )}
+          {sortedGrounds.map((g,i) => {
+            const next = nextMatchByGround[g.name]
+            return (
+            <div key={g.id} onClick={()=>setSelectedId(id=>id===g.id?null:g.id)} style={{display:"flex",alignItems:"center",padding:"14px 16px",background:selectedId===g.id?"rgba(34,197,94,0.05)":"#FFFFFF",borderTop:i===0?"none":"1px solid #F1F5F9",cursor:"pointer",flexWrap:isMobile?"wrap":"nowrap",gap:isMobile?10:0}}>
+              <div style={{flex:1,display:"flex",alignItems:"center",gap:12,minWidth:0}}>
+                <div style={{width:40,height:40,borderRadius:10,background:"rgba(34,197,94,0.1)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><MapPin size={18} color="#166534"/></div>
+                <div style={{minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:14,color:"#0F172A"}}>{g.name}</div>
+                  <div style={{fontSize:12,color:"#64748B",marginTop:2}}>{g.location}</div>
+                </div>
+              </div>
+              <div style={{width:isMobile?"auto":80,textAlign:"center",fontSize:14,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>{matchCountByGround[g.name]||0}{isMobile && <span style={{fontSize:10,color:"#94A3B8",fontWeight:500}}> matches</span>}</div>
+              <div style={{width:isMobile?"auto":160,textAlign:"right",fontSize:12,color:next?"#166534":"#94A3B8",fontWeight:next?700:500}}>
+                {next ? `${fmtDate(next.date)} · ${next.time_slot}` : "No upcoming match"}
+              </div>
+              <div style={{width:36,display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={e=>e.stopPropagation()}>
+                <button onClick={()=>setOpenMenuId(id=>id===g.id?null:g.id)} style={{background:"none",border:"none",cursor:"pointer",padding:4,display:"flex"}}><MoreVertical size={16} color="#94A3B8"/></button>
+                {openMenuId===g.id && (
+                  <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
+                    {g.maps_link && <a href={g.maps_link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{display:"block",width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",textDecoration:"none"}}>View on Map</a>}
+                    <button onClick={()=>{setEditG(g);setEditForm({name:g.name,location:g.location,maps_link:g.maps_link||"",notes:g.notes||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",borderTop:g.maps_link?"1px solid #F1F5F9":"none"}}>Edit</button>
+                    <button onClick={()=>{setDelG(g);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",borderTop:"1px solid #F1F5F9"}}>Delete</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )})}
+        </div>
+      )}
+
+      {selectedGround && (
+        <div style={{marginTop:16}}>
           <div style={{background:"#f0fdf4",borderRadius:16,padding:"18px",border:"2px solid #166534"}}>
             <div style={{display:"flex",alignItems:"flex-start",gap:14,marginBottom:14}}>
-              <div style={{width:52,height:52,borderRadius:14,background:"#F8FAF8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0,border:"2px solid #6ee7b7"}}>📍</div>
+              <div style={{width:52,height:52,borderRadius:14,background:"#F8FAF8",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:"2px solid #6ee7b7"}}><MapPin size={24} color="#166534"/></div>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:800,fontSize:17,color:"#0F172A",fontFamily:"var(--font-head)"}}>{selectedGround.name}</div>
-                <div style={{fontSize:13,color:"#6b7280",marginTop:3}}>📌 {selectedGround.location}</div>
+                <div style={{fontSize:13,color:"#6b7280",marginTop:3,display:"flex",alignItems:"center",gap:5}}><MapPin size={13}/> {selectedGround.location}</div>
               </div>
               <button onClick={()=>setSelectedId(null)} style={{background:"none",border:"none",color:"#9ca3af",fontSize:22,cursor:"pointer",padding:0,flexShrink:0}}>×</button>
             </div>
@@ -2146,10 +2358,6 @@ function GroundsPage({ grounds, onRefresh, isMobile }) {
               <button onClick={()=>setDelG(selectedGround)} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff5f5",color:"#991b1b",fontSize:13,cursor:"pointer",fontWeight:700}}>🗑️ Delete</button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div style={{marginTop:12,padding:"14px 16px",background:"#f9fafb",borderRadius:12,border:"1.5px solid #e5e7eb",textAlign:"center",color:"#9ca3af",fontSize:13}}>
-          Search or select a ground above to view details
         </div>
       )}
       {showAdd&&<div style={mStyle}><div style={mBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{margin:0,fontSize:16,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Add Ground</h3><button onClick={()=>setShowAdd(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>×</button></div><GForm f={form} setF={setForm}/><div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setShowAdd(false)} style={{flex:1,padding:"12px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={addSubmit} disabled={busy} style={{flex:2,padding:"12px",borderRadius:9,background:"#FFFFFF",border:"none",color:"#0F172A",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"Adding...":"Add Ground"}</button></div></div></div>}
