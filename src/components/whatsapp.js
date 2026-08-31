@@ -26,6 +26,10 @@ export function waInviteWithLink(match, baseUrl) {
 
 export function waSquadFull(match, matchPlayers = []) {
   const confirmed = matchPlayers.filter(mp => mp.status === "confirmed")
+  const waitlist = matchPlayers.filter(mp => mp.status === "waitlist")
   const list = confirmed.length > 0 ? confirmed.map((mp, i) => `${i + 1}. ${mp.players?.name || "Player"}`).join("\n") : ""
-  return `🔒 *Squad Full - ${matchTitle(match)}*\n📅 ${fmtDate(match.date)}\n⏰ ${match.time_slot}\n📍 ${match.ground}\n\nThe squad is now full! ✅\n\n*Confirmed Squad (${confirmed.length}):*\n${list}\n\nSee you on the field 🏏`
+  const waitlistBlock = waitlist.length > 0
+    ? `\n\n*Waiting List (${waitlist.length}):*\n${waitlist.map((mp, i) => `${i + 1}. ${mp.players?.name || "Player"}`).join("\n")}`
+    : ""
+  return `🔒 *Squad Full - ${matchTitle(match)}*\n📅 ${fmtDate(match.date)}\n⏰ ${match.time_slot}\n📍 ${match.ground}\n\nThe squad is now full! ✅\n\n*Confirmed Squad (${confirmed.length}):*\n${list}${waitlistBlock}\n\nSee you on the field 🏏`
 }
