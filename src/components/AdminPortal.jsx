@@ -628,7 +628,7 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
 
 function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
   const today = new Date().toISOString().split("T")[0]
-  const [form, setForm] = useState({ date:today, startH:7, startM:"00", endH:9, endM:"00", groundId:"", teamId:teams[0]?.id||"", type:"external", ourTeamId:"", maxPlayers:18 })
+  const [form, setForm] = useState({ date:today, startH:7, startM:"00", endH:9, endM:"00", groundId:"", teamId:teams[0]?.id||"", type:"external", ourTeamId:"", maxPlayers:18, visibility:"private" })
   const [busy, setBusy] = useState(false)
   const [teamList, setTeamList] = useState(teams)
   const [showAddTeam, setShowAddTeam] = useState(false)
@@ -669,7 +669,7 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
     const teamLogo = form.type==="internal"?null:selTeam?.logo_url||null
     const ourTeamName = form.type==="external"?selOurTeam.name:null
     const ourTeamLogo = form.type==="external"?(selOurTeam?.logo_url||null):null
-    try { await createMatch({ date:form.date,time_slot:timeSlot,ground:selGround.name,team:teamName,team_logo:teamLogo,our_team:ourTeamName,our_team_logo:ourTeamLogo,type:form.type,max_players:form.maxPlayers }); onCreated() }
+    try { await createMatch({ date:form.date,time_slot:timeSlot,ground:selGround.name,team:teamName,team_logo:teamLogo,our_team:ourTeamName,our_team_logo:ourTeamLogo,type:form.type,max_players:form.maxPlayers,visibility:form.visibility }); onCreated() }
     catch(e){alert(e.message)} setBusy(false)
   }
   const lS = { fontSize:12,color:"#6b7280",display:"block",marginBottom:5,fontWeight:600 }
@@ -707,6 +707,17 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
                 <button key={v} onClick={()=>setForm({...form,type:v,ourTeamId:"",maxPlayers:v==="internal"?18:9})} style={{ padding:"12px 8px",borderRadius:9,border:`2px solid ${form.type===v?"#166534":"#e5e7eb"}`,background:form.type===v?"#f0fdf4":"#F8FAF8",color:form.type===v?"#065f46":"#6b7280",cursor:"pointer",fontFamily:"var(--font-body)",textAlign:"center" }}>
                   <div style={{ fontSize:13,fontWeight:form.type===v?800:600 }}>{l}</div>
                   <div style={{ fontSize:10,color:form.type===v?"#059669":"#9ca3af",marginTop:2 }}>{sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={lS}>Visibility</label>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+              {[["private","🔒 Private","Only invited players see it"],["public","🌐 Public","All registered players see it"]].map(([v,l,sub])=>(
+                <button key={v} onClick={()=>setForm({...form,visibility:v})} style={{ padding:"12px 8px",borderRadius:9,border:`2px solid ${form.visibility===v?"#166534":"#e5e7eb"}`,background:form.visibility===v?"#f0fdf4":"#F8FAF8",color:form.visibility===v?"#065f46":"#6b7280",cursor:"pointer",fontFamily:"var(--font-body)",textAlign:"center" }}>
+                  <div style={{ fontSize:13,fontWeight:form.visibility===v?800:600 }}>{l}</div>
+                  <div style={{ fontSize:10,color:form.visibility===v?"#059669":"#9ca3af",marginTop:2 }}>{sub}</div>
                 </button>
               ))}
             </div>

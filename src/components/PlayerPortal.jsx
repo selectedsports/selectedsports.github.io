@@ -246,7 +246,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                   <div style={{ display:"grid", gap:10 }}>
                     {pending.map(({ match: m }) => (
                       <Card key={m.id} style={{ padding:"14px 16px" }}>
-                        <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:4 }}>{matchTitle(m)}</div>
+                        <div style={{ fontWeight:700, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:4, display:"flex", alignItems:"center", gap:6 }}>{matchTitle(m)}{m.visibility === "public" && <span style={{ background:"rgba(37,99,235,0.1)", color:"#2563EB", fontSize:9, fontWeight:800, padding:"2px 7px", borderRadius:999, textTransform:"uppercase" }}>Public</span>}</div>
                         <div style={{ color:"#64748B", fontSize:12, display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
                           <span><Calendar size={12} style={{verticalAlign:"-2px"}}/> {fmtDate(m.date)}</span>
                           <span><Clock size={12} style={{verticalAlign:"-2px"}}/> {m.time_slot}</span>
@@ -526,7 +526,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
         })()}
         <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", background:"rgba(34,197,94,0.15)", borderRadius:10, border:"1px solid rgba(34,197,94,0.15)", marginTop:12, marginBottom:18 }}>
           <Lock size={14}/>
-          <span style={{ fontSize:12, color:"#166534", fontWeight:500 }}>You only see matches you have been personally invited to.</span>
+          <span style={{ fontSize:12, color:"#166534", fontWeight:500 }}>You see matches you've been personally invited to, plus any match marked Public.</span>
         </div>
         {myMatches.length === 0 ? (
           <Card style={{ padding:"40px 24px", textAlign:"center" }}>
@@ -554,7 +554,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
             <Card key={m.id} style={{ padding:"16px", marginBottom:12, cursor:"pointer" }} onClick={() => loadDetail(m)}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
                 <div style={{ flex:1,minWidth:0 }}>
-                  <div style={{ fontWeight:800, color:"#0F172A", fontSize:isMobile?14:15, marginBottom:4, fontFamily:"var(--font-head)" }}>{matchTitle(m)}</div>
+                  <div style={{ fontWeight:800, color:"#0F172A", fontSize:isMobile?14:15, marginBottom:4, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6 }}>{matchTitle(m)}{m.visibility === "public" && <span style={{ background:"rgba(37,99,235,0.1)", color:"#2563EB", fontSize:9, fontWeight:800, padding:"2px 7px", borderRadius:999, textTransform:"uppercase" }}>Public</span>}</div>
                   <div style={{ color:"#64748B", fontSize:12, lineHeight:1.8, display:"flex", flexDirection:"column", gap:2 }}><span><Calendar size={12} style={{verticalAlign:"-2px"}}/> {fmtDate(m.date)}</span><span><Clock size={12} style={{verticalAlign:"-2px"}}/> {m.time_slot}</span><span><MapPin size={12} style={{verticalAlign:"-2px"}}/> {m.ground}</span></div>
                   {(() => {
                     const joined = (matchPlayers || []).filter(mp => mp.status === "confirmed").length

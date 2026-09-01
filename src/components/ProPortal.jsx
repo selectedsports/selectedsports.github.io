@@ -17,7 +17,7 @@ function timeSlotStr(sh, sm, eh, em) {
 
 function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile, defaultGroundId }) {
   const today = new Date().toISOString().split("T")[0]
-  const [form, setForm] = useState({ date: today, startH: 7, startM: "00", endH: 9, endM: "00", groundId: defaultGroundId || "", teamId: teams[0]?.id || "", ourTeamId: "", type: "external", maxPlayers: 9 })
+  const [form, setForm] = useState({ date: today, startH: 7, startM: "00", endH: 9, endM: "00", groundId: defaultGroundId || "", teamId: teams[0]?.id || "", ourTeamId: "", type: "external", maxPlayers: 9, visibility: "private" })
   const [teamList, setTeamList] = useState(teams)
   const [busy, setBusy] = useState(false)
   const [showAddTeam, setShowAddTeam] = useState(false)
@@ -57,7 +57,7 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
     const ourTeamName = form.type === "external" ? selOurTeam.name : null
     const ourTeamLogo = form.type === "external" ? (selOurTeam?.logo_url || null) : null
     try {
-      await createMatch({ date: form.date, time_slot: timeSlot, ground: selGround.name, team: teamName, team_logo: teamLogo, our_team: ourTeamName, our_team_logo: ourTeamLogo, type: form.type, max_players: form.maxPlayers, created_by: player.id })
+      await createMatch({ date: form.date, time_slot: timeSlot, ground: selGround.name, team: teamName, team_logo: teamLogo, our_team: ourTeamName, our_team_logo: ourTeamLogo, type: form.type, max_players: form.maxPlayers, created_by: player.id, visibility: form.visibility })
       onCreated()
     } catch(e) { alert(e.message) }
     setBusy(false)
@@ -109,6 +109,17 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
                 <button key={v} onClick={() => setForm({ ...form, type: v, maxPlayers: v === "internal" ? 18 : 9 })} style={{ padding: "12px 8px", borderRadius: 9, border: `2px solid ${form.type === v ? "#166534" : "#E2E8F0"}`, background: form.type === v ? "rgba(34,197,94,0.08)" : "#F8FAF8", color: form.type === v ? "#166534" : "#64748B", cursor: "pointer", textAlign: "center" }}>
                   <div style={{ fontSize: 13, fontWeight: form.type === v ? 800 : 600 }}>{l}</div>
                   <div style={{ fontSize: 10, color: form.type === v ? "#22C55E" : "#94A3B8", marginTop: 2 }}>{sub}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label style={lS}>Visibility</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {[["private", "🔒 Private", "Only invited players see it"], ["public", "🌐 Public", "All registered players see it"]].map(([v, l, sub]) => (
+                <button key={v} onClick={() => setForm({ ...form, visibility: v })} style={{ padding: "12px 8px", borderRadius: 9, border: `2px solid ${form.visibility === v ? "#166534" : "#E2E8F0"}`, background: form.visibility === v ? "rgba(34,197,94,0.08)" : "#F8FAF8", color: form.visibility === v ? "#166534" : "#64748B", cursor: "pointer", textAlign: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: form.visibility === v ? 800 : 600 }}>{l}</div>
+                  <div style={{ fontSize: 10, color: form.visibility === v ? "#22C55E" : "#94A3B8", marginTop: 2 }}>{sub}</div>
                 </button>
               ))}
             </div>
@@ -1038,7 +1049,7 @@ export default function ProPortal({ player, onLogout }) {
               <Card key={m.id} onClick={() => loadInvDetail(m)} style={{ padding: "16px", cursor: "pointer" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A", fontFamily: "var(--font-head)" }}>{matchTitle(m)}</div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A", fontFamily: "var(--font-head)", display:"flex", alignItems:"center", gap:6 }}>{matchTitle(m)}{m.visibility === "public" && <span style={{ background:"rgba(37,99,235,0.1)", color:"#2563EB", fontSize:9, fontWeight:800, padding:"2px 7px", borderRadius:999, textTransform:"uppercase" }}>Public</span>}</div>
                     <div style={{ fontSize: 12, color: "#64748B", marginTop: 3, display:"flex", alignItems:"center", gap:4 }}><Calendar size={12}/> {fmtDate(m.date)}</div>
                     <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>⏰ {m.time_slot}</div>
                     <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 2, display:"flex", alignItems:"center", gap:4 }}><MapPin size={12}/> {m.ground}</div>

@@ -144,8 +144,8 @@ export async function fetchMatchByToken(token) {
   if (error) throw error
   return data
 }
-export async function createMatch({ date, time_slot, ground, team, team_logo, our_team, our_team_logo, type, max_players, created_by }) {
-  const { data, error } = await supabase.from("matches").insert({ date, time_slot, ground, team, team_logo, our_team: our_team || null, our_team_logo: our_team_logo || null, type, max_players, created_by: created_by || null, status: "upcoming", link_active: false }).select().single()
+export async function createMatch({ date, time_slot, ground, team, team_logo, our_team, our_team_logo, type, max_players, created_by, visibility }) {
+  const { data, error } = await supabase.from("matches").insert({ date, time_slot, ground, team, team_logo, our_team: our_team || null, our_team_logo: our_team_logo || null, type, max_players, created_by: created_by || null, status: "upcoming", link_active: false, visibility: visibility || "private" }).select().single()
   if (error) throw error
   let actorName = "Someone"
   if (created_by) {
@@ -244,7 +244,7 @@ export async function setPlayerStatus(match_id, player_id, status) {
       }
     }
   }
-  const { error } = await supabase.from("match_players").update({ status: finalStatus, responded_at: new Date().toISOString() }).eq("match_id", match_id).eq("player_id", player_id)
+  const { error } = await supabase.from("match_players").upsert({ match_id, player_id, status: finalStatus, responded_at: new Date().toISOString() }, { onConflict: "match_id,player_id" })
   if (error) throw error
   // If this player is no longer confirmed, a spot may have opened
   if (status !== "confirmed") await promoteFromWaitlist(match_id)
@@ -476,11 +476,18 @@ export async function fetchProGroupPlayers(proId) {
 
 // Matches this player is invited to / part of (joined with match info)
 export async function fetchMyInvites(playerId) {
-  const { data, error } = await supabase.from("match_players")
-    .select("status, matches(*)")
-    .eq("player_id", playerId)
-  if (error) throw error
-  return (data || []).filter(r => r.matches).map(r => ({ match: r.matches, myStatus: r.status }))
+  const [{ data: mine, error: e1 }, { data: pub, error: e2 }] = await Promise.all([
+    supabase.from("match_players").select("status, matches(*)").eq("player_id", playerId),
+    supabase.from("matches").select("*").eq("visibility", "public").eq("status", "upcoming")
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+  const mineRows = (mine || []).filter(r => r.matches).map(r => ({ match: r.matches, myStatus: r.status }))
+  const mineIds = new Set(mineRows.map(r => r.match.id))
+  // Public matches this player wasn't personally invited to show up as "pending"
+  // so they get the same Confirm/Decline treatment as a normal invite.
+  const publicRows = (pub || []).filter(m => !mineIds.has(m.id)).map(m => ({ match: m, myStatus: "pending" }))
+  return [...mineRows, ...publicRows]
 }
 
 export async function updatePlayerUpi(id, upi_id) {
@@ -872,7 +879,7 @@ export async function undoLastBid(playerId, auctionId = null) {
 }
 
 export async function markPlayerSold(playerId, teamId, amount, auctionId = null) {
-  const { error: e1 } = await supabase.from("auction_players").update({ status: "sold", sold_price: amount, sold_team_id: teamId }).eq("id", playerId)
+  const { error: e1 } = await supabase.from("auction_players").update({ status: "sold", sold_price: amount, sold_team_id: teamId, sold_at: new Date().toISOString() }).eq("id", playerId)
   if (e1) throw e1
   const { data: team, error: e2 } = await supabase.from("auction_teams").select("purse_remaining, name").eq("id", teamId).single()
   if (e2) throw e2
