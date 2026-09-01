@@ -36,6 +36,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState("")
   const [lookedUp, setLookedUp] = useState(false)
+  const [profileComplete, setProfileComplete] = useState(false)
+  const [editingExisting, setEditingExisting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
@@ -68,8 +70,12 @@ export default function PublicAuctionRegister({ auctionCode }) {
           if (p.jersey_number) setJerseyNumber(p.jersey_number)
           if (p.jersey_size) setJerseySize(p.jersey_size)
           setLookedUp(true)
+          const complete = !!(parts[0] && parts.length > 1 && p.city && p.playing_role && ROLES.includes(p.playing_role) && p.birth_date && p.profile_image_url && p.jersey_number && p.jersey_size)
+          setProfileComplete(complete)
+          setEditingExisting(false)
         } else {
           setLookedUp(false)
+          setProfileComplete(false)
         }
       }).catch(() => {})
     }, 400)
@@ -149,8 +155,27 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
           <label style={lS}>Phone Number</label>
           <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: lookedUp ? 6 : 16 }}/>
-          {lookedUp && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — details auto-filled below.</div>}
+          {lookedUp && profileComplete && !editingExisting && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — your profile is already complete.</div>}
+          {lookedUp && (!profileComplete || editingExisting) && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — details auto-filled below{!profileComplete ? ", just fill in what's missing" : ""}.</div>}
 
+          {lookedUp && profileComplete && !editingExisting ? (
+            <>
+              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
+                <img src={photoPreview} alt={firstName} style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #166534" }}/>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
+                  <div style={{ fontSize:12, color:"#64748B", marginTop:2 }}>{city} · {role}</div>
+                  <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
+                </div>
+              </div>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:16, textAlign:"center" }}>
+                These are your saved details. <button type="button" onClick={()=>setEditingExisting(true)} style={{ background:"none", border:"none", color:"#166534", fontWeight:700, cursor:"pointer", padding:0, fontSize:12, textDecoration:"underline" }}>Edit before submitting</button>
+              </div>
+              {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
+              <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : "Confirm & Register for Auction"}</button>
+            </>
+          ) : (
+            <>
           <div style={{ marginBottom:16 }}>
             <PhotoUploadField photoPreview={photoPreview} onPhotoSaved={(file, dataUrl) => { setPhotoFile(file); setPhotoPreview(dataUrl) }}/>
           </div>
@@ -196,6 +221,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
           {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
 
           <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : "Register for Auction"}</button>
+            </>
+          )}
         </div>
       </div>
     </div>
