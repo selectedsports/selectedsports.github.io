@@ -1648,6 +1648,9 @@ function AuctionPage({ isMobile, isFounder }) {
   const [busy, setBusy] = useState(false)
   const [regOpen, setRegOpen] = useState(true)
   const [regBusy, setRegBusy] = useState(false)
+  const [delAuction, setDelAuction] = useState(null)
+  const [delAuctionBusy, setDelAuctionBusy] = useState(false)
+  const [copiedLink, setCopiedLink] = useState("")
   const [pendingPayments, setPendingPayments] = useState([])
   const [showCreateAuction, setShowCreateAuction] = useState(false)
   const [viewingPlayer, setViewingPlayer] = useState(null)
@@ -1692,6 +1695,24 @@ function AuctionPage({ isMobile, isFounder }) {
     setRegBusy(false)
   }
 
+  const doDeleteAuction = async () => {
+    setDelAuctionBusy(true)
+    try {
+      await deleteAuctionEvent(delAuction.id)
+      setDelAuction(null)
+      setManagingAuction(null)
+      setSubTab("today")
+      await loadAuctions()
+    } catch(e) { alert(e.message) }
+    setDelAuctionBusy(false)
+  }
+
+  const copyLink = (text, key) => {
+    navigator.clipboard?.writeText(text)
+    setCopiedLink(key)
+    setTimeout(() => setCopiedLink(""), 2000)
+  }
+
   const doApprovePayment = async (auctionId) => {
     try { await approveAuctionPayment(auctionId); await loadPayments() } catch(e) { alert(e.message) }
   }
@@ -1716,7 +1737,7 @@ function AuctionPage({ isMobile, isFounder }) {
     try { await deleteAuctionPlayer(p.id); await load() } catch(e) { alert(e.message) }
   }
 
-  const openAddTeam = () => { setEditTeam(null); setTeamName(""); setTeamOwner(""); setTeamPurse(""); setShowAddTeam(true) }
+  const openAddTeam = () => { setEditTeam(null); setTeamName(""); setTeamOwner(""); setTeamPurse(managingAuction?.points_purse ? String(managingAuction.points_purse) : ""); setShowAddTeam(true) }
   const openEditTeam = (t) => { setEditTeam(t); setTeamName(t.name); setTeamOwner(t.owner_name || ""); setTeamPurse(String(t.purse_total)); setShowAddTeam(true) }
 
   const saveTeam = async () => {
@@ -1755,8 +1776,32 @@ function AuctionPage({ isMobile, isFounder }) {
           <h2 style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auctions"}</h2>
           {!managingAuction && <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Manage all auctions on Selected Sports</div>}
         </div>
-        <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> New Auction</button>
+        {managingAuction ? (
+          <button onClick={()=>setDelAuction(managingAuction)} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #EF4444", background:"#FFFFFF", color:"#EF4444", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Trash2 size={15}/> Delete Auction</button>
+        ) : (
+          <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> New Auction</button>
+        )}
       </div>
+
+      {managingAuction && managingAuction.auction_code && (() => {
+        const base = window.location.origin
+        const regLink = `${base}/auction-register/${managingAuction.auction_code}`
+        const liveLink = `${base}/live-auction/${managingAuction.auction_code}`
+        return (
+          <Card style={{ padding:"14px 16px", marginBottom:16 }}>
+            <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:10, textTransform:"uppercase" }}>Shareable Links</div>
+            {[["Registration Link", regLink, "reg"], ["Live Auction Link", liveLink, "live"]].map(([label, link, key]) => (
+              <div key={key} style={{ marginBottom:key==="reg"?10:0 }}>
+                <div style={{ fontSize:11, color:"#64748B", marginBottom:4, fontWeight:600 }}>{label}</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <div style={{ flex:1, padding:"9px 11px", background:"#F8FAF8", border:"1px solid #E2E8F0", borderRadius:8, fontSize:12, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{link}</div>
+                  <button onClick={()=>copyLink(link, key)} style={{ padding:"9px 14px", borderRadius:8, border:"1px solid #166534", background: copiedLink===key ? "#166534" : "#FFFFFF", color: copiedLink===key ? "#FFFFFF" : "#166534", fontSize:12, fontWeight:700, cursor:"pointer", flexShrink:0 }}>{copiedLink===key ? "Copied!" : "Copy"}</button>
+                </div>
+              </div>
+            ))}
+          </Card>
+        )
+      })()}
 
       {!managingAuction && (
         <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:20, overflow:"hidden", flexWrap:"wrap" }}>
@@ -2039,6 +2084,7 @@ function AuctionPage({ isMobile, isFounder }) {
             <input value={teamOwner} onChange={e=>setTeamOwner(e.target.value)} placeholder="e.g. Sahir Attar" style={{ ...iS, marginBottom:12 }}/>
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Starting Purse (₹) *</div>
             <input type="number" min="0" value={teamPurse} onChange={e=>setTeamPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
+            {!editTeam && managingAuction?.points_purse && <div style={{ fontSize:11, color:"#166534", marginBottom:16, marginTop:-8 }}>Pre-filled from this auction's default purse — edit if this team should start with a different amount.</div>}
             {editTeam && <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, marginTop:-8 }}>Note: editing the purse resets the remaining balance to match — only do this before bidding starts.</div>}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setShowAddTeam(false)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
@@ -2059,6 +2105,22 @@ function AuctionPage({ isMobile, isFounder }) {
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setDelTeam(null)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
               <button onClick={confirmDeleteTeam} disabled={busy} style={{ flex:1, padding:"12px", borderRadius:9, background:"#EF4444", border:"none", color:"#FFFFFF", fontSize:14, cursor:"pointer", fontWeight:800 }}>{busy ? "Deleting..." : "Delete"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {delAuction && (
+        <div style={mStyle} onClick={()=>setDelAuction(null)}>
+          <div style={mBox} onClick={e=>e.stopPropagation()}>
+            <div style={{ textAlign:"center", padding:"10px 0 18px" }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>⚠️</div>
+              <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>Delete this entire auction?</h3>
+              <p style={{ color:"#6b7280", fontSize:13, margin:0 }}>This permanently deletes <strong>{delAuction.name}</strong> — including every registered player, team, and bid. This cannot be undone.</p>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setDelAuction(null)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
+              <button onClick={doDeleteAuction} disabled={delAuctionBusy} style={{ flex:1, padding:"12px", borderRadius:9, background:"#EF4444", border:"none", color:"#FFFFFF", fontSize:14, cursor:"pointer", fontWeight:800 }}>{delAuctionBusy ? "Deleting..." : "Yes, Delete Everything"}</button>
             </div>
           </div>
         </div>
