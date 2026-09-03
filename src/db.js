@@ -972,6 +972,29 @@ export async function fetchAllAuctionPlayerCounts() {
   return counts
 }
 
+export async function fetchAuctionSponsors(auctionId) {
+  const { data, error } = await supabase.from("auction_sponsors").select("*").eq("auction_id", auctionId).order("created_at", { ascending: true })
+  if (error) throw error
+  return data || []
+}
+export async function addAuctionSponsor(auctionId, name, logoUrl) {
+  const { data, error } = await supabase.from("auction_sponsors").insert({ auction_id: auctionId, name, logo_url: logoUrl || null }).select().single()
+  if (error) throw error
+  return data
+}
+export async function deleteAuctionSponsor(id) {
+  const { error } = await supabase.from("auction_sponsors").delete().eq("id", id)
+  if (error) throw error
+}
+export async function uploadSponsorLogo(file, sponsorName) {
+  const ext = file.name.split(".").pop()
+  const path = `sponsor-logos/${(sponsorName||"sponsor").toLowerCase().replace(/\s+/g,"-")}-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from("team-assets").upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from("team-assets").getPublicUrl(path)
+  return data.publicUrl
+}
+
 export async function fetchAllAuctions() {
   const { data, error } = await supabase.from("auctions").select("*, players(name)").order("created_at", { ascending: false })
   if (error) throw error

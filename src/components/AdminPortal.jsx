@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
@@ -1660,6 +1660,14 @@ function AuctionPage({ isMobile, isFounder }) {
   const [regOpen, setRegOpen] = useState(true)
   const [regBusy, setRegBusy] = useState(false)
   const [delAuction, setDelAuction] = useState(null)
+  const [sponsors, setSponsors] = useState([])
+  const [loadingSponsors, setLoadingSponsors] = useState(false)
+  const [showAddSponsor, setShowAddSponsor] = useState(false)
+  const [sponsorName, setSponsorName] = useState("")
+  const [sponsorLogoFile, setSponsorLogoFile] = useState(null)
+  const [sponsorLogoPreview, setSponsorLogoPreview] = useState("")
+  const [sponsorBusy, setSponsorBusy] = useState(false)
+  const [delSponsor, setDelSponsor] = useState(null)
   const [delAuctionBusy, setDelAuctionBusy] = useState(false)
   const [copiedLink, setCopiedLink] = useState("")
   const [pendingPayments, setPendingPayments] = useState([])
@@ -1722,6 +1730,33 @@ function AuctionPage({ isMobile, isFounder }) {
     } catch(e) { alert(e.message) }
     setDelAuctionBusy(false)
   }
+
+  const loadSponsors = async (auctionId) => {
+    setLoadingSponsors(true)
+    try { setSponsors(await fetchAuctionSponsors(auctionId)) } catch(e) { alert(e.message) }
+    setLoadingSponsors(false)
+  }
+
+  const doAddSponsor = async () => {
+    if (!sponsorName.trim()) { alert("Sponsor name required"); return }
+    setSponsorBusy(true)
+    try {
+      let logoUrl = null
+      if (sponsorLogoFile) logoUrl = await uploadSponsorLogo(sponsorLogoFile, sponsorName.trim())
+      await addAuctionSponsor(managingAuction.id, sponsorName.trim(), logoUrl)
+      setShowAddSponsor(false); setSponsorName(""); setSponsorLogoFile(null); setSponsorLogoPreview("")
+      await loadSponsors(managingAuction.id)
+    } catch(e) { alert(e.message) }
+    setSponsorBusy(false)
+  }
+
+  const doDeleteSponsor = async () => {
+    setSponsorBusy(true)
+    try { await deleteAuctionSponsor(delSponsor.id); setDelSponsor(null); await loadSponsors(managingAuction.id) } catch(e) { alert(e.message) }
+    setSponsorBusy(false)
+  }
+
+  useEffect(() => { if (managingAuction && subTab === "sponsors") loadSponsors(managingAuction.id) }, [managingAuction, subTab])
 
   const copyLink = (text, key) => {
     navigator.clipboard?.writeText(text)
@@ -1803,6 +1838,81 @@ function AuctionPage({ isMobile, isFounder }) {
           <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> New Auction</button>
         )}
       </div>
+
+      {subTab === "sponsors" && managingAuction && (
+        <div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+            <div style={{ fontSize:13, color:"#64748B" }}>{sponsors.length} sponsor{sponsors.length!==1?"s":""} added</div>
+            <button onClick={()=>{setSponsorName("");setSponsorLogoFile(null);setSponsorLogoPreview("");setShowAddSponsor(true)}} style={{ padding:"9px 14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}><Plus size={14}/> Add Sponsor</button>
+          </div>
+          {loadingSponsors ? <Spinner/> : sponsors.length === 0 ? (
+            <Card style={{ padding:"36px 20px", textAlign:"center" }}>
+              <div style={{ fontSize:14, color:"#64748B" }}>Currently, no sponsors have been added.</div>
+              <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Add a sponsor to have their logo shown on this auction's public page.</div>
+            </Card>
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)", gap:12 }}>
+              {sponsors.map(s => (
+                <Card key={s.id} style={{ padding:"16px", textAlign:"center", position:"relative" }}>
+                  <button onClick={()=>setDelSponsor(s)} style={{ position:"absolute", top:8, right:8, background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={14}/></button>
+                  {s.logo_url ? (
+                    <img src={s.logo_url} alt={s.name} style={{ width:56, height:56, borderRadius:12, objectFit:"cover", margin:"0 auto 10px" }}/>
+                  ) : (
+                    <div style={{ width:56, height:56, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}><Star size={24} color="#B8860B"/></div>
+                  )}
+                  <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{s.name}</div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showAddSponsor && (
+        <div style={mStyle} onClick={()=>setShowAddSponsor(false)}>
+          <div style={mBox} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
+              <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>Add Sponsor</h3>
+              <button onClick={()=>setShowAddSponsor(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af" }}>×</button>
+            </div>
+            <div style={{ textAlign:"center", marginBottom:16 }}>
+              <div style={{ width:72, height:72, borderRadius:16, background:"#F8FAF8", border: sponsorLogoPreview ? "2px solid #166534" : "2px dashed #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", margin:"0 auto 8px" }}>
+                {sponsorLogoPreview ? <img src={sponsorLogoPreview} alt="Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <span style={{ fontSize:11, color:"#94A3B8" }}>Logo</span>}
+              </div>
+              <label style={{ cursor:"pointer" }}>
+                <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>{sponsorLogoPreview ? "Change Logo" : "Upload Logo (optional)"}</span>
+                <input type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{
+                  const file = e.target.files?.[0]; if (!file) return
+                  setSponsorLogoFile(file)
+                  const reader = new FileReader(); reader.onload = () => setSponsorLogoPreview(reader.result); reader.readAsDataURL(file)
+                }}/>
+              </label>
+            </div>
+            <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Sponsor Name *</div>
+            <input value={sponsorName} onChange={e=>setSponsorName(e.target.value)} placeholder="e.g. Acme Sports Gear" style={{ ...iS, marginBottom:16 }}/>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setShowAddSponsor(false)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
+              <button onClick={doAddSponsor} disabled={sponsorBusy} style={{ flex:2, padding:"12px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, cursor:"pointer", fontWeight:800, fontFamily:"var(--font-head)" }}>{sponsorBusy?"Adding...":"Add Sponsor"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {delSponsor && (
+        <div style={mStyle} onClick={()=>setDelSponsor(null)}>
+          <div style={{...mBox, maxWidth:360}} onClick={e=>e.stopPropagation()}>
+            <div style={{ textAlign:"center", padding:"10px 0 18px" }}>
+              <div style={{ fontSize:40, marginBottom:12 }}>⚠️</div>
+              <h3 style={{ margin:"0 0 8px", fontSize:17, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>Remove Sponsor?</h3>
+              <p style={{ color:"#6b7280", fontSize:13, margin:0 }}>Remove <strong>{delSponsor.name}</strong> from this auction?</p>
+            </div>
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={()=>setDelSponsor(null)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
+              <button onClick={doDeleteSponsor} disabled={sponsorBusy} style={{ flex:1, padding:"12px", borderRadius:9, background:"#EF4444", border:"none", color:"#FFFFFF", fontSize:14, cursor:"pointer", fontWeight:800 }}>{sponsorBusy?"...":"Remove"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {subTab === "links" && managingAuction && managingAuction.auction_code && (() => {
         const base = window.location.origin
@@ -1903,7 +2013,7 @@ function AuctionPage({ isMobile, isFounder }) {
 
       <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
         {(managingAuction
-          ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["links", "Links"], ["details", "Details"]]
+          ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["sponsors", "Sponsors"], ["links", "Links"], ["details", "Details"]]
           : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["completed", "Completed"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
         ).map(([v, label]) => (
           <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
