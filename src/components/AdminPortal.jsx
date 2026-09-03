@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
@@ -1674,9 +1674,14 @@ function AuctionPage({ isMobile, isFounder }) {
   const [poolSearch, setPoolSearch] = useState("")
   const [teamSearch, setTeamSearch] = useState("")
 
+  const [auctionTeamCounts, setAuctionTeamCounts] = useState({})
+  const [auctionPlayerCounts, setAuctionPlayerCounts] = useState({})
   const loadAuctions = async () => {
     setLoadingAuctions(true)
-    try { setAllAuctions(await fetchAllAuctions()) } catch(e) { alert(e.message) }
+    try {
+      const [list, tCounts, pCounts] = await Promise.all([fetchAllAuctions(), fetchAllAuctionTeamCounts(), fetchAllAuctionPlayerCounts()])
+      setAllAuctions(list); setAuctionTeamCounts(tCounts); setAuctionPlayerCounts(pCounts)
+    } catch(e) { alert(e.message) }
     setLoadingAuctions(false)
   }
   useEffect(() => { loadAuctions() }, [])
@@ -1773,20 +1778,25 @@ function AuctionPage({ isMobile, isFounder }) {
 
   if (loading) return <Spinner/>
 
-  const liveCount = allAuctions.filter(a => a.status === "live").length
+  const todayStr0 = new Date().toISOString().split("T")[0]
+  const activeCount = allAuctions.filter(a => a.status === "live").length
+  const upcomingCount0 = allAuctions.filter(a => a.status !== "completed" && a.auction_date && a.auction_date > todayStr0).length
   const completedCount = allAuctions.filter(a => a.status === "completed").length
-  const pendingPaymentCount = allAuctions.filter(a => a.payment_status === "pending").length
+  const collectedTotal = allAuctions.filter(a => a.payment_status === "paid").reduce((s,a) => s + (Number(a.amount_due)||0), 0)
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, gap:12 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, gap:12, flexWrap:"wrap" }}>
         <div>
           {managingAuction && (
             <button onClick={()=>{ setManagingAuction(null); setSubTab("today") }} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", padding:0, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>← All Auctions</button>
           )}
-          <h2 style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auctions"}</h2>
-          {!managingAuction && <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Manage all auctions on Selected Sports</div>}
+          <h2 style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auction"}</h2>
+          {!managingAuction && <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Create and manage cricket player auctions</div>}
         </div>
+        {!managingAuction && !isMobile && (
+          <div style={{ width:44, height:44, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Gavel size={22} color="#B8860B"/></div>
+        )}
         {managingAuction ? (
           <button onClick={()=>setDelAuction(managingAuction)} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #EF4444", background:"#FFFFFF", color:"#EF4444", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Trash2 size={15}/> Delete Auction</button>
         ) : (
@@ -1794,7 +1804,7 @@ function AuctionPage({ isMobile, isFounder }) {
         )}
       </div>
 
-      {managingAuction && managingAuction.auction_code && (() => {
+      {subTab === "links" && managingAuction && managingAuction.auction_code && (() => {
         const base = window.location.origin
         const regLink = `${base}/auction-register/${managingAuction.auction_code}`
         const liveLink = `${base}/live-auction/${managingAuction.auction_code}`
@@ -1810,20 +1820,68 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               </div>
             ))}
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:12 }}>Note: the "Team Points Screen" and "YouTube overlay" links some auction apps offer aren't separate pages in Selected Sports — your Live Auction Link above already shows real-time team purses to anyone who opens it.</div>
           </Card>
+        )
+      })()}
+
+      {subTab === "details" && managingAuction && (() => {
+        const teamsN = auctionTeamCounts[managingAuction.id] || auctionTeams.length || 0
+        const playersN = auctionPlayerCounts[managingAuction.id] || auctionPlayers.length || 0
+        const lowestBase = auctionPlayers.length > 0 ? Math.min(...auctionPlayers.map(p => Number(p.base_price)||0).filter(n=>n>0)) : null
+        const base = window.location.origin
+        const regLink = `${base}/auction-register/${managingAuction.auction_code}`
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(regLink)}`
+        return (
+          <div>
+            <Card style={{ padding:"18px", marginBottom:16 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Gavel size={17} color="#B8860B"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Auction Code</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.auction_code || "—"}</div></div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Wallet size={17} color="#166534"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Points / Team</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.points_purse ? managingAuction.points_purse.toLocaleString("en-IN") : "Not set"}</div></div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(37,99,235,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ArrowUpDown size={17} color="#2563EB"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Bid Increment</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.bid_increment ? `₹${managingAuction.bid_increment}` : "Not started yet"}</div></div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Gavel size={17} color="#B8860B"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Lowest Base Price</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{lowestBase ? `₹${lowestBase}` : "No players priced yet"}</div></div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><UsersRound size={17} color="#166534"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Teams</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{teamsN}</div></div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Users size={17} color="#166534"/></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Players</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{playersN}</div></div>
+                </div>
+              </div>
+            </Card>
+            <Card style={{ padding:"18px", textAlign:"center" }}>
+              <div style={{ fontSize:12, color:"#64748B", fontWeight:600, marginBottom:14 }}>Scan to open the registration page</div>
+              <img src={qrUrl} alt="Auction QR Code" width={200} height={200} style={{ borderRadius:12, border:"1px solid #E2E8F0" }}/>
+              <div style={{ fontSize:13, fontWeight:800, color:"#166534", marginTop:12, fontFamily:"var(--font-head)" }}>{managingAuction.auction_code}</div>
+              <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Auction QR Code</div>
+            </Card>
+          </div>
         )
       })()}
 
       {!managingAuction && (
         <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:20, overflow:"hidden", flexWrap:"wrap" }}>
           {[
-            { icon:Trophy, v:allAuctions.length, label:"Total Auctions" },
-            { icon:Zap, v:liveCount, label:"Live Now" },
-            { icon:CheckCircle2, v:completedCount, label:"Completed" },
-            { icon:Wallet, v:pendingPaymentCount, label:"Pending Payment" },
+            { icon:Gavel, v:activeCount, label:"Active Auctions", color:"#166534" },
+            { icon:Calendar, v:upcomingCount0, label:"Upcoming", color:"#166534" },
+            { icon:Trophy, v:completedCount, label:"Completed", color:"#166534" },
+            { icon:Wallet, v:`₹${collectedTotal.toLocaleString("en-IN")}`, label:"Collected", color:"#B8860B" },
           ].map((c,i)=>(
             <div key={i} style={{ flex:"1 1 25%", minWidth:130, padding:"18px 16px", display:"flex", alignItems:"center", gap:12, borderRight:i<3?"1px solid #F1F5F9":"none" }}>
-              <c.icon size={20} color="#166534"/>
+              <c.icon size={20} color={c.color}/>
               <div>
                 <div style={{ fontSize:isMobile?18:22, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
                 <div style={{ fontSize:11, color:"#64748B", marginTop:2 }}>{c.label}</div>
@@ -1845,16 +1903,18 @@ function AuctionPage({ isMobile, isFounder }) {
 
       <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
         {(managingAuction
-          ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"]]
-          : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
+          ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["links", "Links"], ["details", "Details"]]
+          : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["completed", "Completed"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
         ).map(([v, label]) => (
           <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
         ))}
       </div>
 
-      {(subTab === "today" || subTab === "upcoming") && (() => {
+      {(subTab === "today" || subTab === "upcoming" || subTab === "completed") && (() => {
         const todayStr = new Date().toISOString().split("T")[0]
         const dateFiltered = allAuctions.filter(a => {
+          if (subTab === "completed") return a.status === "completed"
+          if (a.status === "completed") return false
           if (!a.auction_date) return subTab === "upcoming" // undated auctions show under Upcoming
           return subTab === "today" ? a.auction_date === todayStr : a.auction_date > todayStr
         })
@@ -1866,7 +1926,10 @@ function AuctionPage({ isMobile, isFounder }) {
           return (a.auction_date||"9999") < (b.auction_date||"9999") ? -1 : 1
         })
         const statusColor = { free:"#166534", paid:"#166534", pending:"#B8860B", rejected:"#EF4444" }
-        const opColor = { setup:"#94A3B8", live:"#22C55E", completed:"#0F172A" }
+        // Derive a friendlier status label than the raw setup/live/completed value
+        const statusLabel = a => a.status === "completed" ? "Completed" : a.status === "live" ? "Active" : (a.auction_date && a.auction_date > todayStr) ? "Upcoming" : "Setup"
+        const statusBg = a => a.status === "completed" ? "#F1F5F9" : a.status === "live" ? "rgba(34,197,94,0.12)" : (a.auction_date && a.auction_date > todayStr) ? "rgba(34,197,94,0.12)" : "rgba(245,158,11,0.12)"
+        const statusFg = a => a.status === "completed" ? "#64748B" : a.status === "live" ? "#166534" : (a.auction_date && a.auction_date > todayStr) ? "#166534" : "#B8860B"
         if (loadingAuctions) return <Spinner/>
         return (
           <>
@@ -1888,28 +1951,51 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
             {list.length === 0 ? (
           <Card style={{ padding:"32px 16px", textAlign:"center" }}>
-            <div style={{ fontSize:14, color:"#64748B" }}>No {subTab === "today" ? "auctions today" : "upcoming auctions"}.</div>
+            <div style={{ fontSize:14, color:"#64748B" }}>No {subTab === "today" ? "auctions today" : subTab === "completed" ? "completed auctions yet" : "upcoming auctions"}.</div>
           </Card>
         ) : (
-          <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:12 }}>
+          <div style={{ display:"grid", gap:12 }}>
             {list.map(a => {
               const canManage = a.payment_status === "paid" || a.payment_status === "free"
+              const teamsN = auctionTeamCounts[a.id] || 0
+              const playersN = auctionPlayerCounts[a.id] || 0
               return (
-              <Card key={a.id} onClick={() => canManage && (setManagingAuction(a), setSubTab("players"))} style={{ padding:"16px", cursor: canManage ? "pointer" : "default" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
-                  <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>{a.name}</div>
-                  <span style={{ background:opColor[a.status]||"#94A3B8", color:"#FFFFFF", borderRadius:999, padding:"3px 10px", fontSize:10, fontWeight:700, textTransform:"capitalize", flexShrink:0 }}>{a.status}</span>
+              <Card key={a.id} style={{ padding:"16px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8, gap:10 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12, flex:1, minWidth:0 }}>
+                    <TeamAv name={a.name} logo={null} size={44}/>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>{a.name}</div>
+                      <div style={{ fontSize:12, color:"#64748B", marginTop:2, display:"flex", alignItems:"center", gap:4 }}><UserIcon size={11}/> Organized by {a.players?.name || "—"}</div>
+                    </div>
+                  </div>
+                  <span style={{ background:statusBg(a), color:statusFg(a), borderRadius:999, padding:"4px 11px", fontSize:11, fontWeight:700, flexShrink:0 }}>{statusLabel(a)}</span>
                 </div>
-                <div style={{ fontSize:12, color:"#64748B", marginBottom:2 }}>Organizer: {a.players?.name || "—"}</div>
-                {a.location && <div style={{ fontSize:12, color:"#64748B", marginBottom:2, display:"flex", alignItems:"center", gap:4 }}><MapPin size={11}/> {a.location}</div>}
-                <div style={{ fontSize:12, color:"#64748B", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
-                  {a.auction_date ? <><Calendar size={11}/> {fmtDate(a.auction_date)}</> : "Date TBD"}{a.auction_time ? ` · ${a.auction_time}` : ""}
+                <div style={{ fontSize:12, color:"#64748B", marginBottom:2, display:"flex", alignItems:"center", gap:4 }}>
+                  {a.auction_date ? <><Calendar size={11}/> {fmtDate(a.auction_date)}</> : "Date TBD"}{a.auction_time ? <> · <Clock size={11}/> {a.auction_time}</> : ""}
                 </div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <span style={{ fontSize:11, color:"#7A4F13", fontWeight:700, background:"rgba(246,196,83,0.15)", padding:"3px 8px", borderRadius:7 }}>{a.plan_tier} · up to {a.max_teams} teams</span>
-                  <span style={{ fontSize:11, fontWeight:700, color:statusColor[a.payment_status]||"#94A3B8", textTransform:"capitalize" }}>{a.payment_status}</span>
+                {a.location && <div style={{ fontSize:12, color:"#64748B", marginBottom:10, display:"flex", alignItems:"center", gap:4 }}><MapPin size={11}/> {a.location}</div>}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:10, borderTop:"1px solid #F1F5F9", gap:10, flexWrap:"wrap" }}>
+                  <div style={{ display:"flex", gap:16 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <UsersRound size={14} color="#166534"/>
+                      <div><div style={{ fontSize:13, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{teamsN}</div><div style={{ fontSize:9, color:"#94A3B8" }}>Teams</div></div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <Users size={14} color="#166534"/>
+                      <div><div style={{ fontSize:13, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{playersN}</div><div style={{ fontSize:9, color:"#94A3B8" }}>Players</div></div>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <ShieldCheck size={14} color="#B8860B"/>
+                      <div><div style={{ fontSize:13, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1, textTransform:"capitalize" }}>{a.plan_tier}</div><div style={{ fontSize:9, color:"#94A3B8" }}>Plan Used</div></div>
+                    </div>
+                  </div>
+                  {canManage ? (
+                    <button onClick={()=>{ setManagingAuction(a); setSubTab(a.status==="completed"?"players":"players") }} style={{ padding:"9px 14px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{a.status==="completed"?"View Results":"Open Auction"} <ChevronRight size={13}/></button>
+                  ) : (
+                    <span style={{ fontSize:11, color:statusColor[a.payment_status]||"#94A3B8", fontWeight:700, fontStyle:"italic" }}>{a.payment_status === "pending" ? "Awaiting payment confirmation" : a.payment_status}</span>
+                  )}
                 </div>
-                {!canManage && <div style={{ fontSize:11, color:"#94A3B8", marginTop:8, fontStyle:"italic" }}>Awaiting payment confirmation before this can be managed.</div>}
               </Card>
             )})}
           </div>

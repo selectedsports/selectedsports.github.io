@@ -955,6 +955,23 @@ export async function fetchMyAuctions(organizerId) {
   return data
 }
 
+// Lightweight bulk counts (one column, aggregated client-side) so the auction
+// list can show real Teams/Players numbers per card without a query per auction.
+export async function fetchAllAuctionTeamCounts() {
+  const { data, error } = await supabase.from("auction_teams").select("auction_id")
+  if (error) throw error
+  const counts = {}
+  ;(data || []).forEach(r => { if (r.auction_id) counts[r.auction_id] = (counts[r.auction_id]||0) + 1 })
+  return counts
+}
+export async function fetchAllAuctionPlayerCounts() {
+  const { data, error } = await supabase.from("auction_players").select("auction_id")
+  if (error) throw error
+  const counts = {}
+  ;(data || []).forEach(r => { if (r.auction_id) counts[r.auction_id] = (counts[r.auction_id]||0) + 1 })
+  return counts
+}
+
 export async function fetchAllAuctions() {
   const { data, error } = await supabase.from("auctions").select("*, players(name)").order("created_at", { ascending: false })
   if (error) throw error
