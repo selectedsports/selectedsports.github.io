@@ -728,7 +728,7 @@ export function ProfileCompletionModal({ player, onComplete }) {
             <label style={lS}>Jersey Size</label>
             <select value={jerseySize} onChange={e => setJerseySize(e.target.value)} style={iS}>
               <option value="">Select</option>
-              {["S","M","L","XL","XXL"].map(s => <option key={s} value={s}>{s}</option>)}
+              {["S","M","L","XL","XXL","3XL","4XL","5XL","6XL"].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>

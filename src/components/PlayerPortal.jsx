@@ -426,7 +426,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                         <label style={{ fontSize:12, color:"#64748B", display:"block", marginBottom:5, fontWeight:600 }}>Jersey Size</label>
                         <select value={pForm.jerseySize} onChange={e=>setPForm({...pForm, jerseySize:e.target.value})} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", boxSizing:"border-box", fontFamily:"var(--font-body)" }}>
                           <option value="">Select</option>
-                          {["S","M","L","XL","XXL"].map(s => <option key={s} value={s}>{s}</option>)}
+                          {["S","M","L","XL","XXL","3XL","4XL","5XL","6XL"].map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                     </div>

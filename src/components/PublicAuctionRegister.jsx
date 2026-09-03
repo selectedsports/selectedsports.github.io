@@ -4,7 +4,7 @@ import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
 
 const ROLES = ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"]
-const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"]
+const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"]
 
 const iS = { width:"100%", padding:"12px 13px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:15, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
 const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }

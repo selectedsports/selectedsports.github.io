@@ -139,7 +139,7 @@ export function RegisterScreen({ onSuccess, onBack }) {
 
   const iS = { width:"100%", padding:"12px 13px", borderRadius:9, border:"1.5px solid #E2E8F0", background:"#FFFFFF", color:"#0F172A", fontSize:15, outline:"none", boxSizing:"border-box", fontFamily:"var(--font-body)" }
   const lS = { color:"#64748B", fontSize:12, display:"block", marginBottom:6, fontWeight:600 }
-  const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"]
+  const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"]
 
   const submit = async () => {
     if (!firstName.trim()) { setErr("First name required"); return }
