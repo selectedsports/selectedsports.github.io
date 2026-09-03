@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
@@ -1673,6 +1673,13 @@ function AuctionPage({ isMobile, isFounder }) {
   const [pendingPayments, setPendingPayments] = useState([])
   const [showCreateAuction, setShowCreateAuction] = useState(false)
   const [viewingPlayer, setViewingPlayer] = useState(null)
+  const [playerHistory, setPlayerHistory] = useState([])
+  const [loadingPlayerHistory, setLoadingPlayerHistory] = useState(false)
+  useEffect(() => {
+    if (!viewingPlayer?.phone) { setPlayerHistory([]); return }
+    setLoadingPlayerHistory(true)
+    fetchPlayerAuctionHistory(viewingPlayer.phone).then(setPlayerHistory).catch(()=>{}).finally(()=>setLoadingPlayerHistory(false))
+  }, [viewingPlayer?.phone])
   const [viewingTeam, setViewingTeam] = useState(null)
   const [allAuctions, setAllAuctions] = useState([])
   const [loadingAuctions, setLoadingAuctions] = useState(true)
@@ -2441,10 +2448,45 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
             </div>
 
-            <div style={{ display:"flex", gap:8, alignItems:"center", padding:"12px", background:"rgba(34,197,94,0.08)", borderRadius:9 }}>
+            <div style={{ display:"flex", gap:8, alignItems:"center", padding:"12px", background:"rgba(34,197,94,0.08)", borderRadius:9, marginBottom:18 }}>
               <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>Base Price ₹</span>
               <input type="number" min="0" value={priceDrafts[viewingPlayer.id] !== undefined ? priceDrafts[viewingPlayer.id] : (viewingPlayer.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [viewingPlayer.id]: e.target.value})} onBlur={()=>savePrice(viewingPlayer.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px", background:"#FFFFFF" }}/>
             </div>
+
+            {(() => {
+              const joinedAuctions = playerHistory.length
+              const joinedTeams = playerHistory.filter(h => h.status === "sold" && h.sold_team_id).length
+              return (
+                <div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14, padding:"12px", background:"#F8FAF8", borderRadius:9 }}>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:18, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>{loadingPlayerHistory ? "…" : joinedAuctions}</div>
+                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600, textTransform:"uppercase" }}>Joined Auctions</div>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:18, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>{loadingPlayerHistory ? "…" : joinedTeams}</div>
+                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600, textTransform:"uppercase" }}>Joined Teams</div>
+                    </div>
+                  </div>
+                  {playerHistory.length > 1 && (
+                    <div>
+                      <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:8, textTransform:"uppercase" }}>Auction History</div>
+                      <div style={{ display:"grid", gap:8, maxHeight:220, overflowY:"auto" }}>
+                        {playerHistory.map(h => (
+                          <div key={h.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 11px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:8 }}>
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{h.auctions?.name || "—"}</div>
+                              <div style={{ fontSize:11, color:"#94A3B8" }}>{h.auctions?.auction_date ? fmtDate(h.auctions.auction_date) : "Date TBD"}</div>
+                            </div>
+                            <span style={{ fontSize:11, fontWeight:700, color:h.status==="sold"?"#166534":h.status==="unsold"?"#EF4444":"#B8860B", flexShrink:0, marginLeft:8 }}>{h.status==="sold" ? `Sold ₹${h.sold_price}` : h.status==="unsold" ? "Unsold" : "Registered"}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
       )}
