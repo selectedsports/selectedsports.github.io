@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -2878,7 +2878,9 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const mBox={background:"#F8FAF8",borderRadius:isMobile?"20px 20px 0 0":20,padding:isMobile?"22px 18px":28,width:"100%",maxWidth:isMobile?"100%":420,maxHeight:isMobile?"95vh":"auto",overflowY:"auto",boxSizing:"border-box"}
   const addSubmit=async()=>{
     if(!form.firstName?.trim()){alert("First name required");return}
+    if(!isValidName(form.firstName)){alert("First name can only contain letters.");return}
     if(!form.lastName?.trim()){alert("Last name required");return}
+    if(!isValidName(form.lastName)){alert("Last name can only contain letters.");return}
     if(!form.phone||form.phone.length<10){alert("Enter valid 10-digit phone");return}
     if(!form.pin||form.pin.length!==4){alert("PIN must be 4 digits");return}
     const cleanedNew=form.phone.replace(/[^0-9]/g,"").slice(-10)
@@ -2887,7 +2889,10 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   }
   const editSubmit=async()=>{
     if(!editForm.firstName.trim()){alert("First name required");return}
+    if(!isValidName(editForm.firstName)){alert("First name can only contain letters.");return}
     if(!editForm.lastName.trim()){alert("Last name required");return}
+    if(!isValidName(editForm.lastName)){alert("Last name can only contain letters.");return}
+    if(editForm.birthDate){const dobErr=birthDateError(editForm.birthDate);if(dobErr){alert(dobErr);return}}
     setBusy(true);try{
       const {updatePlayer,setPlayerAccountRole,uploadProfilePhoto}=await import("../db.js")
       let photoUrl=editForm.photoPreview

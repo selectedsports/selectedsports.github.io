@@ -1,4 +1,4 @@
-import { aColor, initials } from "../constants.js"
+import { aColor, initials, birthDateError } from "../constants.js"
 import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye, ChevronRight, ChevronDown, Calendar, BarChart3, Zap as SixesIcon, Ban, Target } from "lucide-react"
 export function Logo({ size = 36 }) {
   return (
@@ -688,6 +688,8 @@ export function ProfileCompletionModal({ player, onComplete }) {
     setError("")
     if (!city.trim()) { setError("Please enter your city."); return }
     if (!birthDate) { setError("Please enter your date of birth."); return }
+    const dobErr = birthDateError(birthDate)
+    if (dobErr) { setError(dobErr); return }
     if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }

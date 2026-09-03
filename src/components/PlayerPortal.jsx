@@ -3,7 +3,7 @@ import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock,
 import { LogoFull, Av, Tag, Card, Spinner , StatsBanner, Bell, MessageInbox, LeaderboardPage, ProRequestCard, RoleBadge} from "./ui.jsx"
 import { fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, sendMessage, setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch, subscribeToChat , updatePlayer, fetchContributions, fetchStats, fetchPlayerStats, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds, updatePlayerRole, uploadProfilePhoto} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
-import { fmtDate, dayName, matchTitle } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError } from "../constants.js"
 import { supabase } from "../supabase.js"
 // CALENDAR_NAV_REMOVED
 import { useMobile } from "../hooks/useMobile.js"
@@ -118,10 +118,14 @@ export default function PlayerPortal({ player, matches, onLogout }) {
   }, [player.id])
   const saveProfile = async () => {
     if (!pForm.firstName.trim()) { alert("First name required"); return }
+    if (!isValidName(pForm.firstName)) { alert("First name can only contain letters."); return }
     if (!pForm.lastName.trim()) { alert("Last name required"); return }
+    if (!isValidName(pForm.lastName)) { alert("Last name can only contain letters."); return }
     if (pForm.pin.length !== 4) { alert("PIN must be 4 digits"); return }
     if (!pForm.city.trim()) { alert("City is required"); return }
     if (!pForm.birthDate) { alert("Date of birth is required"); return }
+    const dobErr = birthDateError(pForm.birthDate)
+    if (dobErr) { alert(dobErr); return }
     if (!pForm.jerseyNumber.trim()) { alert("Jersey number is required"); return }
     if (!pForm.jerseySize) { alert("Jersey size is required"); return }
     if (!pForm.photoFile && !pForm.photoPreview) { alert("Profile photo is required"); return }

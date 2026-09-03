@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
-import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto } from "../db.js"
+import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, fetchAuctionPlayers } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
+import { isValidName, birthDateError } from "../constants.js"
 
 const ROLES = ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"]
 const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"]
@@ -18,6 +19,66 @@ function Header({ auctionName }) {
       </div>
       <h1 style={{ color:"#FFFFFF", fontFamily:"var(--font-head)", fontSize:20, fontWeight:800, margin:"0 0 6px" }}>{auctionName || "Register for the Auction"}</h1>
       <div style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>Fill in your details below — the organizer sets your base price separately.</div>
+    </div>
+  )
+}
+
+function AuctionDetailsCard({ auction }) {
+  if (!auction) return null
+  const rows = [
+    ["Auction Date", auction.auction_date ? new Date(auction.auction_date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"}) : "Date TBD"],
+    ["Time", auction.auction_time || "TBD"],
+    ["Venue", auction.location || "TBD"],
+    ["Points / Team", auction.points_purse ? auction.points_purse.toLocaleString("en-IN") : "Not set"],
+  ]
+  return (
+    <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>
+      <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:12, textTransform:"uppercase" }}>Auction Details</div>
+      <div style={{ display:"grid", gap:10 }}>
+        {rows.map(([label, val]) => (
+          <div key={label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span style={{ fontSize:13, color:"#64748B" }}>{label}</span>
+            <span style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{val}</span>
+          </div>
+        ))}
+      </div>
+      {auction.description && <div style={{ fontSize:12, color:"#64748B", marginTop:14, paddingTop:14, borderTop:"1px solid #F1F5F9", lineHeight:1.6 }}>{auction.description}</div>}
+    </div>
+  )
+}
+
+function RegisteredPlayersList({ auctionId }) {
+  const [players, setPlayers] = useState([])
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    if (!auctionId) { setLoading(false); return }
+    fetchAuctionPlayers(auctionId).then(setPlayers).catch(()=>{}).finally(()=>setLoading(false))
+  }, [auctionId])
+  return (
+    <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>
+      <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:12, textTransform:"uppercase" }}>Registered Players ({loading ? "…" : players.length})</div>
+      {loading ? (
+        <div style={{ fontSize:13, color:"#94A3B8", textAlign:"center", padding:"12px 0" }}>Loading...</div>
+      ) : players.length === 0 ? (
+        <div style={{ fontSize:13, color:"#94A3B8", textAlign:"center", padding:"12px 0" }}>No one has registered yet — be the first!</div>
+      ) : (
+        <div style={{ display:"grid", gap:8, maxHeight:320, overflowY:"auto" }}>
+          {players.map(p => (
+            <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:"#F8FAF8", borderRadius:9 }}>
+              {p.profile_image_url ? (
+                <img src={p.profile_image_url} alt={p.name} style={{ width:32, height:32, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+              ) : (
+                <div style={{ width:32, height:32, borderRadius:"50%", background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+              )}
+              <div style={{ minWidth:0, flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                {p.playing_role && <div style={{ fontSize:11, color:"#94A3B8" }}>{p.playing_role}</div>}
+              </div>
+              {p.status === "sold" && <span style={{ fontSize:10, fontWeight:700, color:"#166534", background:"rgba(34,197,94,0.12)", padding:"2px 8px", borderRadius:999, flexShrink:0 }}>Sold ₹{p.sold_price}</span>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -44,6 +105,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
+  const [infoTab, setInfoTab] = useState("register") // "register" | "details" | "players"
 
   useEffect(() => {
     if (!auctionCode) { setChecking(false); return } // legacy/unscoped fallback
@@ -93,12 +155,16 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const submit = async () => {
     setError("")
     if (!firstName.trim()) { setError("Please enter your first name."); return }
+    if (!isValidName(firstName)) { setError("First name can only contain letters."); return }
     if (!lastName.trim()) { setError("Please enter your last name."); return }
+    if (!isValidName(lastName)) { setError("Last name can only contain letters."); return }
     if (!city.trim()) { setError("Please enter your city."); return }
     const cleaned = phone.replace(/[^0-9]/g, "")
     if (cleaned.length !== 10) { setError("Please enter a valid 10-digit phone number."); return }
     if (!role) { setError("Please select your playing role."); return }
     if (!birthDate) { setError("Please enter your date of birth."); return }
+    const dobErr = birthDateError(birthDate)
+    if (dobErr) { setError(dobErr); return }
     if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
@@ -147,10 +213,15 @@ export default function PublicAuctionRegister({ auctionCode }) {
   if (done) return (
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
       <Header auctionName={auction?.name}/>
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"32px 20px", textAlign:"center" }}>
-        <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
-        <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>You're registered!</div>
-        <div style={{ fontSize:13, color:"#64748B", marginTop:6 }}>{firstName}, you've been added to the auction pool. The organizer will set your base price before the auction starts.</div>
+      <div style={{ maxWidth:480, margin:"0 auto", padding:"32px 20px 40px" }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
+          <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>You're registered!</div>
+          <div style={{ fontSize:13, color:"#64748B", marginTop:6 }}>{firstName}, you've been added to the auction pool. The organizer will set your base price before the auction starts.</div>
+        </div>
+        <AuctionDetailsCard auction={auction}/>
+        <div style={{ height:20 }}/>
+        <RegisteredPlayersList auctionId={auctionId}/>
       </div>
     </div>
   )
@@ -159,6 +230,17 @@ export default function PublicAuctionRegister({ auctionCode }) {
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
       <Header auctionName={auction?.name}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
+
+        <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+          {[["register","Register"],["details","Auction Details"],["players","Players"]].map(([k,label]) => (
+            <button key={k} onClick={()=>setInfoTab(k)} style={{ flex:1, padding:"9px 6px", borderRadius:10, border:infoTab===k?"none":"1.5px solid #E2E8F0", background:infoTab===k?"#166534":"#FFFFFF", color:infoTab===k?"#FFFFFF":"#64748B", fontSize:12, fontWeight:700, cursor:"pointer" }}>{label}</button>
+          ))}
+        </div>
+
+        {infoTab === "details" && <AuctionDetailsCard auction={auction}/>}
+        {infoTab === "players" && <RegisteredPlayersList auctionId={auctionId}/>}
+
+        {infoTab === "register" && (
         <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"1px solid #E2E8F0" }}>
 
           <label style={lS}>Phone Number</label>
@@ -249,6 +331,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
             </>
           )}
         </div>
+        )}
       </div>
     </div>
   )

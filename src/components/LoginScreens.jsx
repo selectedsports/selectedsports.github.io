@@ -3,7 +3,7 @@ import { Logo, Av } from "./ui.jsx"
 import { fetchPlayers, registerPlayer, fetchRecentlyRegistered, fetchPlayerCount, fetchMatchCount, fetchTeamCount, uploadProfilePhoto } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { Phone, Lock, Eye, EyeOff, UserPlus, Users, Swords, Trophy } from "lucide-react"
-import { ADMIN_PHONE } from "../constants.js"
+import { ADMIN_PHONE, isValidName, birthDateError } from "../constants.js"
 import { useMobile } from "../hooks/useMobile.js"
 
 export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, onRegister }) {
@@ -143,11 +143,15 @@ export function RegisterScreen({ onSuccess, onBack }) {
 
   const submit = async () => {
     if (!firstName.trim()) { setErr("First name required"); return }
+    if (!isValidName(firstName)) { setErr("First name can only contain letters."); return }
     if (!lastName.trim())  { setErr("Last name required"); return }
+    if (!isValidName(lastName)) { setErr("Last name can only contain letters."); return }
     const cleaned = phone.replace(/[^0-9]/g,"").slice(-10)
     if (cleaned.length !== 10) { setErr("Enter a valid 10-digit mobile number"); return }
     if (!city.trim()) { setErr("City required"); return }
     if (!birthDate) { setErr("Date of birth required"); return }
+    const dobErr = birthDateError(birthDate)
+    if (dobErr) { setErr(dobErr); return }
     if (!jerseyNumber.trim()) { setErr("Jersey number required"); return }
     if (!jerseySize) { setErr("Please select a jersey size"); return }
     if (!photoFile && !photoPreview) { setErr("Please upload a profile photo"); return }

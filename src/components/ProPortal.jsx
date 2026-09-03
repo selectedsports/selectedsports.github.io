@@ -5,7 +5,7 @@ import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMat
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, matchTitle } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -951,9 +951,13 @@ export default function ProPortal({ player, onLogout }) {
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={async () => {
                       if (!pForm.firstName.trim()) { alert("First name required"); return }
+                      if (!isValidName(pForm.firstName)) { alert("First name can only contain letters."); return }
                       if (!pForm.lastName.trim()) { alert("Last name required"); return }
+                      if (!isValidName(pForm.lastName)) { alert("Last name can only contain letters."); return }
                       if (!pForm.city.trim()) { alert("City is required"); return }
                       if (!pForm.birthDate) { alert("Date of birth is required"); return }
+                      const dobErr = birthDateError(pForm.birthDate)
+                      if (dobErr) { alert(dobErr); return }
                       if (!pForm.jerseyNumber.trim()) { alert("Jersey number is required"); return }
                       if (!pForm.jerseySize) { alert("Jersey size is required"); return }
                       if (!pForm.photoFile && !pForm.photoPreview) { alert("Profile photo is required"); return }
