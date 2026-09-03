@@ -724,6 +724,24 @@ export async function fetchTeamCount() {
 // ── Auction Tournament — registration functions ───────────────────────────────
 // (Added here because the original patch that should have added these
 // during Phase 1 never actually landed on this file.)
+// Add an existing platform player straight into an auction's pool, skipping
+// the public self-registration form. Playing role isn't tracked on the main
+// players table, so it's left unset — the organizer can set it afterward in
+// the Player Pool tab, same as any manually-added auction player.
+export async function addRosterPlayerToAuction(auctionId, player) {
+  const cleaned = (player.phone || "").replace(/[^0-9]/g, "").slice(-10)
+  const exists = await checkAuctionPhoneExists(cleaned, auctionId)
+  if (exists) return null // already in this auction's pool, skip silently
+  const category = computeAgeCategory(player.birth_date)
+  const { data, error } = await supabase.from("auction_players").insert({
+    name: player.name, phone: cleaned, status: "registered", auction_id: auctionId,
+    birth_date: player.birth_date || null, profile_image_url: player.profile_image_url || null,
+    category, city: player.city || null, jersey_number: player.jersey_number || null, jersey_size: player.jersey_size || null
+  }).select().single()
+  if (error) throw error
+  return data
+}
+
 export async function registerAuctionPlayer(name, phone, playingRole, birthDate = null, profileImageUrl = null, auctionId = null, extra = {}) {
   const category = computeAgeCategory(birthDate)
   const { data, error } = await supabase.from("auction_players").insert({
