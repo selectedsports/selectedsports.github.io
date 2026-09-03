@@ -733,20 +733,30 @@ export async function addRosterPlayerToAuction(auctionId, player) {
   const exists = await checkAuctionPhoneExists(cleaned, auctionId)
   if (exists) return null // already in this auction's pool, skip silently
   const category = computeAgeCategory(player.birth_date)
+  const basePrice = await computeAuctionBasePrice(auctionId)
   const { data, error } = await supabase.from("auction_players").insert({
     name: player.name, phone: cleaned, status: "registered", auction_id: auctionId,
     birth_date: player.birth_date || null, profile_image_url: player.profile_image_url || null,
-    category, city: player.city || null, jersey_number: player.jersey_number || null, jersey_size: player.jersey_size || null
+    category, city: player.city || null, jersey_number: player.jersey_number || null, jersey_size: player.jersey_size || null, base_price: basePrice
   }).select().single()
   if (error) throw error
   return data
 }
 
+// Base price is always exactly 1% of the auction's total points purse per
+// team, applied automatically to every player — no manual entry needed.
+async function computeAuctionBasePrice(auctionId) {
+  if (!auctionId) return null
+  const { data } = await supabase.from("auctions").select("points_purse").eq("id", auctionId).maybeSingle()
+  return data?.points_purse ? Math.round(data.points_purse / 100) : null
+}
+
 export async function registerAuctionPlayer(name, phone, playingRole, birthDate = null, profileImageUrl = null, auctionId = null, extra = {}) {
   const category = computeAgeCategory(birthDate)
+  const basePrice = await computeAuctionBasePrice(auctionId)
   const { data, error } = await supabase.from("auction_players").insert({
     name, phone, playing_role: playingRole, status: "registered", birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, auction_id: auctionId || null,
-    city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null
+    city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null, base_price: basePrice
   }).select().single()
   if (error) throw error
   await createNotification("auction_registration", `${name} registered for the auction`)
