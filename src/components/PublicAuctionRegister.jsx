@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
+import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
 
 const ROLES = ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"]
 const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"]
@@ -28,6 +29,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [city, setCity] = useState("")
+  const [selectedState, setSelectedState] = useState("")
+  const [cityMode, setCityMode] = useState("select") // "select" | "other"
   const [phone, setPhone] = useState("")
   const [role, setRole] = useState("")
   const [birthDate, setBirthDate] = useState("")
@@ -63,7 +66,12 @@ export default function PublicAuctionRegister({ auctionCode }) {
           const parts = (p.name || "").trim().split(/\s+/)
           setFirstName(parts[0] || "")
           setLastName(parts.slice(1).join(" ") || "")
-          if (p.city) setCity(p.city)
+          if (p.city) {
+            setCity(p.city)
+            const foundState = Object.keys(CITIES_BY_STATE).find(st => CITIES_BY_STATE[st].includes(p.city))
+            if (foundState) { setSelectedState(foundState); setCityMode("select") }
+            else { setCityMode("other") }
+          }
           if (p.playing_role && ROLES.includes(p.playing_role)) setRole(p.playing_role)
           if (p.birth_date) setBirthDate(p.birth_date)
           if (p.profile_image_url) setPhotoPreview(p.profile_image_url)
@@ -191,8 +199,27 @@ export default function PublicAuctionRegister({ auctionCode }) {
             </div>
           </div>
 
+          <label style={lS}>State</label>
+          <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select") }} style={{ ...iS, marginBottom:16 }}>
+            <option value="">Select your state</option>
+            {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
           <label style={lS}>City</label>
-          <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Pune" style={{ ...iS, marginBottom:16 }}/>
+          {cityMode === "other" ? (
+            <div style={{ marginBottom:16 }}>
+              <input value={city} onChange={e => setCity(e.target.value)} placeholder="Type your city" style={iS}/>
+              {selectedState && CITIES_BY_STATE[selectedState] && (
+                <button type="button" onClick={() => { setCityMode("select"); setCity("") }} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, marginTop:6 }}>← Choose from list instead</button>
+              )}
+            </div>
+          ) : (
+            <select value={city} onChange={e => { if (e.target.value === "__other__") { setCityMode("other"); setCity("") } else { setCity(e.target.value) } }} disabled={!selectedState} style={{ ...iS, marginBottom:16, opacity: selectedState ? 1 : 0.6 }}>
+              <option value="">{selectedState ? "Select your city" : "Select a state first"}</option>
+              {selectedState && (CITIES_BY_STATE[selectedState] || []).map(c => <option key={c} value={c}>{c}</option>)}
+              {selectedState && <option value="__other__">My city isn't listed...</option>}
+            </select>
+          )}
 
           <label style={lS}>Date of Birth</label>
           <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={new Date().toISOString().split("T")[0]} style={{ ...iS, marginBottom:16 }}/>
