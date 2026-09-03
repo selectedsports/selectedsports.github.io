@@ -2408,17 +2408,15 @@ function AuctionPage({ isMobile, isFounder }) {
               <button onClick={()=>setViewingPlayer(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af" }}>×</button>
             </div>
 
-            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:18 }}>
               {viewingPlayer.profile_image_url ? (
-                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
               ) : (
-                <Av name={viewingPlayer.name} id={viewingPlayer.id} sz={64}/>
+                <Av name={viewingPlayer.name} id={viewingPlayer.id} sz={100}/>
               )}
-              <div>
-                <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>{viewingPlayer.name}</div>
-                <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:4, marginTop:2 }}><Phone size={12}/> {viewingPlayer.phone}</div>
-                {viewingPlayer.category && <span style={{ display:"inline-block", marginTop:6, fontSize:10, fontWeight:700, color:"#B8860B", background:"rgba(246,196,83,0.15)", padding:"2px 8px", borderRadius:999 }}>{viewingPlayer.category}</span>}
-              </div>
+              <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{viewingPlayer.name}</div>
+              <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:4, marginTop:3 }}><Phone size={12}/> {viewingPlayer.phone}</div>
+              {viewingPlayer.category && <span style={{ display:"inline-block", marginTop:6, fontSize:10, fontWeight:700, color:"#B8860B", background:"rgba(246,196,83,0.15)", padding:"2px 8px", borderRadius:999 }}>{viewingPlayer.category}</span>}
             </div>
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
@@ -2772,23 +2770,25 @@ function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit
     <div>
       <button onClick={onBack} style={{ background:"none", border:"none", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", padding:0, marginBottom:18, display:"flex", alignItems:"center", gap:4 }}><ArrowLeft size={15}/> Back to Players</button>
 
-      <div style={{ display:"flex", flexWrap:"wrap", gap:20, alignItems:"flex-start", marginBottom:20 }}>
-        <div style={{ display:"flex", gap:16, alignItems:"flex-start", flex:1, minWidth:260 }}>
-          <Av name={player.name} id={player.id} sz={80}/>
-          <div>
-            <div style={{ fontSize:isMobile?20:26, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>{player.name}</div>
-            <div style={{ marginTop:6 }}><RoleBadge role={player.role||"player"}/></div>
-            <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3 }}>
-              {player.phone && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><Phone size={13}/> {player.phone}</div>}
-              {player.city && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><MapPin size={13}/> {player.city}</div>}
-            </div>
-            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-              <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700, color:isPending?"#B8860B":"#166534" }}><div style={{ width:8, height:8, borderRadius:"50%", background:isPending?"#B8860B":"#166534" }}/> {isPending?"Pending Approval":"Active Player"}</span>
-              {memberSince && <><span style={{ color:"#E2E8F0" }}>|</span><span style={{ fontSize:12, color:"#94A3B8" }}>Member since {memberSince}</span></>}
-            </div>
+      <div style={{ marginBottom:20, position:"relative" }}>
+        <button onClick={onEdit} style={{ position:"absolute", top:0, right:0, padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>Edit Player</button>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
+          {player.profile_image_url ? (
+            <img src={player.profile_image_url} alt={player.name} style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:12 }}/>
+          ) : (
+            <Av name={player.name} id={player.id} sz={120}/>
+          )}
+          <div style={{ fontSize:isMobile?20:26, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:10 }}>{player.name}</div>
+          <div style={{ marginTop:6 }}><RoleBadge role={player.role||"player"}/></div>
+          <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:3, alignItems:"center" }}>
+            {player.phone && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><Phone size={13}/> {player.phone}</div>}
+            {player.city && <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:6 }}><MapPin size={13}/> {player.city}</div>}
+          </div>
+          <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
+            <span style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, fontWeight:700, color:isPending?"#B8860B":"#166534" }}><div style={{ width:8, height:8, borderRadius:"50%", background:isPending?"#B8860B":"#166534" }}/> {isPending?"Pending Approval":"Active Player"}</span>
+            {memberSince && <><span style={{ color:"#E2E8F0" }}>|</span><span style={{ fontSize:12, color:"#94A3B8" }}>Member since {memberSince}</span></>}
           </div>
         </div>
-        <button onClick={onEdit} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>Edit Player</button>
       </div>
 
       {/* Real stats only */}
@@ -3072,15 +3072,17 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
 
       {selectedPlayer && (
         <div style={{marginTop:16}}>
-          <div style={{background:"#f0fdf4",borderRadius:16,padding:"16px 18px",border:"2px solid #166534"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
-              <Av name={selectedPlayer.name} id={selectedPlayer.id} sz={52}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:800,fontSize:16,color:"#0F172A",fontFamily:"var(--font-head)"}}>{selectedPlayer.name}</div>
-                <div style={{fontSize:12,color:"#6b7280",marginTop:3}}>📱 {selectedPlayer.phone||"No phone"}</div>
-                <div style={{fontSize:12,marginTop:4}}><span style={{color:"#9ca3af"}}>PIN: </span><span style={{background:"#d1fae5",color:"#065f46",padding:"2px 10px",borderRadius:5,fontWeight:800,fontSize:14}}>{selectedPlayer.pin}</span></div>
-              </div>
-              <button onClick={()=>setSelectedId(null)} style={{background:"none",border:"none",color:"#9ca3af",fontSize:22,cursor:"pointer",padding:0,flexShrink:0}}>×</button>
+          <div style={{background:"#f0fdf4",borderRadius:16,padding:"16px 18px",border:"2px solid #166534",position:"relative"}}>
+            <button onClick={()=>setSelectedId(null)} style={{position:"absolute",top:14,right:14,background:"none",border:"none",color:"#9ca3af",fontSize:22,cursor:"pointer",padding:0}}>×</button>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",marginBottom:14}}>
+              {selectedPlayer.profile_image_url ? (
+                <img src={selectedPlayer.profile_image_url} alt={selectedPlayer.name} style={{width:100,height:100,borderRadius:"50%",objectFit:"cover",border:"3px solid #166534",marginBottom:10}}/>
+              ) : (
+                <Av name={selectedPlayer.name} id={selectedPlayer.id} sz={100}/>
+              )}
+              <div style={{fontWeight:800,fontSize:16,color:"#0F172A",fontFamily:"var(--font-head)",marginTop:8}}>{selectedPlayer.name}</div>
+              <div style={{fontSize:12,color:"#6b7280",marginTop:3}}>📱 {selectedPlayer.phone||"No phone"}</div>
+              <div style={{fontSize:12,marginTop:6}}><span style={{color:"#9ca3af"}}>PIN: </span><span style={{background:"#d1fae5",color:"#065f46",padding:"2px 10px",borderRadius:5,fontWeight:800,fontSize:14}}>{selectedPlayer.pin}</span></div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
               <button onClick={()=>{const parts=(selectedPlayer.name||"").trim().split(/\s+/);setEditP(selectedPlayer);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:selectedPlayer.phone||"",pin:selectedPlayer.pin,role:selectedPlayer.role||"player",city:selectedPlayer.city||"",birthDate:selectedPlayer.birth_date||"",jerseyNumber:selectedPlayer.jersey_number||"",jerseySize:selectedPlayer.jersey_size||"",photoFile:null,photoPreview:selectedPlayer.profile_image_url||""})}} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #dbeafe",background:"#F5E6C8",color:"#7A4F13",fontSize:13,cursor:"pointer",fontWeight:700}}>Edit</button>

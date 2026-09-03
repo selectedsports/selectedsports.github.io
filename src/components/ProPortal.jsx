@@ -832,17 +832,15 @@ export default function ProPortal({ player, onLogout }) {
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>Player Details</h3>
                     <button onClick={() => setViewingAuctionPlayer(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#9ca3af" }}>×</button>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 18 }}>
+                  <div style={{ display: "flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom: 18 }}>
                     {viewingAuctionPlayer.profile_image_url ? (
-                      <img src={viewingAuctionPlayer.profile_image_url} alt={viewingAuctionPlayer.name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }}/>
+                      <img src={viewingAuctionPlayer.profile_image_url} alt={viewingAuctionPlayer.name} style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border:"3px solid #166534", marginBottom:10 }}/>
                     ) : (
-                      <Av name={viewingAuctionPlayer.name} id={viewingAuctionPlayer.id} sz={64}/>
+                      <Av name={viewingAuctionPlayer.name} id={viewingAuctionPlayer.id} sz={100}/>
                     )}
-                    <div>
-                      <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)" }}>{viewingAuctionPlayer.name}</div>
-                      <div style={{ fontSize: 13, color: "#64748B", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}><Phone size={12}/> {viewingAuctionPlayer.phone}</div>
-                      {viewingAuctionPlayer.category && <span style={{ display: "inline-block", marginTop: 6, fontSize: 10, fontWeight: 700, color: "#B8860B", background: "rgba(246,196,83,0.15)", padding: "2px 8px", borderRadius: 999 }}>{viewingAuctionPlayer.category}</span>}
-                    </div>
+                    <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)", marginTop:8 }}>{viewingAuctionPlayer.name}</div>
+                    <div style={{ fontSize: 13, color: "#64748B", display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}><Phone size={12}/> {viewingAuctionPlayer.phone}</div>
+                    {viewingAuctionPlayer.category && <span style={{ display: "inline-block", marginTop: 6, fontSize: 10, fontWeight: 700, color: "#B8860B", background: "rgba(246,196,83,0.15)", padding: "2px 8px", borderRadius: 999 }}>{viewingAuctionPlayer.category}</span>}
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
                     <div style={{ padding: "10px 12px", background: "#F8FAF8", borderRadius: 9 }}><div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 600 }}>CITY</div><div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>{viewingAuctionPlayer.city || "—"}</div></div>
@@ -868,25 +866,23 @@ export default function ProPortal({ player, onLogout }) {
           <div style={{ maxWidth: 660, margin: "0 auto", padding: isMobile ? "0 12px" : "0 16px" }}>
 
             {/* Header: Avatar, Name, Phone */}
-            <Card style={{ padding: "16px", marginBottom: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: editingProfile ? 16 : 0 }}>
+            <Card style={{ padding: "16px", marginBottom: 16, position:"relative" }}>
+              {!editingProfile && <button onClick={() => {
+                const parts = (player.name || "").trim().split(/\s+/)
+                setPForm({ firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "", phone: player.phone || "", pin: player.pin, city: player.city || "", birthDate: player.birth_date || "", jerseyNumber: player.jersey_number || "", jerseySize: player.jersey_size || "", photoFile: null, photoPreview: player.profile_image_url || "" })
+                setEditingProfile(true)
+              }} style={{ position:"absolute", top:14, right:14, padding: "6px 14px", borderRadius: 8, background: "rgba(246,196,83,0.12)", border: "1px solid rgba(246,196,83,0.3)", color: "#B8860B", fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Edit</button>}
+              <div style={{ display: "flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom: editingProfile ? 16 : 0 }}>
                 {player.profile_image_url ? (
-                  <img src={player.profile_image_url} alt={player.name} style={{ width:52, height:52, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                  <img src={player.profile_image_url} alt={player.name} style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
                 ) : (
-                  <Av name={player.name} id={player.id} sz={52}/>
+                  <Av name={player.name} id={player.id} sz={100}/>
                 )}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontSize: 17, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
-                    {player.role && player.role !== "player" && <RoleBadge role={player.role} size="sm"/>}
-                  </div>
-                  <div style={{ fontSize: 13, color: "#64748B", marginTop: 2 }}>{player.phone}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop:8 }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
+                  {player.role && player.role !== "player" && <RoleBadge role={player.role} size="sm"/>}
                 </div>
-                {!editingProfile && <button onClick={() => {
-                  const parts = (player.name || "").trim().split(/\s+/)
-                  setPForm({ firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "", phone: player.phone || "", pin: player.pin, city: player.city || "", birthDate: player.birth_date || "", jerseyNumber: player.jersey_number || "", jerseySize: player.jersey_size || "", photoFile: null, photoPreview: player.profile_image_url || "" })
-                  setEditingProfile(true)
-                }} style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(246,196,83,0.12)", border: "1px solid rgba(246,196,83,0.3)", color: "#B8860B", fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Edit</button>}
+                <div style={{ fontSize: 13, color: "#64748B", marginTop: 3 }}>{player.phone}</div>
               </div>
               {!editingProfile && (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 14 }}>

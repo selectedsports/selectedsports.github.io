@@ -449,19 +449,17 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                   </div>
                 ) : (
                   <div style={{ display:"grid", gap:10 }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:4 }}>
                       {player.profile_image_url ? (
-                        <img src={player.profile_image_url} alt={player.name} style={{ width:48, height:48, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                        <img src={player.profile_image_url} alt={player.name} style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
                       ) : (
-                        <Av name={player.name} id={player.id} sz={48}/>
+                        <Av name={player.name} id={player.id} sz={100}/>
                       )}
-                      <div>
-                        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                          <div style={{ fontWeight:800, fontSize:16, color:"#0F172A" }}>{player.name}</div>
-                          {player.role && player.role !== "player" && <RoleBadge role={player.role} size="sm"/>}
-                        </div>
-                        <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:5 }}><Phone size={12}/> {player.phone || "No phone"}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8 }}>
+                        <div style={{ fontWeight:800, fontSize:17, color:"#0F172A" }}>{player.name}</div>
+                        {player.role && player.role !== "player" && <RoleBadge role={player.role} size="sm"/>}
                       </div>
+                      <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:5, marginTop:3 }}><Phone size={12}/> {player.phone || "No phone"}</div>
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginTop:4 }}>
                       <div style={{ padding:"8px 10px", background:"#F8FAF8", borderRadius:9 }}>

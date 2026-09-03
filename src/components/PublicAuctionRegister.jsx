@@ -168,13 +168,11 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
           {lookedUp && profileComplete && !editingExisting ? (
             <>
-              <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
-                <img src={photoPreview} alt={firstName} style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", flexShrink:0, border:"2px solid #166534" }}/>
-                <div style={{ minWidth:0 }}>
-                  <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
-                  <div style={{ fontSize:12, color:"#64748B", marginTop:2 }}>{city} · {role}</div>
-                  <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
-                </div>
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"18px 14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
+                <img src={photoPreview} alt={firstName} style={{ width:110, height:110, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
+                <div style={{ fontSize:12, color:"#64748B", marginTop:3 }}>{city} · {role}</div>
+                <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
               </div>
               <div style={{ fontSize:12, color:"#64748B", marginBottom:16, textAlign:"center" }}>
                 These are your saved details. <button type="button" onClick={()=>setEditingExisting(true)} style={{ background:"none", border:"none", color:"#166534", fontWeight:700, cursor:"pointer", padding:0, fontSize:12, textDecoration:"underline" }}>Edit before submitting</button>
