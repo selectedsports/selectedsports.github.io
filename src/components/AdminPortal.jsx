@@ -1172,7 +1172,7 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                 {[{label:"✅ Confirmed",list:confirmed,bg:"#f0fdf4",border:"#bbf7d0",tc:"#065f46"},{label:"⏳ Waitlist",list:waitlist,bg:"#fefce8",border:"#fde68a",tc:"#78350f"},{label:"❌ Declined",list:declined,bg:"#fff5f5",border:"#fecaca",tc:"#991b1b"}].map(({label,list,bg,border,tc})=>(
                   <div key={label} style={{ background:bg,borderRadius:12,padding:"12px 14px",border:`1.5px solid ${border}` }}>
                     <div style={{ fontSize:12,fontWeight:800,color:tc,marginBottom:8,fontFamily:"var(--font-head)" }}>{label} ({list.length})</div>
-                    {list.map(mp=>{ const p=mp.players; if(!p) return null; return <div key={mp.id} style={{ display:"flex",alignItems:"center",gap:7,marginBottom:5 }}><Av name={p.name} id={p.id} sz={22}/><span style={{ fontSize:12,color:"#374151" }}>{p.name}</span></div> })}
+                    {list.map(mp=>{ const p=mp.players; if(!p) return null; return <div key={mp.id} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:7 }}><Av name={p.name} id={p.id} sz={30}/><span style={{ fontSize:12,color:"#374151" }}>{p.name}</span></div> })}
                     {list.length===0&&<div style={{ fontSize:12,color:"#9ca3af" }}>None</div>}
                   </div>
                 ))}
@@ -2410,9 +2410,9 @@ function AuctionPage({ isMobile, isFounder }) {
 
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:18 }}>
               {viewingPlayer.profile_image_url ? (
-                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:140, height:140, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
               ) : (
-                <Av name={viewingPlayer.name} id={viewingPlayer.id} sz={100}/>
+                <Av name={viewingPlayer.name} id={viewingPlayer.id} sz={140}/>
               )}
               <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{viewingPlayer.name}</div>
               <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:4, marginTop:3 }}><Phone size={12}/> {viewingPlayer.phone}</div>

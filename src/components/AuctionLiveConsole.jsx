@@ -135,10 +135,14 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
       ) : (
         <Card style={{ padding:"18px 16px", marginBottom:14, border:"2px solid #166534" }}>
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-            <Av name={currentPlayer.name} id={currentPlayer.id} sz={48}/>
+            {currentPlayer.profile_image_url ? (
+              <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", border:"2px solid #166534", flexShrink:0 }}/>
+            ) : (
+              <Av name={currentPlayer.name} id={currentPlayer.id} sz={64}/>
+            )}
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>{currentPlayer.name}</div>
-              <div style={{ fontSize:12, color:"#94A3B8" }}>{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
+              <div style={{ fontSize:12, color:"#94A3B8" }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
             </div>
             <span style={{ background:"rgba(34,197,94,0.12)", color:"#166534", borderRadius:999, padding:"4px 10px", fontSize:10, fontWeight:800, display:"flex", alignItems:"center", gap:4, flexShrink:0 }}><Gavel size={11}/> On the block</span>
           </div>
@@ -171,7 +175,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
       )}
 
       {registeredCount > 0 && (
-        <div style={{ display:"flex", gap:8 }}>
+        <div style={{ display:"flex", gap:8, marginBottom:18 }}>
           <select value={jumpTo} onChange={e=>setJumpTo(e.target.value)} style={{ flex:1, padding:"11px 12px", borderRadius:10, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", color:"#0F172A" }}>
             <option value="">Jump to player...</option>
             {auctionPlayers.filter(p => p.status === "registered" && p.id !== currentPlayer?.id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -179,6 +183,29 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           <button onClick={doJump} disabled={!jumpTo || busy} style={{ padding:"10px 18px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, fontWeight:700, cursor:(!jumpTo||busy)?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:4 }}>Go <ChevronRight size={14}/></button>
         </div>
       )}
+
+      {(() => {
+        const recentSold = auctionPlayers.filter(p => p.status === "sold" && p.sold_at).sort((a,b) => new Date(b.sold_at) - new Date(a.sold_at)).slice(0, 5)
+        if (recentSold.length === 0) return null
+        return (
+          <div>
+            <div style={{ fontWeight:700, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6 }}><CheckCircle2 size={14} color="#166534"/> Recently Sold</div>
+            <div style={{ display:"grid", gap:6 }}>
+              {recentSold.map(p => {
+                const team = auctionTeams.find(t => t.id === p.sold_team_id)
+                return (
+                  <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#FFFFFF", border:"1px solid #F1F5F9", borderRadius:9 }}>
+                    <Av name={p.name} id={p.id} sz={26}/>
+                    <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                    <div style={{ fontSize:11, color:"#94A3B8", flexShrink:0 }}>{team?.name || "—"}</div>
+                    <div style={{ fontSize:12, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>₹{p.sold_price}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

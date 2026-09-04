@@ -715,7 +715,7 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
               <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                 {confirmed.map(mp => (
                   <div key={mp.id} style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 12px 6px 6px", background:"rgba(34,197,94,0.08)", borderRadius:20, border:"1px solid rgba(34,197,94,0.3)" }}>
-                    <Av name={mp.players?.name || "?"} id={mp.player_id} sz={24}/>
+                    <Av name={mp.players?.name || "?"} id={mp.player_id} sz={30}/>
                     <span style={{ fontSize:12, fontWeight:600, color:"#166534" }}>{mp.players?.name || "Player"}{mp.player_id === player.id ? " (You)" : ""}</span>
                   </div>
                 ))}
@@ -741,7 +741,7 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
                     <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                       {waitlisted.map(mp => (
                         <div key={mp.id} style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 12px 6px 6px", background:"rgba(251,191,36,0.08)", borderRadius:20, border:"1px solid rgba(246,196,83,0.15)" }}>
-                          <Av name={mp.players?.name || "?"} id={mp.player_id} sz={24}/>
+                          <Av name={mp.players?.name || "?"} id={mp.player_id} sz={30}/>
                           <span style={{ fontSize:12, fontWeight:600, color:"#B8860B" }}>{mp.players?.name || "Player"}{mp.player_id === player.id ? " (You)" : ""}</span>
                         </div>
                       ))}
@@ -761,7 +761,7 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
                     <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                       {declined.map(mp => (
                         <div key={mp.id} style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 12px 6px 6px", background:"rgba(231,76,60,0.08)", borderRadius:20, border:"1px solid rgba(231,76,60,0.15)" }}>
-                          <Av name={mp.players?.name || "?"} id={mp.player_id} sz={24}/>
+                          <Av name={mp.players?.name || "?"} id={mp.player_id} sz={30}/>
                           <span style={{ fontSize:12, fontWeight:600, color:"#EF4444" }}>{mp.players?.name || "Player"}{mp.player_id === player.id ? " (You)" : ""}</span>
                         </div>
                       ))}
