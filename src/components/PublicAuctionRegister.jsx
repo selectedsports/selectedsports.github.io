@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, fetchAuctionPlayers } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
-import { isValidName, birthDateError } from "../constants.js"
+import { isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 
 const ROLES = ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"]
 const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"]
@@ -268,16 +268,18 @@ export default function PublicAuctionRegister({ auctionCode }) {
             <PhotoUploadField photoPreview={photoPreview} onPhotoSaved={(file, dataUrl) => { setPhotoFile(file); setPhotoPreview(dataUrl) }}/>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:6 }}>
             <div>
               <label style={lS}>First Name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={iS}/>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} disabled={lookedUp} placeholder="First name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
             </div>
             <div>
               <label style={lS}>Last Name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={iS}/>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} disabled={lookedUp} placeholder="Last name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
             </div>
           </div>
+          {lookedUp && <div style={{ fontSize:11, color:"#94A3B8", marginBottom:10 }}>Name matches your existing account and can't be changed here.</div>}
+          <div style={{ marginBottom:16 }}/>
 
           <label style={lS}>State</label>
           <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select") }} style={{ ...iS, marginBottom:16 }}>
@@ -302,7 +304,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
           )}
 
           <label style={lS}>Date of Birth</label>
-          <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={new Date().toISOString().split("T")[0]} style={{ ...iS, marginBottom:16 }}/>
+          <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={maxBirthDateForMinAge()} style={{ ...iS, marginBottom:16 }}/>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
             <div>
