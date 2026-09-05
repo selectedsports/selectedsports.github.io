@@ -7,9 +7,10 @@ import ProPortal from "./components/ProPortal.jsx"
 import PublicInvitePage from "./components/PublicInvitePage.jsx"
 import PublicAuctionView from "./components/PublicAuctionView.jsx"
 import PublicAuctionRegister from "./components/PublicAuctionRegister.jsx"
+import TeamOwnerView from "./components/TeamOwnerView.jsx"
 import { fetchMatches } from "./db.js"
 import { ADMIN_PHONE } from "./constants.js"
-import { Spinner, ProfileCompletionModal, isProfileIncomplete } from "./components/ui.jsx"
+import { Spinner } from "./components/ui.jsx"
 
 function restoreGitHubPagesPath() {
   const params = new URLSearchParams(window.location.search)
@@ -32,6 +33,11 @@ function getAuctionRegisterCode() {
   const match = window.location.pathname.match(/\/auction-register(?:\/([a-zA-Z0-9\-]+))?\/?$/)
   return match ? (match[1] || null) : undefined
 }
+function getTeamViewParams() {
+  restoreGitHubPagesPath()
+  const match = window.location.pathname.match(/\/team-view\/([a-zA-Z0-9\-]+)\/([a-zA-Z0-9\-]+)\/?$/)
+  return match ? { auctionCode: match[1], teamId: match[2] } : null
+}
 
 import { saveSession, loadSession, clearSession } from "./session.js"
 
@@ -50,8 +56,11 @@ export default function App() {
   const [joinToken, setJoinToken]    = useState(null)
   const [liveAuctionCode, setLiveAuctionCode] = useState(null)
   const [registerAuctionCode, setRegisterAuctionCode] = useState(null)
+  const [teamViewParams, setTeamViewParams] = useState(null)
 
   useEffect(() => {
+    const teamView = getTeamViewParams()
+    if (teamView) { setTeamViewParams(teamView); setScreen("teamView"); return }
     const liveCode = getLiveAuctionCode()
     if (liveCode !== undefined) { setLiveAuctionCode(liveCode); setScreen("liveAuction"); return }
     const regCode = getAuctionRegisterCode()
@@ -104,17 +113,15 @@ export default function App() {
     <>
       {screen==="publicInvite" && <PublicInvitePage token={joinToken}/>}
       {screen==="liveAuction"  && <PublicAuctionView auctionCode={liveAuctionCode}/>}
+      {screen==="teamView"     && <TeamOwnerView auctionCode={teamViewParams?.auctionCode} teamId={teamViewParams?.teamId}/>}
       {screen==="auctionRegister" && <PublicAuctionRegister auctionCode={registerAuctionCode}/>}
       {screen==="home"         && <HomeScreen onLogin={() => setScreen("login")} onRegister={() => setScreen("register")}/>}
       {screen==="register"     && <RegisterScreen onSuccess={() => setScreen("registered")} onBack={() => setScreen("home")}/>}
       {screen==="registered"   && <RegistrationSubmittedScreen onBack={() => setScreen("home")}/>}
       {screen==="login"        && <UnifiedLoginScreen onAdminSuccess={handleLogin} onPlayerSuccess={handleLogin} onBack={() => setScreen("home")} onRegister={() => setScreen("register")}/>}
-      {screen==="portal"       && loggedPlayer && !isAdmin && isProfileIncomplete(loggedPlayer) && (
-        <ProfileCompletionModal player={loggedPlayer} onComplete={(updated) => { setPlayer(updated); saveSession(isPro ? "pro" : "player", updated) }}/>
-      )}
-      {screen==="portal"       && loggedPlayer && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}
-      {screen==="portal"       && loggedPlayer && !isAdmin && isPro && !isProfileIncomplete(loggedPlayer) && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
-      {screen==="portal"       && loggedPlayer && !isAdmin && !isPro && !isProfileIncomplete(loggedPlayer) && (
+      {screen==="portal"       && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}
+      {screen==="portal"       && !isAdmin && isPro && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
+      {screen==="portal"       && !isAdmin && !isPro && (
         loadingMatches
           ? <div style={{ minHeight:"100vh",background:"#FBF3E7",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>
           : <PlayerPortal player={loggedPlayer} matches={matches} onLogout={handleLogout}/>

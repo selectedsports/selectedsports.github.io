@@ -1824,8 +1824,8 @@ function AuctionPage({ isMobile, isFounder }) {
     const sections = auctionTeams.map(t => {
       const squad = auctionPlayers.filter(p => p.sold_team_id === t.id)
       const rows = squad.length === 0
-        ? `<tr><td colspan="4" style="text-align:center;color:#94A3B8;padding:14px;">No players won yet.</td></tr>`
-        : squad.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.playing_role||"—")}</td><td>${esc(p.city||"—")}</td><td>${esc(p.phone||"—")}</td></tr>`).join("")
+        ? `<tr><td colspan="5" style="text-align:center;color:#94A3B8;padding:14px;">No players won yet.</td></tr>`
+        : squad.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.playing_role||"—")}</td><td>${esc(p.city||"—")}</td><td>${esc(p.phone||"—")}</td><td>₹${esc(p.sold_price||0)}</td></tr>`).join("")
       return `
         <div class="team-block">
           <div class="team-header">
@@ -1833,7 +1833,7 @@ function AuctionPage({ isMobile, isFounder }) {
             <div class="team-meta">Owner: ${esc(t.owner_name||"—")} &nbsp;·&nbsp; Captain: ${esc(t.captain_name||"—")}</div>
           </div>
           <table>
-            <thead><tr><th>Player Name</th><th>Role</th><th>City</th><th>Mobile Number</th></tr></thead>
+            <thead><tr><th>Player Name</th><th>Role</th><th>City</th><th>Mobile Number</th><th>Sold For</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>`
@@ -2286,6 +2286,7 @@ function AuctionPage({ isMobile, isFounder }) {
                       <div style={{ fontSize:10, color:"#94A3B8" }}>of ₹{t.purse_total}</div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8"/>
+                    <button onClick={(e)=>{ e.stopPropagation(); copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`) }} style={{ background:"none", border:"none", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#64748B", padding:4, fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>{copiedLink===`team-${t.id}` ? "Copied!" : "Team Link"}</button>
                     <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#64748B", padding:4 }}>Edit</button>
                     <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
                   </div>
