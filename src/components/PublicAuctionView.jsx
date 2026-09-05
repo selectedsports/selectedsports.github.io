@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { fetchAuctionState, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionByCode } from "../db.js"
+import { fetchAuctionState, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionByCode, fetchAuctionSponsors } from "../db.js"
 import { Av } from "./ui.jsx"
 
 const POLL_MS = 5000
@@ -21,6 +21,7 @@ export default function PublicAuctionView({ auctionCode }) {
   const [state, setState] = useState(null)
   const [players, setPlayers] = useState([])
   const [teams, setTeams] = useState([])
+  const [sponsors, setSponsors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -42,6 +43,7 @@ export default function PublicAuctionView({ auctionCode }) {
           const a = await fetchAuctionByCode(auctionCode)
           if (!a) { setNotFound(true); setLoading(false); return }
           setAuctionMeta(a)
+          fetchAuctionSponsors(a.id).then(setSponsors).catch(()=>{})
           await load(a.id)
           interval = setInterval(() => load(a.id), POLL_MS)
         } catch { setNotFound(true); setLoading(false) }
@@ -82,6 +84,21 @@ export default function PublicAuctionView({ auctionCode }) {
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
       <Header auctionName={auctionMeta?.name}/>
       <div style={{ maxWidth:520, margin:"0 auto", padding:"20px 16px 40px" }}>
+
+        {sponsors.length > 0 && (
+          <div style={{ display:"flex", gap:10, overflowX:"auto", marginBottom:18, paddingBottom:2 }}>
+            {sponsors.map(s => (
+              <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:64 }}>
+                {s.logo_url ? (
+                  <img src={s.logo_url} alt={s.name} style={{ width:48, height:48, borderRadius:12, objectFit:"cover" }}/>
+                ) : (
+                  <div style={{ width:48, height:48, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ fontSize:18 }}>⭐</span></div>
+                )}
+                <div style={{ fontSize:9, color:"#64748B", marginTop:4, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>{s.name}</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {(!state || state.status === "setup") && (
           <div style={{ background:"#FFFFFF", borderRadius:16, padding:"32px 20px", textAlign:"center", border:"1px solid #E2E8F0" }}>
@@ -170,8 +187,16 @@ export default function PublicAuctionView({ auctionCode }) {
                     <div style={{ fontSize:12, color:"#94A3B8" }}>₹{t.purse_remaining} left of ₹{t.purse_total}</div>
                   </div>
                   {squad.length === 0 ? <div style={{ fontSize:12, color:"#94A3B8" }}>No players won.</div> : squad.map(p => (
-                    <div key={p.id} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"4px 0", color:"#0F172A" }}>
-                      <span>{p.name}</span><span style={{ fontWeight:700, color:"#166534" }}>₹{p.sold_price}</span>
+                    <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 0", color:"#0F172A" }}>
+                      <span style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:26, height:26, borderRadius:"50%", objectFit:"cover" }}/>
+                        ) : (
+                          <Av name={p.name} id={p.id} sz={26}/>
+                        )}
+                        {p.name}
+                      </span>
+                      <span style={{ fontWeight:700, color:"#166534" }}>₹{p.sold_price}</span>
                     </div>
                   ))}
                 </div>

@@ -10,6 +10,9 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const [increment, setIncrement] = useState("100")
   const [bidHistory, setBidHistory] = useState([])
   const [jumpTo, setJumpTo] = useState("")
+  const [bidStep, setBidStep] = useState(1000)
+  const [manualTeamId, setManualTeamId] = useState("")
+  const [manualAmount, setManualAmount] = useState("")
 
   const load = async () => {
     try {
@@ -38,9 +41,21 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   }
 
   const doBid = async (teamId) => {
-    const nextAmount = (state.current_bid || 0) + state.bid_increment
+    const nextAmount = (state.current_bid || 0) + bidStep
     setBusy(true)
     try { await placeBid(state.current_player_id, teamId, nextAmount, auctionId); await load() } catch(e) { alert(e.message) }
+    setBusy(false)
+  }
+
+  const doManualBid = async () => {
+    const amount = Number(manualAmount)
+    if (!manualTeamId) { alert("Select a team first"); return }
+    if (!amount || amount <= 0) { alert("Enter a valid bid amount"); return }
+    if (amount <= (state.current_bid || 0)) { alert(`Bid must be higher than the current ₹${state.current_bid}`); return }
+    const team = auctionTeams.find(t => t.id === manualTeamId)
+    if (team && team.purse_remaining < amount) { alert(`${team.name} only has ₹${team.purse_remaining} left`); return }
+    setBusy(true)
+    try { await placeBid(state.current_player_id, manualTeamId, amount, auctionId); setManualAmount(""); await load() } catch(e) { alert(e.message) }
     setBusy(false)
   }
 
@@ -151,19 +166,40 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             <div style={{ fontSize:12, color:leadingTeam?"#166534":"#94A3B8", fontWeight:700, marginTop:4 }}>{leadingTeam ? `Leading: ${leadingTeam.name}` : "No bids yet"}</div>
           </div>
 
+          <div style={{ marginBottom:10 }}>
+            <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:6, textTransform:"uppercase" }}>Bid Step</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:6 }}>
+              {[1000,2000,5000,10000,15000,20000].map(v => (
+                <button key={v} onClick={()=>setBidStep(v)} style={{ padding:"7px 2px", borderRadius:8, border:bidStep===v?"none":"1.5px solid #E2E8F0", background:bidStep===v?"#166534":"#FFFFFF", color:bidStep===v?"#FFFFFF":"#64748B", fontSize:10, fontWeight:700, cursor:"pointer" }}>+{v>=1000?`${v/1000}k`:v}</button>
+              ))}
+            </div>
+          </div>
+
           <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)", gap:8, marginBottom:14 }}>
             {auctionTeams.map(t => {
-              const nextAmount = (state.current_bid || 0) + state.bid_increment
+              const nextAmount = (state.current_bid || 0) + bidStep
               const canAfford = t.purse_remaining >= nextAmount
               const isLeading = leadingTeam?.id === t.id
               return (
                 <button key={t.id} onClick={()=>doBid(t.id)} disabled={busy || !canAfford || isLeading} style={{ padding:"10px 8px", borderRadius:10, border:isLeading?"2px solid #166534":"1.5px solid #E2E8F0", background:isLeading?"rgba(34,197,94,0.1)":"#FFFFFF", cursor:(busy||!canAfford||isLeading)?"not-allowed":"pointer", opacity:(!canAfford||isLeading)?0.5:1, textAlign:"center" }}>
                   {isLeading && <div style={{ fontSize:9, color:"#166534", fontWeight:800, marginBottom:2, display:"flex", alignItems:"center", justifyContent:"center", gap:2 }}><Trophy size={9}/> LEADING</div>}
                   <div style={{ fontSize:12, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.name}</div>
-                  <div style={{ fontSize:10, color:"#94A3B8", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}><Wallet size={9}/> ₹{t.purse_remaining} left</div>
+                  <div style={{ fontSize:10, color:"#94A3B8", display:"flex", alignItems:"center", justifyContent:"center", gap:3 }}>→ ₹{nextAmount}</div>
                 </button>
               )
             })}
+          </div>
+
+          <div style={{ padding:"12px", background:"#F8FAF8", borderRadius:10, border:"1px solid #E2E8F0", marginBottom:14 }}>
+            <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:8, textTransform:"uppercase" }}>Manual Bid — jump to any exact amount</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <select value={manualTeamId} onChange={e=>setManualTeamId(e.target.value)} style={{ flex:1, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none", background:"#FFFFFF" }}>
+                <option value="">Team...</option>
+                {auctionTeams.map(t => <option key={t.id} value={t.id}>{t.name} (₹{t.purse_remaining})</option>)}
+              </select>
+              <input type="number" min="0" value={manualAmount} onChange={e=>setManualAmount(e.target.value)} placeholder={`> ₹${state.current_bid||0}`} style={{ width:110, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none" }}/>
+              <button onClick={doManualBid} disabled={busy} style={{ padding:"9px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:busy?"not-allowed":"pointer" }}>Bid</button>
+            </div>
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
