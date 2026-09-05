@@ -1697,11 +1697,12 @@ function AuctionPage({ isMobile, isFounder }) {
   const [platformTypeFilter, setPlatformTypeFilter] = useState("")
   const [addingToPool, setAddingToPool] = useState(false)
   useEffect(() => {
-    if (managingAuction && poolView === "registered" && allPlatformPlayers.length === 0) {
+    if (isFounder && managingAuction && poolView === "registered" && allPlatformPlayers.length === 0) {
       setLoadingPlatformPlayers(true)
       fetchPlayers().then(setAllPlatformPlayers).catch(()=>{}).finally(()=>setLoadingPlatformPlayers(false))
     }
-  }, [managingAuction, poolView])
+  }, [managingAuction, poolView, isFounder])
+  useEffect(() => { if (!isFounder) setPoolView("pool") }, [isFounder])
   const [teamSearch, setTeamSearch] = useState("")
 
   const [auctionTeamCounts, setAuctionTeamCounts] = useState({})
@@ -2246,13 +2247,17 @@ function AuctionPage({ isMobile, isFounder }) {
             <button onClick={load} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:0 }}><RotateCcw size={13}/> Refresh</button>
           </div>
           <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
-            {[
+            {(isFounder ? [
               { icon:Users, v:allPlatformPlayers.length, label:"Total Players" },
               { icon:Gavel, v:auctionPlayers.length, label:"In Auction Pool" },
               { icon:UserPlus, v:notAddedCount, label:"Not Added to Auction" },
               { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
-            ].map((c,i)=>(
-              <div key={i} style={{ flex:"1 1 25%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<3?"1px solid #F1F5F9":"none" }}>
+            ] : [
+              { icon:Gavel, v:auctionPlayers.length, label:"In Auction Pool" },
+              { icon:CheckCircle2, v:soldCount, label:"Sold" },
+              { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
+            ]).map((c,i,arr)=>(
+              <div key={i} style={{ flex:`1 1 ${100/arr.length}%`, minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<arr.length-1?"1px solid #F1F5F9":"none" }}>
                 <c.icon size={17} color="#166534"/>
                 <div>
                   <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
@@ -2262,13 +2267,15 @@ function AuctionPage({ isMobile, isFounder }) {
             ))}
           </div>
 
+          {isFounder && (
           <div style={{ display:"flex", gap:8, marginBottom:16 }}>
             {[["registered",`Registered Players`],["pool",`Auction Pool (${auctionPlayers.length})`]].map(([k,label])=>(
               <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:poolView===k?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:poolView===k?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer" }}>{label}</button>
             ))}
           </div>
+          )}
 
-          {poolView === "registered" ? (
+          {poolView === "registered" && isFounder ? (
             <>
               <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>All players registered on Selected Sports. Add players to the auction pool to include them in the auction.</div>
               <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
