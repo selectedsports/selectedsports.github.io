@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -2922,16 +2922,6 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [sortOpen,setSortOpen]=useState(false)
   const [filtersOpen,setFiltersOpen]=useState(false)
   const [cityFilter,setCityFilter]=useState("")
-  const [syncBusy, setSyncBusy] = useState(false)
-  const doSyncAuctionPlayers = async () => {
-    setSyncBusy(true)
-    try {
-      const { synced, skipped } = await syncAuctionPlayersToRoster()
-      alert(synced > 0 ? `Added ${synced} new player${synced!==1?"s":""} from auction registrations. ${skipped} already existed and were skipped.` : `No new players to add — everyone from auction registrations is already in this list (${skipped} skipped).`)
-      onRefresh()
-    } catch(e) { alert(e.message) }
-    setSyncBusy(false)
-  }
   const [openMenuId,setOpenMenuId]=useState(null)
   const [viewProfileId,setViewProfileId]=useState(null)
   const [lbRaw,setLbRaw]=useState([])
@@ -3052,9 +3042,6 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
         <div style={{flex:1, minWidth:200, position:"relative"}}>
           <SearchIcon size={16} color="#94A3B8" style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)"}}/>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search by name, phone or team..." style={{width:"100%",padding:"12px 14px 12px 40px",borderRadius:12,border:"1.5px solid #E2E8F0",fontSize:13,outline:"none",background:"#FFFFFF",boxSizing:"border-box",fontFamily:"var(--font-body)"}}/>
-        </div>
-        <div style={{position:"relative"}}>
-          <button onClick={doSyncAuctionPlayers} disabled={syncBusy} title="One-time sync: adds any auction registrant not already in this list — never creates duplicates" style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #166534",background:"#FFFFFF",color:"#166534",fontSize:13,fontWeight:600,cursor:syncBusy?"not-allowed":"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><UserPlus size={15}/> {syncBusy?"Syncing...":"Sync Auction Players"}</button>
         </div>
         <div style={{position:"relative"}}>
           <button onClick={()=>setFiltersOpen(o=>!o)} style={{padding:"12px 16px",borderRadius:12,border:"1.5px solid #E2E8F0",background:filtersOpen||cityFilter?"rgba(22,101,52,0.08)":"#FFFFFF",color:"#0F172A",fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap"}}><SlidersHorizontal size={15}/> Filters{cityFilter?" (1)":""}</button>
