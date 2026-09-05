@@ -793,16 +793,6 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
   const [filter, setFilter]   = useState(initialFilter||"all")
   const [search, setSearch]   = useState("")
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [syncBusy, setSyncBusy] = useState(false)
-  const doSyncAuctionPlayers = async () => {
-    setSyncBusy(true)
-    try {
-      const { synced, skipped } = await syncAuctionPlayersToRoster()
-      alert(synced > 0 ? `Added ${synced} new player${synced!==1?"s":""} from auction registrations. ${skipped} already existed and were skipped.` : `No new players to add — everyone from auction registrations is already in this list (${skipped} skipped).`)
-      onRefresh()
-    } catch(e) { alert(e.message) }
-    setSyncBusy(false)
-  }
   const [groundFilter, setGroundFilter] = useState("")
   const [openMenuId, setOpenMenuId] = useState(null)
   const [busyAction, setBusyAction] = useState(false)
@@ -2932,6 +2922,16 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [sortOpen,setSortOpen]=useState(false)
   const [filtersOpen,setFiltersOpen]=useState(false)
   const [cityFilter,setCityFilter]=useState("")
+  const [syncBusy, setSyncBusy] = useState(false)
+  const doSyncAuctionPlayers = async () => {
+    setSyncBusy(true)
+    try {
+      const { synced, skipped } = await syncAuctionPlayersToRoster()
+      alert(synced > 0 ? `Added ${synced} new player${synced!==1?"s":""} from auction registrations. ${skipped} already existed and were skipped.` : `No new players to add — everyone from auction registrations is already in this list (${skipped} skipped).`)
+      onRefresh()
+    } catch(e) { alert(e.message) }
+    setSyncBusy(false)
+  }
   const [openMenuId,setOpenMenuId]=useState(null)
   const [viewProfileId,setViewProfileId]=useState(null)
   const [lbRaw,setLbRaw]=useState([])
