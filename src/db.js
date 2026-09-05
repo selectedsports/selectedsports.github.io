@@ -1008,6 +1008,32 @@ export async function fetchPlayerAuctionHistory(phone) {
   return (data || []).filter(r => r.auctions)
 }
 
+// One-time backfill: sync every existing auction registration (across every
+// auction) into the main player roster, skipping anyone whose phone number
+// already exists there — so re-running this never creates duplicates or
+// inflates the player count.
+export async function syncAuctionPlayersToRoster() {
+  const norm = phone => (phone || "").replace(/[^0-9]/g, "").slice(-10)
+  const [{ data: auctionPlayers, error: e1 }, { data: mainPlayers, error: e2 }] = await Promise.all([
+    supabase.from("auction_players").select("name, phone, birth_date, profile_image_url, city, jersey_number, jersey_size"),
+    supabase.from("players").select("phone"),
+  ])
+  if (e1) throw e1
+  if (e2) throw e2
+  const existingPhones = new Set((mainPlayers || []).map(p => norm(p.phone)))
+  let synced = 0, skipped = 0
+  for (const ap of (auctionPlayers || [])) {
+    const phone = norm(ap.phone)
+    if (!phone || existingPhones.has(phone)) { skipped++; continue }
+    try {
+      await addPlayer(ap.name, phone, "1234", null, ap.birth_date, ap.profile_image_url, { city: ap.city, jerseyNumber: ap.jersey_number, jerseySize: ap.jersey_size })
+      existingPhones.add(phone) // prevents inserting the same new phone twice if they're in multiple auctions
+      synced++
+    } catch(e) { console.error(`Failed to sync ${ap.name} (${phone}):`, e); skipped++ }
+  }
+  return { synced, skipped }
+}
+
 export async function fetchAuctionSponsors(auctionId) {
   const { data, error } = await supabase.from("auction_sponsors").select("*").eq("auction_id", auctionId).order("created_at", { ascending: true })
   if (error) throw error
