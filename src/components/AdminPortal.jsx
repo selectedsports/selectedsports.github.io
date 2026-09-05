@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -1655,6 +1655,7 @@ function AuctionPage({ isMobile, isFounder }) {
   const [delTeam, setDelTeam] = useState(null)
   const [teamName, setTeamName] = useState("")
   const [teamOwner, setTeamOwner] = useState("")
+  const [teamCaptain, setTeamCaptain] = useState("")
   const [teamPurse, setTeamPurse] = useState("")
   const [busy, setBusy] = useState(false)
   const [regOpen, setRegOpen] = useState(true)
@@ -1795,8 +1796,8 @@ function AuctionPage({ isMobile, isFounder }) {
     try { await deleteAuctionPlayer(p.id); await load() } catch(e) { alert(e.message) }
   }
 
-  const openAddTeam = () => { setEditTeam(null); setTeamName(""); setTeamOwner(""); setTeamPurse(managingAuction?.points_purse ? String(managingAuction.points_purse) : ""); setShowAddTeam(true) }
-  const openEditTeam = (t) => { setEditTeam(t); setTeamName(t.name); setTeamOwner(t.owner_name || ""); setTeamPurse(String(t.purse_total)); setShowAddTeam(true) }
+  const openAddTeam = () => { setEditTeam(null); setTeamName(""); setTeamOwner(""); setTeamCaptain(""); setTeamPurse(managingAuction?.points_purse ? String(managingAuction.points_purse) : ""); setShowAddTeam(true) }
+  const openEditTeam = (t) => { setEditTeam(t); setTeamName(t.name); setTeamOwner(t.owner_name || ""); setTeamCaptain(t.captain_name || ""); setTeamPurse(String(t.purse_total)); setShowAddTeam(true) }
 
   const saveTeam = async () => {
     if (!teamName.trim()) { alert("Team name required"); return }
@@ -1804,8 +1805,8 @@ function AuctionPage({ isMobile, isFounder }) {
     if (!teamPurse || isNaN(purse) || purse <= 0) { alert("Enter a valid starting purse"); return }
     setBusy(true)
     try {
-      if (editTeam) await updateAuctionTeam(editTeam.id, { name: teamName.trim(), ownerName: teamOwner.trim(), purseTotal: purse })
-      else await createAuctionTeam(teamName.trim(), teamOwner.trim(), purse, managingAuction?.id || null)
+      if (editTeam) await updateAuctionTeam(editTeam.id, { name: teamName.trim(), ownerName: teamOwner.trim(), purseTotal: purse, captainName: teamCaptain.trim() })
+      else await createAuctionTeam(teamName.trim(), teamOwner.trim(), purse, managingAuction?.id || null, teamCaptain.trim())
       setShowAddTeam(false)
       await load()
     } catch(e) { alert(e.message) }
@@ -1816,6 +1817,49 @@ function AuctionPage({ isMobile, isFounder }) {
     setBusy(true)
     try { await deleteAuctionTeam(delTeam.id); setDelTeam(null); await load() } catch(e) { alert(e.message) }
     setBusy(false)
+  }
+
+  const doPrintTeamLists = () => {
+    const esc = s => String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+    const sections = auctionTeams.map(t => {
+      const squad = auctionPlayers.filter(p => p.sold_team_id === t.id)
+      const rows = squad.length === 0
+        ? `<tr><td colspan="4" style="text-align:center;color:#94A3B8;padding:14px;">No players won yet.</td></tr>`
+        : squad.map(p => `<tr><td>${esc(p.name)}</td><td>${esc(p.playing_role||"—")}</td><td>${esc(p.city||"—")}</td><td>${esc(p.phone||"—")}</td></tr>`).join("")
+      return `
+        <div class="team-block">
+          <div class="team-header">
+            <div class="team-name">${esc(t.name)}</div>
+            <div class="team-meta">Owner: ${esc(t.owner_name||"—")} &nbsp;·&nbsp; Captain: ${esc(t.captain_name||"—")}</div>
+          </div>
+          <table>
+            <thead><tr><th>Player Name</th><th>Role</th><th>City</th><th>Mobile Number</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`
+    }).join("")
+    const html = `<!DOCTYPE html><html><head><title>${esc(managingAuction?.name||"Auction")} — Team Rosters</title><style>
+      body{font-family:Arial,sans-serif;color:#0F172A;padding:24px;}
+      h1{font-size:20px;margin:0 0 4px;}
+      .subtitle{color:#64748B;font-size:13px;margin-bottom:24px;}
+      .team-block{margin-bottom:28px;page-break-inside:avoid;}
+      .team-header{background:#F0FDF4;border:1.5px solid #166534;border-radius:8px;padding:10px 14px;margin-bottom:8px;}
+      .team-name{font-size:16px;font-weight:800;}
+      .team-meta{font-size:12px;color:#374151;margin-top:2px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;}
+      th{background:#F8FAF8;text-align:left;padding:8px 10px;border:1px solid #E2E8F0;font-size:11px;text-transform:uppercase;color:#64748B;}
+      td{padding:7px 10px;border:1px solid #E2E8F0;}
+      @media print{ body{padding:10px;} }
+    </style></head><body>
+      <h1>${esc(managingAuction?.name||"Auction")} — Team Rosters</h1>
+      <div class="subtitle">Generated ${new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</div>
+      ${sections}
+    </body></html>`
+    const w = window.open("", "_blank")
+    if (!w) { alert("Please allow pop-ups to print the team lists."); return }
+    w.document.write(html)
+    w.document.close()
+    w.onload = () => w.print()
   }
 
   if (loading) return <Spinner/>
@@ -2219,6 +2263,7 @@ function AuctionPage({ isMobile, isFounder }) {
               <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
               <input value={teamSearch} onChange={e=>setTeamSearch(e.target.value)} placeholder="Search teams by name or owner..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
             </div>
+            <button onClick={doPrintTeamLists} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><FileText size={15}/> Print / Export</button>
             <button onClick={openAddTeam} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><Plus size={15}/> Add Team</button>
           </div>
           {filteredTeams.length === 0 ? (
@@ -2294,8 +2339,10 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Team Name *</div>
             <input value={teamName} onChange={e=>setTeamName(e.target.value)} placeholder="e.g. Mumbai Warriors" autoFocus style={{ ...iS, marginBottom:12 }}/>
-            <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Owner / Captain</div>
+            <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Owner Name</div>
             <input value={teamOwner} onChange={e=>setTeamOwner(e.target.value)} placeholder="e.g. Sahir Attar" style={{ ...iS, marginBottom:12 }}/>
+            <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Captain Name</div>
+            <input value={teamCaptain} onChange={e=>setTeamCaptain(e.target.value)} placeholder="e.g. Sahir Attar" style={{ ...iS, marginBottom:12 }}/>
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Starting Purse (₹) *</div>
             <input type="number" min="0" value={teamPurse} onChange={e=>setTeamPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
             {!editTeam && managingAuction?.points_purse && <div style={{ fontSize:11, color:"#166534", marginBottom:16, marginTop:-8 }}>Pre-filled from this auction's default purse — edit if this team should start with a different amount.</div>}
@@ -3131,7 +3178,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
           </div>
           <div><label style={lS}>Mobile</label><input type="tel" value={editForm.phone} onChange={e=>setEditForm({...editForm,phone:e.target.value.replace(/[^0-9+]/g,"").slice(0,13)})} style={iS}/></div>
           <div><label style={lS}>City</label><input value={editForm.city} onChange={e=>setEditForm({...editForm,city:e.target.value})} placeholder="e.g. Pune" style={iS}/></div>
-          <div><label style={lS}>Date of Birth</label><input type="date" value={editForm.birthDate} onChange={e=>setEditForm({...editForm,birthDate:e.target.value})} max={new Date().toISOString().split("T")[0]} style={iS}/></div>
+          <div><label style={lS}>Date of Birth</label><input type="date" value={editForm.birthDate} onChange={e=>setEditForm({...editForm,birthDate:e.target.value})} max={maxBirthDateForMinAge()} style={iS}/></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
             <div><label style={lS}>Jersey Number</label><input value={editForm.jerseyNumber} onChange={e=>setEditForm({...editForm,jerseyNumber:e.target.value.replace(/[^0-9]/g,"").slice(0,3)})} inputMode="numeric" placeholder="e.g. 7" style={iS}/></div>
             <div><label style={lS}>Jersey Size</label>

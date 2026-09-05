@@ -26,6 +26,15 @@ export const auctionPlanById = id => AUCTION_PLANS.find(p => p.id === id) || AUC
 
 export const MIN_REGISTRATION_AGE = 15
 
+// The latest birth date that still satisfies the minimum age — use this as
+// a date input's `max` so the calendar picker itself only offers valid dates,
+// rather than letting someone pick an invalid one and rejecting it after.
+export function maxBirthDateForMinAge() {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - MIN_REGISTRATION_AGE)
+  return d.toISOString().split("T")[0]
+}
+
 // Letters, spaces, apostrophes, hyphens, periods only — no digits or symbols.
 export const isValidName = s => /^[A-Za-z\s'.-]+$/.test((s || "").trim()) && (s || "").trim().length > 0
 

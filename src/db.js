@@ -837,16 +837,16 @@ export async function fetchAuctionTeams(auctionId = null) {
   if (error) throw error
   return data
 }
-export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null) {
+export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null, captainName = null) {
   const { data, error } = await supabase.from("auction_teams").insert({
-    name, owner_name: ownerName || null, purse_total: purseTotal, purse_remaining: purseTotal, auction_id: auctionId || null
+    name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal, auction_id: auctionId || null
   }).select().single()
   if (error) throw error
   return data
 }
-export async function updateAuctionTeam(id, { name, ownerName, purseTotal }) {
+export async function updateAuctionTeam(id, { name, ownerName, purseTotal, captainName }) {
   const { error } = await supabase.from("auction_teams").update({
-    name, owner_name: ownerName || null, purse_total: purseTotal, purse_remaining: purseTotal
+    name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal
   }).eq("id", id)
   if (error) throw error
 }
