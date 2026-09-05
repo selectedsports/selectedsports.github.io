@@ -99,12 +99,14 @@ export default function PublicAuctionView({ auctionCode }) {
 
             {currentPlayer ? (
               <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"2px solid #166534", marginBottom:20 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
-                  <Av name={currentPlayer.name} id={currentPlayer.id} sz={48}/>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)" }}>{currentPlayer.name}</div>
-                    <div style={{ fontSize:12, color:"#94A3B8" }}>{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
-                  </div>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:16 }}>
+                  {currentPlayer.profile_image_url ? (
+                    <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                  ) : (
+                    <Av name={currentPlayer.name} id={currentPlayer.id} sz={120}/>
+                  )}
+                  <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{currentPlayer.name}</div>
+                  <div style={{ fontSize:13, color:"#94A3B8", marginTop:2 }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
                 </div>
                 <div style={{ textAlign:"center", padding:"16px", background:"rgba(34,197,94,0.08)", borderRadius:12 }}>
                   <div style={{ fontSize:32, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>₹{state.current_bid}</div>
@@ -118,7 +120,7 @@ export default function PublicAuctionView({ auctionCode }) {
             )}
 
             <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Team Purses</div>
-            <div style={{ display:"grid", gap:8 }}>
+            <div style={{ display:"grid", gap:8, marginBottom:20 }}>
               {teams.slice().sort((a,b) => b.purse_remaining - a.purse_remaining).map(t => (
                 <div key={t.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#FFFFFF", borderRadius:10, padding:"10px 14px", border: leadingTeam?.id===t.id ? "1.5px solid #166534" : "1px solid #E2E8F0" }}>
                   <span style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{t.name}</span>
@@ -126,6 +128,29 @@ export default function PublicAuctionView({ auctionCode }) {
                 </div>
               ))}
             </div>
+
+            {(() => {
+              const recentSold = players.filter(p => p.status === "sold" && p.sold_at).sort((a,b) => new Date(b.sold_at) - new Date(a.sold_at)).slice(0, 5)
+              if (recentSold.length === 0) return null
+              return (
+                <div>
+                  <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Recently Sold</div>
+                  <div style={{ display:"grid", gap:6 }}>
+                    {recentSold.map(p => {
+                      const team = teams.find(t => t.id === p.sold_team_id)
+                      return (
+                        <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:9 }}>
+                          <Av name={p.name} id={p.id} sz={26}/>
+                          <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                          <div style={{ fontSize:11, color:"#94A3B8", flexShrink:0 }}>{team?.name || "—"}</div>
+                          <div style={{ fontSize:12, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>₹{p.sold_price}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
           </>
         )}
 

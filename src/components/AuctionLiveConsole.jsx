@@ -134,17 +134,17 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         </Card>
       ) : (
         <Card style={{ padding:"18px 16px", marginBottom:14, border:"2px solid #166534" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-            {currentPlayer.profile_image_url ? (
-              <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:64, height:64, borderRadius:"50%", objectFit:"cover", border:"2px solid #166534", flexShrink:0 }}/>
-            ) : (
-              <Av name={currentPlayer.name} id={currentPlayer.id} sz={64}/>
-            )}
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>{currentPlayer.name}</div>
-              <div style={{ fontSize:12, color:"#94A3B8" }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
-            </div>
+          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:6 }}>
             <span style={{ background:"rgba(34,197,94,0.12)", color:"#166534", borderRadius:999, padding:"4px 10px", fontSize:10, fontWeight:800, display:"flex", alignItems:"center", gap:4, flexShrink:0 }}><Gavel size={11}/> On the block</span>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:14 }}>
+            {currentPlayer.profile_image_url ? (
+              <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+            ) : (
+              <Av name={currentPlayer.name} id={currentPlayer.id} sz={120}/>
+            )}
+            <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{currentPlayer.name}</div>
+            <div style={{ fontSize:13, color:"#94A3B8", marginTop:2 }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
           </div>
           <div style={{ textAlign:"center", padding:"16px", background:"rgba(34,197,94,0.08)", borderRadius:12, marginBottom:14 }}>
             <div style={{ fontSize:30, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>₹{state.current_bid}</div>
