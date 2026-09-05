@@ -1802,6 +1802,8 @@ function AuctionPage({ isMobile, isFounder }) {
 
   const saveTeam = async () => {
     if (!teamName.trim()) { alert("Team name required"); return }
+    if (teamOwner.trim() && !isValidName(teamOwner)) { alert("Owner name can only contain letters."); return }
+    if (teamCaptain.trim() && !isValidName(teamCaptain)) { alert("Captain name can only contain letters."); return }
     const purse = Number(teamPurse)
     if (!teamPurse || isNaN(purse) || purse <= 0) { alert("Enter a valid starting purse"); return }
     setBusy(true)

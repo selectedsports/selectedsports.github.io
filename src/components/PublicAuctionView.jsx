@@ -118,7 +118,7 @@ export default function PublicAuctionView({ auctionCode }) {
               <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"2px solid #166534", marginBottom:20 }}>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:16 }}>
                   {currentPlayer.profile_image_url ? (
-                    <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                    <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:180, height:200, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
                   ) : (
                     <Av name={currentPlayer.name} id={currentPlayer.id} sz={120}/>
                   )}
