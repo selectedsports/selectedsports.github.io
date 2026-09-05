@@ -762,7 +762,7 @@ export async function registerAuctionPlayer(name, phone, playingRole, birthDate 
   await createNotification("auction_registration", `${name} registered for the auction`)
   // Also create a full (pending-approval) player account if this phone isn't one already,
   // so auction registrants count toward the main player roster too.
-  try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, extra) } catch {}
+  try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, extra) } catch(e) { console.error("Failed to sync auction registrant into main player roster:", e) }
   return data
 }
 

@@ -3100,7 +3100,11 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
             return (
               <div key={p.id} onClick={()=>setSelectedId(id=>id===p.id?null:p.id)} style={{display:"flex",alignItems:"center",padding:"14px 16px",background:selectedId===p.id?"rgba(34,197,94,0.05)":"#FFFFFF",borderTop:i===0?"none":"1px solid #F1F5F9",cursor:"pointer",flexWrap:isMobile?"wrap":"nowrap",gap:isMobile?10:0}}>
                 <div style={{flex:1,display:"flex",alignItems:"center",gap:12,minWidth:0}}>
-                  <Av name={p.name} id={p.id} sz={40}/>
+                  {p.profile_image_url ? (
+                    <img src={p.profile_image_url} alt={p.name} style={{ width:48, height:48, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
+                  ) : (
+                    <Av name={p.name} id={p.id} sz={48}/>
+                  )}
                   <div style={{minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:14,color:"#0F172A"}}>{p.name}</div>
                     <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",alignItems:"center",gap:4}}><Phone size={11}/> {p.phone||"No phone"}</div>
