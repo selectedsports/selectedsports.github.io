@@ -2988,12 +2988,14 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const proCount = players.filter(p=>p.role==="pro").length
   const adminCount = players.filter(p=>p.role==="organizer"||p.role==="founder").length
   const normalCount = players.filter(p=>!p.role||p.role==="player").length
+  const auctionCount = players.filter(p=>p.registration_source==="auction").length
   const cities = Array.from(new Set(players.map(p=>p.city).filter(Boolean))).sort()
 
   const tabFiltered = players.filter(p => {
     if (tab==="player") return !p.role || p.role==="player"
     if (tab==="pro") return p.role==="pro"
     if (tab==="admin") return p.role==="organizer" || p.role==="founder"
+    if (tab==="auction") return p.registration_source==="auction"
     return true
   })
   const q = search.trim().toLowerCase()
@@ -3082,7 +3084,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
 
       {/* Filter pills */}
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-        {[["all",`All (${registeredCount})`],["player",`Players (${normalCount})`],["pro",`PRO (${proCount})`],["admin",`Admin (${adminCount})`]].map(([k,label])=>(
+        {[["all",`All (${registeredCount})`],["player",`Players (${normalCount})`],["pro",`PRO (${proCount})`],["admin",`Admin (${adminCount})`],["auction",`Auction (${auctionCount})`]].map(([k,label])=>(
           <button key={k} onClick={()=>setTab(k)} style={{padding:"9px 16px",borderRadius:999,border:tab===k?"none":"1.5px solid #E2E8F0",background:tab===k?"#166534":"#FFFFFF",color:tab===k?"#FFFFFF":"#0F172A",fontSize:12,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>{label}</button>
         ))}
       </div>
@@ -3117,7 +3119,14 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
                     <Av name={p.name} id={p.id} sz={48}/>
                   )}
                   <div style={{minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:14,color:"#0F172A"}}>{p.name}</div>
+                    <div style={{fontWeight:700,fontSize:14,color:"#0F172A",display:"flex",alignItems:"center",gap:6}}>
+                      {p.name}
+                      {p.registration_source === "auction" ? (
+                        <span style={{ fontSize:9, fontWeight:800, color:"#B8860B", background:"rgba(184,134,11,0.12)", padding:"2px 7px", borderRadius:999, textTransform:"uppercase", flexShrink:0 }}><Gavel size={9} style={{verticalAlign:"-1px", marginRight:2}}/>Auction</span>
+                      ) : (
+                        <span style={{ fontSize:9, fontWeight:700, color:"#64748B", background:"#F1F5F9", padding:"2px 7px", borderRadius:999, textTransform:"uppercase", flexShrink:0 }}>Direct</span>
+                      )}
+                    </div>
                     <div style={{fontSize:12,color:"#64748B",marginTop:2,display:"flex",alignItems:"center",gap:4}}><Phone size={11}/> {p.phone||"No phone"}</div>
                     {p.city && <div style={{fontSize:12,color:"#94A3B8",marginTop:1,display:"flex",alignItems:"center",gap:4}}><MapPin size={11}/> {p.city}</div>}
                   </div>

@@ -68,7 +68,7 @@ export async function fetchPlayers() {
 export async function addPlayer(name, phone, pin = "1234", created_by = null, birthDate = null, profileImageUrl = null, extra = {}) {
   if (await checkPlayerPhoneExists(phone)) throw new Error("This phone number is already registered.")
   const category = computeAgeCategory(birthDate)
-  const { data, error } = await supabase.from("players").insert({ name, phone, pin, created_by, birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null }).select().single()
+  const { data, error } = await supabase.from("players").insert({ name, phone, pin, created_by, birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null, registration_source: extra.source || "direct" }).select().single()
   if (error) throw error
   if (data && data.approved === false) await createNotification("player_pending", `${name} registered and is awaiting approval`)
   return data
@@ -339,7 +339,7 @@ export async function upsertSetting(key, value) {
 export async function registerPlayer(name, phone, pin, birthDate = null, profileImageUrl = null, extra = {}) {
   if (await checkPlayerPhoneExists(phone)) throw new Error("This phone number is already registered.")
   const category = computeAgeCategory(birthDate)
-  const { data, error } = await supabase.from("players").insert({ name, phone, pin, approved: true, birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null }).select().single()
+  const { data, error } = await supabase.from("players").insert({ name, phone, pin, approved: true, birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null, registration_source: "direct" }).select().single()
   if (error) throw error
   return data
 }
@@ -762,7 +762,7 @@ export async function registerAuctionPlayer(name, phone, playingRole, birthDate 
   await createNotification("auction_registration", `${name} registered for the auction`)
   // Also create a full (pending-approval) player account if this phone isn't one already,
   // so auction registrants count toward the main player roster too.
-  try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, extra) } catch(e) { console.error("Failed to sync auction registrant into main player roster:", e) }
+  try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, { ...extra, source: "auction" }) } catch(e) { console.error("Failed to sync auction registrant into main player roster:", e) }
   return data
 }
 
@@ -1026,7 +1026,7 @@ export async function syncAuctionPlayersToRoster() {
     const phone = norm(ap.phone)
     if (!phone || existingPhones.has(phone)) { skipped++; continue }
     try {
-      await addPlayer(ap.name, phone, "1234", null, ap.birth_date, ap.profile_image_url, { city: ap.city, jerseyNumber: ap.jersey_number, jerseySize: ap.jersey_size })
+      await addPlayer(ap.name, phone, "1234", null, ap.birth_date, ap.profile_image_url, { city: ap.city, jerseyNumber: ap.jersey_number, jerseySize: ap.jersey_size, source: "auction" })
       existingPhones.add(phone) // prevents inserting the same new phone twice if they're in multiple auctions
       synced++
     } catch(e) { console.error(`Failed to sync ${ap.name} (${phone}):`, e); skipped++ }
