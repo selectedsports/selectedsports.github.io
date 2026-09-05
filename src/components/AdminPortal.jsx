@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -1689,6 +1689,19 @@ function AuctionPage({ isMobile, isFounder }) {
   const [auctionSort, setAuctionSort] = useState("date")
   const [auctionSortOpen, setAuctionSortOpen] = useState(false)
   const [poolSearch, setPoolSearch] = useState("")
+  const [poolView, setPoolView] = useState("registered") // "registered" | "pool"
+  const [allPlatformPlayers, setAllPlatformPlayers] = useState([])
+  const [loadingPlatformPlayers, setLoadingPlatformPlayers] = useState(false)
+  const [selectedPlatformIds, setSelectedPlatformIds] = useState(new Set())
+  const [platformSearch, setPlatformSearch] = useState("")
+  const [platformTypeFilter, setPlatformTypeFilter] = useState("")
+  const [addingToPool, setAddingToPool] = useState(false)
+  useEffect(() => {
+    if (managingAuction && poolView === "registered" && allPlatformPlayers.length === 0) {
+      setLoadingPlatformPlayers(true)
+      fetchPlayers().then(setAllPlatformPlayers).catch(()=>{}).finally(()=>setLoadingPlatformPlayers(false))
+    }
+  }, [managingAuction, poolView])
   const [teamSearch, setTeamSearch] = useState("")
 
   const [auctionTeamCounts, setAuctionTeamCounts] = useState({})
@@ -1743,6 +1756,25 @@ function AuctionPage({ isMobile, isFounder }) {
       await loadAuctions()
     } catch(e) { alert(e.message) }
     setDelAuctionBusy(false)
+  }
+
+  const doAddPlayerToPool = async (player) => {
+    setAddingToPool(true)
+    try { await addRosterPlayerToAuction(managingAuction.id, player); await load() } catch(e) { alert(e.message) }
+    setAddingToPool(false)
+  }
+
+  const doBulkAddToPool = async () => {
+    setAddingToPool(true)
+    try {
+      for (const id of selectedPlatformIds) {
+        const player = allPlatformPlayers.find(p => p.id === id)
+        if (player) await addRosterPlayerToAuction(managingAuction.id, player)
+      }
+      setSelectedPlatformIds(new Set())
+      await load()
+    } catch(e) { alert(e.message) }
+    setAddingToPool(false)
   }
 
   const loadSponsors = async (auctionId) => {
@@ -2191,8 +2223,23 @@ function AuctionPage({ isMobile, isFounder }) {
       {subTab === "players" && (() => {
         const soldCount = auctionPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
         const totalBase = auctionPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
+        const inPoolPhones = new Set(auctionPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
+        const notAddedCount = allPlatformPlayers.filter(p => !inPoolPhones.has((p.phone||"").replace(/[^0-9]/g,"").slice(-10))).length
         const q = poolSearch.trim().toLowerCase()
         const filteredPool = auctionPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+
+        const pq = platformSearch.trim().toLowerCase()
+        const filteredPlatform = allPlatformPlayers.filter(p => {
+          if (pq && !p.name.toLowerCase().includes(pq) && !(p.phone||"").includes(pq)) return false
+          if (platformTypeFilter && (p.role||"player") !== platformTypeFilter) return false
+          return true
+        })
+        const toggleSelect = id => {
+          const next = new Set(selectedPlatformIds)
+          next.has(id) ? next.delete(id) : next.add(id)
+          setSelectedPlatformIds(next)
+        }
+
         return (
         <div>
           <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
@@ -2200,11 +2247,12 @@ function AuctionPage({ isMobile, isFounder }) {
           </div>
           <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
             {[
-              { icon:Users, v:auctionPlayers.length, label:"Total Players" },
-              { icon:CheckCircle2, v:soldCount, label:"Sold" },
+              { icon:Users, v:allPlatformPlayers.length, label:"Total Players" },
+              { icon:Gavel, v:auctionPlayers.length, label:"In Auction Pool" },
+              { icon:UserPlus, v:notAddedCount, label:"Not Added to Auction" },
               { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
             ].map((c,i)=>(
-              <div key={i} style={{ flex:"1 1 33%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<2?"1px solid #F1F5F9":"none" }}>
+              <div key={i} style={{ flex:"1 1 25%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<3?"1px solid #F1F5F9":"none" }}>
                 <c.icon size={17} color="#166534"/>
                 <div>
                   <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
@@ -2213,6 +2261,57 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
             ))}
           </div>
+
+          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+            {[["registered",`Registered Players`],["pool",`Auction Pool (${auctionPlayers.length})`]].map(([k,label])=>(
+              <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:poolView===k?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:poolView===k?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer" }}>{label}</button>
+            ))}
+          </div>
+
+          {poolView === "registered" ? (
+            <>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>All players registered on Selected Sports. Add players to the auction pool to include them in the auction.</div>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+                <div style={{ flex:1, minWidth:200, position:"relative" }}>
+                  <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                  <input value={platformSearch} onChange={e=>setPlatformSearch(e.target.value)} placeholder="Search players by name or phone..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+                </div>
+                <select value={platformTypeFilter} onChange={e=>setPlatformTypeFilter(e.target.value)} style={{ padding:"12px 14px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, background:"#FFFFFF", color:"#0F172A" }}>
+                  <option value="">All Types</option>
+                  <option value="player">Player</option>
+                  <option value="pro">PRO</option>
+                </select>
+                {selectedPlatformIds.size > 0 && (
+                  <button onClick={doBulkAddToPool} disabled={addingToPool} style={{ padding:"12px 18px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><Plus size={15}/> Add {selectedPlatformIds.size} to Pool</button>
+                )}
+              </div>
+              {loadingPlatformPlayers ? <Spinner/> : filteredPlatform.length === 0 ? (
+                <Card style={{ padding:"32px 16px", textAlign:"center" }}><div style={{ fontSize:14, color:"#64748B" }}>No players found.</div></Card>
+              ) : (
+                <div style={{ display:"grid", gap:8 }}>
+                  {filteredPlatform.map(p => {
+                    const already = inPoolPhones.has((p.phone||"").replace(/[^0-9]/g,"").slice(-10))
+                    return (
+                      <Card key={p.id} style={{ padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                        <input type="checkbox" checked={selectedPlatformIds.has(p.id)} disabled={already} onChange={()=>toggleSelect(p.id)} style={{ flexShrink:0 }}/>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:38, height:38, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
+                        ) : (
+                          <Av name={p.name} id={p.id} sz={38}/>
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:700, fontSize:14, color:"#0F172A" }}>{p.name}{p.role==="pro" && <span style={{ marginLeft:6, fontSize:9, fontWeight:800, color:"#B8860B", background:"rgba(184,134,11,0.12)", padding:"2px 6px", borderRadius:999 }}>PRO</span>}</div>
+                          <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.city ? ` · ${p.city}` : ""}</div>
+                        </div>
+                        <button onClick={()=>doAddPlayerToPool(p)} disabled={already || addingToPool} style={{ padding:"8px 14px", borderRadius:9, border:already?"none":"1.5px solid #166534", background:already?"rgba(34,197,94,0.12)":"#FFFFFF", color:already?"#166534":"#166534", fontSize:12, fontWeight:700, cursor:already?"default":"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{already ? <><CheckCircle2 size={13}/> Added</> : <><Plus size={13}/> Add</>}</button>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+          <>
           <div style={{ position:"relative", marginBottom:14 }}>
             <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
             <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search players by name or role..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
@@ -2242,6 +2341,8 @@ function AuctionPage({ isMobile, isFounder }) {
                 </Card>
               ))}
             </div>
+          )}
+          </>
           )}
         </div>
         )
