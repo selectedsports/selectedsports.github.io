@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -1706,19 +1706,19 @@ function AuctionPage({ isMobile, isFounder }) {
   const loadPayments = async () => { try { setPendingPayments(await fetchPendingAuctionPayments()) } catch {} }
   useEffect(() => { if (isFounder) loadPayments() }, [isFounder])
 
-  const load = async () => {
-    setLoading(true)
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const auctionId = managingAuction?.id || null
       const [p, t, open] = await Promise.all([fetchAuctionPlayers(auctionId), fetchAuctionTeams(auctionId), fetchAuctionRegistrationOpen(auctionId)])
       setAuctionPlayers(p); setAuctionTeams(t); setRegOpen(open)
-    } catch(e) { alert(e.message) }
-    setLoading(false)
+    } catch(e) { if (!silent) alert(e.message) }
+    if (!silent) setLoading(false)
   }
   useEffect(() => { load() }, [managingAuction])
   useEffect(() => {
     if (!managingAuction || subTab !== "players") return
-    const interval = setInterval(load, 8000)
+    const interval = setInterval(() => load(true), 8000)
     return () => clearInterval(interval)
   }, [managingAuction, subTab])
 
@@ -2915,6 +2915,9 @@ function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit
 }
 
 function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
+  useEffect(() => {
+    syncAuctionPlayersToRoster().then(({ synced }) => { if (synced > 0) onRefresh() }).catch(e => console.error("Background auction-player sync failed:", e))
+  }, [])
   const [showAdd,setShowAdd]=useState(false)
   const [editP,setEditP]=useState(null)
   const [pinP,setPinP]=useState(null)
