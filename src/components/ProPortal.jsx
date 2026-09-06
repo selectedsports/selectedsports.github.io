@@ -187,6 +187,7 @@ export default function ProPortal({ player, onLogout }) {
   const [teams, setTeams] = useState([])
   const [loading, setLoading] = useState(true)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [showBenefits, setShowBenefits] = useState(false)
   const [showCreateAuction, setShowCreateAuction] = useState(false)
   const [myAuctions, setMyAuctions] = useState([])
   const [loadingAuctions, setLoadingAuctions] = useState(true)
@@ -522,14 +523,17 @@ export default function ProPortal({ player, onLogout }) {
 
               <div style={{ marginBottom: 20 }}>
                 <h2 style={{ margin: "0 0 12px", fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>Quick Actions</h2>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3,1fr)", gap: 10 }}>
                   {[
                     { label:"Schedule Match", icon:Plus, action:()=>setShowSchedule(true), disabled:!active, bg:"rgba(37,99,235,0.1)", c:"#2563EB" },
-                    { label:"My Players", icon:Users, action:()=>setProView("players"), disabled:false, bg:"rgba(34,197,94,0.1)", c:"#166534" },
-                    { label:"New Auction", icon:Trophy, action:()=>setShowCreateAuction(true), disabled:!active, bg:"rgba(246,196,83,0.15)", c:"#B8860B" },
-                    { label:"My Auctions", icon:ClipboardList, action:()=>setProView("auctions"), disabled:false, bg:"rgba(124,58,237,0.1)", c:"#7C3AED" },
+                    { label:"My Matches", icon:Calendar, action:()=>setProView("matches"), disabled:false, bg:"rgba(34,197,94,0.1)", c:"#166534" },
+                    { label:"My Players", icon:Users, action:()=>setProView("players"), disabled:false, bg:"rgba(246,196,83,0.15)", c:"#B8860B" },
+                    { label:"Auction", icon:Trophy, action:()=>setProView("auctions"), disabled:false, bg:"rgba(124,58,237,0.1)", c:"#7C3AED", badge:"NEW" },
+                    { label:"Payments", icon:Wallet, action:()=>setProView("matches"), disabled:false, bg:"rgba(15,110,86,0.1)", c:"#0F6E56" },
+                    { label:"Invite Players", icon:UserPlus, action:()=>setProView("players"), disabled:false, bg:"rgba(37,99,235,0.1)", c:"#2563EB" },
                   ].map((a,i) => (
-                    <button key={i} onClick={a.action} disabled={a.disabled} style={{ padding: "16px 8px", borderRadius: 14, background: "#F8FAF8", border: "1.5px solid #E2E8F0", cursor: a.disabled ? "not-allowed" : "pointer", opacity: a.disabled ? 0.5 : 1, display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
+                    <button key={i} onClick={a.action} disabled={a.disabled} style={{ position:"relative", padding: "16px 8px", borderRadius: 14, background: "#F8FAF8", border: "1.5px solid #E2E8F0", cursor: a.disabled ? "not-allowed" : "pointer", opacity: a.disabled ? 0.5 : 1, display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
+                      {a.badge && <span style={{ position:"absolute", top:6, right:6, fontSize:8, fontWeight:800, color:"#FFFFFF", background:"#EF4444", padding:"2px 6px", borderRadius:999 }}>{a.badge}</span>}
                       <div style={{ width:34, height:34, borderRadius:10, background:a.bg, display:"flex", alignItems:"center", justifyContent:"center" }}><a.icon size={17} color={a.c}/></div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>{a.label}</div>
                     </button>
@@ -537,12 +541,58 @@ export default function ProPortal({ player, onLogout }) {
                 </div>
               </div>
 
-              <Card style={{ padding: "16px", background: active ? "linear-gradient(135deg,#166534,#0F766E)" : "rgba(231,76,60,0.12)" }}>
-                <div style={{ fontWeight: 800, fontSize: 14, fontFamily: "var(--font-head)", display: "flex", alignItems: "center", gap: 8, color: active ? "#FFFFFF" : "#EF4444" }}>
-                  {active ? (<><Star size={16} /> PRO Membership</>) : (<><AlertTriangle size={16} /> Subscription Expired</>)}
-                </div>
-                <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9, color: active ? "#FFFFFF" : "#EF4444" }}>
-                  {active ? `Expires ${player.subscription_expiry} \u00b7 ${daysLeft} day${daysLeft > 1 ? "s" : ""} left` : "Contact admin to renew your subscription."}
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap:16, marginBottom:20 }}>
+                <Card style={{ padding: isMobile?"18px 16px":"22px 24px", background: active ? "linear-gradient(135deg,#166534,#0F172A)" : "rgba(231,76,60,0.12)", color:"#FFFFFF" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                    <div style={{ fontWeight: 900, fontSize: 17, fontFamily: "var(--font-head)", display: "flex", alignItems: "center", gap: 8, color: active ? "#FFFFFF" : "#EF4444" }}>
+                      {active ? (<><Star size={18} /> PRO Membership</>) : (<><AlertTriangle size={18} /> Subscription Expired</>)}
+                    </div>
+                    {active && <span style={{ background:"rgba(255,255,255,0.15)", color:"#FFFFFF", fontSize:11, fontWeight:700, padding:"4px 12px", borderRadius:999, display:"flex", alignItems:"center", gap:4, flexShrink:0 }}><CheckCircle2 size={12}/> Active</span>}
+                  </div>
+                  <div style={{ fontSize:12, opacity:0.85, marginBottom:16 }}>Unlock premium features and take your game to the next level.</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
+                    {["Create & manage matches","Priority support","Access to player auctions","Custom team management","Advanced player stats","Exclusive pro-only events"].map((f,i)=>(
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, opacity:0.9 }}><CheckCircle2 size={13} color={active?"#4ADE80":"#FCA5A5"}/> {f}</div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize:12, opacity:0.75, marginBottom:14 }}>
+                    {active ? `Expires ${player.subscription_expiry} · ${daysLeft} day${daysLeft > 1 ? "s" : ""} left` : "Contact admin to renew your subscription."}
+                  </div>
+                  <div style={{ display:"flex", gap:10 }}>
+                    <button onClick={()=>setProView("profile")} style={{ flex:1, padding:"10px", borderRadius:9, border:"1.5px solid rgba(255,255,255,0.3)", background:"transparent", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer" }}>Manage Plan</button>
+                    <button onClick={()=>setShowBenefits(true)} style={{ flex:1, padding:"10px", borderRadius:9, border:"none", background:"#FFFFFF", color: active ? "#166534" : "#EF4444", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}>View Benefits</button>
+                  </div>
+                </Card>
+
+                <Card style={{ padding:"20px 18px", background:"linear-gradient(135deg,rgba(124,58,237,0.06),rgba(37,99,235,0.06))", border:"1.5px solid rgba(124,58,237,0.2)" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                    <Gavel size={17} color="#7C3AED"/>
+                    <div style={{ fontWeight:900, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>Explore Auctions</div>
+                  </div>
+                  <div style={{ fontSize:12, color:"#64748B", marginBottom:14, lineHeight:1.5 }}>Build your dream team by running or joining a player auction — already included in your PRO membership.</div>
+                  <div style={{ display:"grid", gap:8, marginBottom:16 }}>
+                    {["Bid on players in real time","Manage teams and rosters","Track every auction's history"].map((f,i)=>(
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:7, fontSize:12, color:"#374151" }}><CheckCircle2 size={13} color="#7C3AED"/> {f}</div>
+                    ))}
+                  </div>
+                  <button onClick={()=>setProView("auctions")} style={{ width:"100%", padding:"11px", borderRadius:9, border:"none", background:"#7C3AED", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><Gavel size={14}/> Go to Auctions</button>
+                </Card>
+              </div>
+
+              <Card style={{ padding:"18px" }}>
+                <div style={{ fontWeight:900, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}><Star size={16} color="#B8860B"/> Pro Player Perks</div>
+                <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:10 }}>
+                  {[
+                    { icon:Gavel, text:"Join player auctions" },
+                    { icon:Calendar, text:"Priority match scheduling" },
+                    { icon:Star, text:"Pro member badge" },
+                    { icon:UsersRound, text:"Custom team management" },
+                  ].map((p,i)=>(
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:"#374151" }}>
+                      <div style={{ width:26, height:26, borderRadius:8, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><p.icon size={13} color="#B8860B"/></div>
+                      {p.text}
+                    </div>
+                  ))}
                 </div>
               </Card>
             </div>
@@ -1102,6 +1152,33 @@ export default function ProPortal({ player, onLogout }) {
         <CreateAuctionFlow organizerId={player.id} isMobile={isMobile}
           onClose={() => setShowCreateAuction(false)}
           onCreated={() => setShowCreateAuction(false)} />
+      )}
+
+      {showBenefits && (
+        <div onClick={()=>setShowBenefits(false)} style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.5)", display:"flex", alignItems:isMobile?"flex-end":"center", justifyContent:"center", zIndex:400, padding:16 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#FFFFFF", borderRadius:isMobile?"20px 20px 0 0":20, padding:"24px 22px", maxWidth:420, width:"100%", maxHeight:"85vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+              <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:8 }}><Star size={18} color="#B8860B"/> PRO Benefits</div>
+              <button onClick={()=>setShowBenefits(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#94A3B8" }}>×</button>
+            </div>
+            <div style={{ display:"grid", gap:12 }}>
+              {[
+                ["Create & manage matches","Schedule and organize matches for your community, with no limit on how many you host."],
+                ["Access to player auctions","Run your own cricket player auctions to build teams, or take part in others'."],
+                ["Advanced player stats","See real match history and rank for every player you've invited."],
+                ["Custom team management","Add, edit, and organize your own set of teams for matches and auctions."],
+                ["Priority support","Reach out to the platform admin directly for help whenever you need it."],
+                ["Exclusive pro-only events","Get early access to new features as they roll out to the platform."],
+              ].map(([title, desc], i) => (
+                <div key={i} style={{ display:"flex", gap:10 }}>
+                  <CheckCircle2 size={16} color="#166534" style={{ flexShrink:0, marginTop:2 }}/>
+                  <div><div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{title}</div><div style={{ fontSize:12, color:"#64748B", marginTop:2 }}>{desc}</div></div>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setShowBenefits(false)} style={{ width:"100%", padding:"12px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", marginTop:18 }}>Got it</button>
+          </div>
+        </div>
       )}
 
       {/* PRO_BOTTOM_NAV_BAR_V1 */}
