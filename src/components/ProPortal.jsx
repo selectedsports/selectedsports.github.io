@@ -5,7 +5,7 @@ import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMat
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -417,30 +417,51 @@ export default function ProPortal({ player, onLogout }) {
           const previewMatches = upcomingMatches.slice(0, 3)
           return (
             <div>
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 13, color: "#64748B", fontWeight: 600 }}>👋 Welcome back</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2, flexWrap: "wrap" }}>
-                <div style={{ fontSize: 20, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
-                <span style={{ color: isActive ? "#166534" : "#EF4444", fontSize: 11, background: isActive ? "rgba(22,101,52,0.12)" : "rgba(231,76,60,0.12)", padding: "2px 9px", borderRadius: 999, fontWeight: 800 }}>{isActive ? "PRO MEMBER" : "SUBSCRIPTION EXPIRED"}</span>
+            <div style={{ position:"relative", borderRadius:20, overflow:"hidden", marginBottom:18, background:"linear-gradient(135deg,#0F172A,#166534)", padding: isMobile ? "20px 16px" : "28px 32px" }}>
+              <div style={{ position:"absolute", top:-30, right:-30, width:180, height:180, borderRadius:"50%", background:"rgba(255,255,255,0.04)" }}/>
+              <div style={{ position:"absolute", bottom:-40, right:60, width:120, height:120, borderRadius:"50%", background:"rgba(255,255,255,0.03)" }}/>
+              {!isMobile && (
+                <div style={{ position:"absolute", top:20, right:32, textAlign:"right", fontFamily:"cursive", color:"rgba(255,255,255,0.35)", fontSize:20, lineHeight:1.3, fontStyle:"italic" }}>
+                  Same<br/>Passion<br/><span style={{ fontWeight:700 }}>Bigger Games</span>
+                </div>
+              )}
+              <div style={{ display:"flex", alignItems:"center", gap:16, position:"relative" }}>
+                <div style={{ position:"relative", flexShrink:0 }}>
+                  {player.profile_image_url ? (
+                    <img src={player.profile_image_url} alt={player.name} style={{ width: isMobile?64:84, height: isMobile?64:84, borderRadius:"50%", objectFit:"cover", border:"3px solid rgba(255,255,255,0.25)" }}/>
+                  ) : (
+                    <Av name={player.name} id={player.id} sz={isMobile?64:84}/>
+                  )}
+                  <span style={{ position:"absolute", bottom:-4, left:"50%", transform:"translateX(-50%)", background: isActive ? "#166534" : "#EF4444", color:"#FFFFFF", fontSize:9, fontWeight:800, padding:"2px 9px", borderRadius:999, whiteSpace:"nowrap", border:"2px solid #0F172A" }}>{isActive ? "PRO" : "EXPIRED"}</span>
+                </div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.6)", fontWeight:600 }}>👋 Welcome back</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:2, flexWrap:"wrap" }}>
+                    <div style={{ fontSize: isMobile?18:22, fontWeight:900, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>{player.name}</div>
+                    <span style={{ color: isActive ? "#4ADE80" : "#FCA5A5", fontSize:10, background:"rgba(255,255,255,0.1)", padding:"2px 9px", borderRadius:999, fontWeight:800 }}>{isActive ? "PRO MEMBER" : "SUBSCRIPTION EXPIRED"}</span>
+                  </div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.55)", marginTop:6, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Calendar size={12}/> {fmtDate(new Date().toISOString().split("T")[0])}</span>
+                    <span>·</span>
+                    <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={12}/> {upcomingMatches.length} upcoming match{upcomingMatches.length!==1?"es":""}</span>
+                  </div>
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: "#64748B", marginTop: 6, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Calendar size={12}/> {fmtDate(new Date().toISOString().split("T")[0])}</span>
-                <span>·</span>
-                <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={12}/> {upcomingMatches.length} upcoming match{upcomingMatches.length!==1?"es":""}</span>
-              </div>
+              <div style={{ marginTop:16, fontSize:12, color:"rgba(255,255,255,0.45)", fontStyle:"italic", position:"relative" }}>"Cricket is not just a game, it's a way to stay connected."</div>
             </div>
 
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <div style={{ fontSize: 13, color: "#0F172A", fontWeight: 700, fontFamily:"var(--font-head)" }}>Your Overview</div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
               {[
                 { icon:Calendar, v:stats?.matches ?? 0, label:"Matches Hosted", sub:"Matches you organized", bg:"rgba(34,197,94,0.08)", border:"rgba(34,197,94,0.3)", c:"#166534" },
                 { icon:Swords, v:playerStats?.matches ?? 0, label:"Matches Played", sub:"Matches you joined", bg:"rgba(15,110,86,0.08)", border:"rgba(15,110,86,0.3)", c:"#0F6E56" },
                 { icon:UsersRound, v:stats?.players ?? 0, label:"Players Managed", sub:"Across your matches", bg:"rgba(246,196,83,0.12)", border:"rgba(246,196,83,0.3)", c:"#B8860B" },
                 { icon:MapPin, v:stats?.venues ?? 0, label:"Grounds", sub:"Grounds you've used", bg:"rgba(245,158,11,0.08)", border:"rgba(246,196,83,0.15)", c:"#B8860B" },
               ].map((s,i) => (
-                <div key={i} style={{ padding: "14px 14px", background: s.bg, borderRadius: 14, border: `1.5px solid ${s.border}` }}>
+                <div key={i} style={{ padding: "14px 14px", background: s.bg, borderRadius: 14, border: `1.5px solid ${s.border}`, position:"relative" }}>
+                  <ChevronRight size={13} color={s.c} style={{ position:"absolute", top:14, right:12, opacity:0.5 }}/>
                   <div style={{ width:28, height:28, borderRadius:8, background:"rgba(255,255,255,0.6)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:8 }}><s.icon size={14} color={s.c}/></div>
                   <div style={{ fontSize: 20, fontWeight: 900, color: s.c, fontFamily: "var(--font-head)" }}>{s.v}</div>
                   <div style={{ fontSize: 11, color: "#0F172A", fontWeight: 700, marginTop:2 }}>{s.label}</div>
@@ -503,13 +524,13 @@ export default function ProPortal({ player, onLogout }) {
                 <h2 style={{ margin: "0 0 12px", fontSize: isMobile ? 16 : 18, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>Quick Actions</h2>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { label:"Schedule Match", icon:Plus, action:()=>setShowSchedule(true), disabled:!active },
-                    { label:"My Players", icon:Users, action:()=>setProView("players"), disabled:false },
-                    { label:"New Auction", icon:Trophy, action:()=>setShowCreateAuction(true), disabled:!active },
-                    { label:"My Auctions", icon:ClipboardList, action:()=>setProView("auctions"), disabled:false },
+                    { label:"Schedule Match", icon:Plus, action:()=>setShowSchedule(true), disabled:!active, bg:"rgba(37,99,235,0.1)", c:"#2563EB" },
+                    { label:"My Players", icon:Users, action:()=>setProView("players"), disabled:false, bg:"rgba(34,197,94,0.1)", c:"#166534" },
+                    { label:"New Auction", icon:Trophy, action:()=>setShowCreateAuction(true), disabled:!active, bg:"rgba(246,196,83,0.15)", c:"#B8860B" },
+                    { label:"My Auctions", icon:ClipboardList, action:()=>setProView("auctions"), disabled:false, bg:"rgba(124,58,237,0.1)", c:"#7C3AED" },
                   ].map((a,i) => (
                     <button key={i} onClick={a.action} disabled={a.disabled} style={{ padding: "16px 8px", borderRadius: 14, background: "#F8FAF8", border: "1.5px solid #E2E8F0", cursor: a.disabled ? "not-allowed" : "pointer", opacity: a.disabled ? 0.5 : 1, display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
-                      <div style={{ width:34, height:34, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}><a.icon size={17} color="#166534"/></div>
+                      <div style={{ width:34, height:34, borderRadius:10, background:a.bg, display:"flex", alignItems:"center", justifyContent:"center" }}><a.icon size={17} color={a.c}/></div>
                       <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>{a.label}</div>
                     </button>
                   ))}
@@ -929,7 +950,7 @@ export default function ProPortal({ player, onLogout }) {
                   </div>
                   <div>
                     <label style={{ fontSize: 12, color: "#64748B", display: "block", marginBottom: 5, fontWeight: 600 }}>Date of Birth</label>
-                    <input value={pForm.birthDate} onChange={e => setPForm({ ...pForm, birthDate: e.target.value })} type="date" max={new Date().toISOString().split("T")[0]} style={{ width: "100%", padding: "11px 12px", borderRadius: 9, border: "1.5px solid #E2E8F0", fontSize: 14, outline: "none", boxSizing: "border-box" }}/>
+                    <input value={pForm.birthDate} onChange={e => setPForm({ ...pForm, birthDate: e.target.value })} type="date" max={maxBirthDateForMinAge()} style={{ width: "100%", padding: "11px 12px", borderRadius: 9, border: "1.5px solid #E2E8F0", fontSize: 14, outline: "none", boxSizing: "border-box" }}/>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                     <div>
