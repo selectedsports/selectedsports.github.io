@@ -17,6 +17,7 @@ export const matchTitle = m => m.our_team ? `${m.our_team} vs ${m.team}` : m.tea
 export const AUCTION_PLANS = [
   { id: "free",   label: "Free",   maxTeams: 3,  price: 0 },
   { id: "plan2",  label: "Plan 2", maxTeams: 4,  price: 1999 },
+  { id: "plan2b", label: "Plan 2B", maxTeams: 5,  price: 2249 },
   { id: "plan3",  label: "Plan 3", maxTeams: 6,  price: 2499 },
   { id: "plan4",  label: "Plan 4", maxTeams: 8,  price: 2999 },
   { id: "plan5",  label: "Plan 5", maxTeams: 12, price: 3999 },
