@@ -1290,7 +1290,22 @@ export async function fetchAllAuctionPlayerCounts() {
 // A player's full history across EVERY auction they've registered for (matched
 // by phone, since auction_players has no direct link to the main players table).
 export async function fetchPlayerAuctionHistory(phone) {
-  const { data, error } = await supabase.from("auction_players").select("*, auctions(id, name, auction_date, points_purse, status)").eq("phone", phone).order("created_at", { ascending: false })
+  if (!phone) return []
+  const norm = phone.replace(/[^0-9]/g, "").slice(-10)
+  try {
+    const { data, error } = await supabase
+      .from("auction_players")
+      .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, organized_by), auction_teams!sold_team_id(id, name, color, logo_url)")
+      .or(`phone.eq.${phone},phone.eq.${norm},phone.like.%${norm}`)
+      .order("created_at", { ascending: false })
+    if (!error && data) return data.filter(r => r.auctions)
+  } catch {}
+
+  const { data, error } = await supabase
+    .from("auction_players")
+    .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, organized_by)")
+    .or(`phone.eq.${phone},phone.eq.${norm},phone.like.%${norm}`)
+    .order("created_at", { ascending: false })
   if (error) throw error
   return (data || []).filter(r => r.auctions)
 }
