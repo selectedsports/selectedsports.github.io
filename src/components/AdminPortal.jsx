@@ -1811,12 +1811,14 @@ function AuctionPage({ isMobile, isFounder }) {
     setTimeout(() => setCopiedLink(""), 2000)
   }
 
+  const [receiptModalImg, setReceiptModalImg] = useState(null)
+
   const doApprovePayment = async (auctionId) => {
-    try { await approveAuctionPayment(auctionId); await loadPayments() } catch(e) { alert(e.message) }
+    try { await approveAuctionPayment(auctionId); await Promise.all([loadPayments(), loadAuctions()]) } catch(e) { alert(e.message) }
   }
   const doRejectPayment = async (auctionId) => {
     if (!window.confirm("Reject this payment claim?")) return
-    try { await rejectAuctionPayment(auctionId); await loadPayments() } catch(e) { alert(e.message) }
+    try { await rejectAuctionPayment(auctionId); await Promise.all([loadPayments(), loadAuctions()]) } catch(e) { alert(e.message) }
   }
 
   const iS = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #e5e7eb", fontSize:14, outline:"none", background:"#fafafa", boxSizing:"border-box", fontFamily:"var(--font-body)" }
@@ -1948,9 +1950,9 @@ function AuctionPage({ isMobile, isFounder }) {
                 <Card key={s.id} style={{ padding:"16px", textAlign:"center", position:"relative" }}>
                   <button onClick={()=>setDelSponsor(s)} style={{ position:"absolute", top:8, right:8, background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={14}/></button>
                   {s.logo_url ? (
-                    <img src={s.logo_url} alt={s.name} style={{ width:56, height:56, borderRadius:12, objectFit:"cover", margin:"0 auto 10px" }}/>
+                    <img src={s.logo_url} alt={s.name} style={{ width:80, height:80, borderRadius:14, objectFit:"cover", margin:"0 auto 10px", border:"1px solid #E2E8F0" }}/>
                   ) : (
-                    <div style={{ width:56, height:56, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}><Star size={24} color="#B8860B"/></div>
+                    <div style={{ width:80, height:80, borderRadius:14, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}><Star size={32} color="#B8860B"/></div>
                   )}
                   <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{s.name}</div>
                 </Card>
@@ -2195,7 +2197,12 @@ function AuctionPage({ isMobile, isFounder }) {
                   {canManage ? (
                     <button onClick={()=>{ setManagingAuction(a); setSubTab(a.status==="completed"?"players":"players") }} style={{ padding:"9px 14px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{a.status==="completed"?"View Results":"Open Auction"} <ChevronRight size={13}/></button>
                   ) : (
-                    <span style={{ fontSize:11, color:statusColor[a.payment_status]||"#94A3B8", fontWeight:700, fontStyle:"italic" }}>{a.payment_status === "pending" ? "Awaiting payment confirmation" : a.payment_status}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                      <span style={{ fontSize:11, color:statusColor[a.payment_status]||"#94A3B8", fontWeight:700, fontStyle:"italic" }}>{a.payment_status === "pending" ? "Awaiting payment confirmation" : a.payment_status}</span>
+                      {isFounder && a.payment_status === "pending" && (
+                        <button onClick={async (e)=>{ e.stopPropagation(); await doApprovePayment(a.id) }} style={{ padding:"6px 12px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:11, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>✓ Approve</button>
+                      )}
+                    </div>
                   )}
                 </div>
               </Card>
@@ -2333,11 +2340,20 @@ function AuctionPage({ isMobile, isFounder }) {
               {filteredPool.map(p => (
                 <Card key={p.id} style={{ padding:"14px 16px" }}>
                   <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
-                    <Av name={p.name} id={p.id} sz={38}/>
+                    {p.profile_image_url ? (
+                      <img src={p.profile_image_url} alt={p.name} style={{ width:42, height:42, borderRadius:9, objectFit:"cover", flexShrink:0 }}/>
+                    ) : (
+                      <div style={{ width:42, height:42, borderRadius:9, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                    )}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
                       <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
                     </div>
+                    {p.payment_screenshot_url && (
+                      <button onClick={(e)=>{ e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #166534", background:"rgba(34,197,94,0.08)", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                        🧾 Receipt
+                      </button>
+                    )}
                     <ChevronRight size={16} color="#94A3B8"/>
                     <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
                   </div>
@@ -2553,9 +2569,9 @@ function AuctionPage({ isMobile, isFounder }) {
                 {squad.map(p => (
                   <div key={p.id} onClick={()=>{ setViewingTeam(null); setViewingPlayer(p) }} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:"#F8FAF8", borderRadius:9, cursor:"pointer" }}>
                     {p.profile_image_url ? (
-                      <img src={p.profile_image_url} alt={p.name} style={{ width:32, height:32, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                      <img src={p.profile_image_url} alt={p.name} style={{ width:34, height:34, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
                     ) : (
-                      <Av name={p.name} id={p.id} sz={32}/>
+                      <div style={{ width:34, height:34, borderRadius:8, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
                     )}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{p.name}</div>
@@ -2581,9 +2597,12 @@ function AuctionPage({ isMobile, isFounder }) {
 
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:18 }}>
               {viewingPlayer.profile_image_url ? (
-                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:140, height:140, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                <img src={viewingPlayer.profile_image_url} alt={viewingPlayer.name} style={{ width:160, height:180, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10, boxShadow:"0 4px 14px rgba(0,0,0,0.08)" }}/>
               ) : (
-                <Av name={viewingPlayer.name} id={viewingPlayer.id} sz={140}/>
+                <div style={{ width:160, height:180, borderRadius:16, background:"#F1F5F9", border:"3px solid #166534", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:44, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>{(viewingPlayer.name||"?")[0]}</div>
+                  {viewingPlayer.jersey_number && <div style={{ fontSize:13, fontWeight:700, color:"#64748B", marginTop:4 }}>#{viewingPlayer.jersey_number}</div>}
+                </div>
               )}
               <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{viewingPlayer.name}</div>
               <div style={{ fontSize:13, color:"#64748B", display:"flex", alignItems:"center", gap:4, marginTop:3 }}><Phone size={12}/> {viewingPlayer.phone}</div>
@@ -2616,6 +2635,16 @@ function AuctionPage({ isMobile, isFounder }) {
                 <div style={{ fontSize:13, color:"#0F172A", fontWeight:600 }}>{viewingPlayer.jersey_size || "—"}</div>
               </div>
             </div>
+
+            {viewingPlayer.payment_screenshot_url && (
+              <div style={{ marginBottom:16, padding:"12px", background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.3)", borderRadius:10 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#166534", textTransform:"uppercase" }}>Payment Screenshot</div>
+                  <button onClick={()=>setReceiptModalImg(viewingPlayer.payment_screenshot_url)} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, textDecoration:"underline" }}>Enlarge View ↗</button>
+                </div>
+                <img src={viewingPlayer.payment_screenshot_url} alt="Payment Receipt" onClick={()=>setReceiptModalImg(viewingPlayer.payment_screenshot_url)} style={{ width:"100%", maxHeight:180, objectFit:"contain", borderRadius:8, background:"#FFFFFF", border:"1px solid #E2E8F0", cursor:"pointer" }}/>
+              </div>
+            )}
 
             <div style={{ display:"flex", gap:8, alignItems:"center", padding:"12px", background:"rgba(34,197,94,0.08)", borderRadius:9, marginBottom:18 }}>
               <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>Base Price ₹</span>
@@ -2656,6 +2685,22 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               )
             })()}
+          </div>
+        </div>
+      )}
+
+      {receiptModalImg && (
+        <div style={mStyle} onClick={()=>setReceiptModalImg(null)}>
+          <div style={{ ...mBox, maxWidth:isMobile?"100%":480, textAlign:"center" }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+              <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>Payment Screenshot</h3>
+              <button onClick={()=>setReceiptModalImg(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af" }}>×</button>
+            </div>
+            <img src={receiptModalImg} alt="Payment Receipt" style={{ width:"100%", maxHeight:"65vh", objectFit:"contain", borderRadius:12, background:"#0F172A", marginBottom:14 }}/>
+            <div style={{ display:"flex", gap:10 }}>
+              <a href={receiptModalImg} target="_blank" rel="noreferrer" style={{ flex:1, padding:"11px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:700, textAlign:"center" }}>Open Full Image ↗</a>
+              <button onClick={()=>setReceiptModalImg(null)} style={{ flex:1, padding:"11px", borderRadius:8, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, cursor:"pointer" }}>Close</button>
+            </div>
           </div>
         </div>
       )}

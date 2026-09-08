@@ -42,6 +42,9 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [timeMinute, setTimeMinute] = useState("00")
   const [timePeriod, setTimePeriod] = useState("AM")
   const [pointsPurse, setPointsPurse] = useState("")
+  const [playerEntryFee, setPlayerEntryFee] = useState("")
+  const [organizerUpiId, setOrganizerUpiId] = useState("")
+  const [organizerPaymentPhone, setOrganizerPaymentPhone] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [platformUpi, setPlatformUpi] = useState("")
@@ -69,16 +72,26 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
     const todayStr = new Date().toISOString().split("T")[0]
     if (auctionDate < todayStr) { setError("Auction date can't be in the past."); return }
     if (!pointsPurse || Number(pointsPurse) <= 0) { setError("Please enter a default points purse per team."); return }
+    const feeNum = Number(playerEntryFee) || 0
+    if (feeNum > 0) {
+      if (!organizerUpiId.trim()) { setError("Please enter your UPI ID so players can pay the entry fee."); return }
+      const cleanPhone = organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10)
+      if (cleanPhone.length !== 10) { setError("Please enter a valid 10-digit mobile number for GPay/PhonePe."); return }
+    }
     const location = `${city.trim()}, ${selectedState}`
     const auctionTime = `${timeHour}:${timeMinute} ${timePeriod}`
     setBusy(true)
     try {
+      const cleanPhone = organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10)
       const auction = await createAuction({
         name: name.trim(), organizerId, location,
         auctionDate: auctionDate || null, auctionTime: auctionTime || null,
         planTier: plan.id, maxTeams: plan.maxTeams,
         pointsPurse: pointsPurse ? Number(pointsPurse) : null,
-        amountDue: plan.price
+        amountDue: plan.price,
+        playerEntryFee: feeNum,
+        organizerUpiId: feeNum > 0 ? organizerUpiId.trim() : null,
+        organizerPaymentPhone: feeNum > 0 ? cleanPhone : null
       })
       setCreatedAuction(auction)
       setStep("roster")
@@ -146,7 +159,9 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
 
         {step === "details" && (() => {
           const todayStr = new Date().toISOString().split("T")[0]
-          const allFilled = name.trim() && selectedState && city.trim() && auctionDate && auctionDate >= todayStr && pointsPurse && Number(pointsPurse) > 0
+          const feeNum = Number(playerEntryFee) || 0
+          const paymentValid = feeNum === 0 || (organizerUpiId.trim() && organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10).length === 10)
+          const allFilled = name.trim() && selectedState && city.trim() && auctionDate && auctionDate >= todayStr && pointsPurse && Number(pointsPurse) > 0 && paymentValid
           return (
           <>
             <div style={{ padding:"10px 12px", background:"rgba(34,197,94,0.08)", borderRadius:9, marginBottom:16, fontSize:12, color:"#166534", fontWeight:600 }}>
@@ -198,9 +213,36 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
                 </div>
               </div>
             </div>
+
             <label style={lS}>Default Points Purse (per team) *</label>
             <div style={{ fontSize:11, color:"#94A3B8", marginBottom:6, marginTop:-8 }}>This will be the fixed starting purse for every team — it can't be changed per-team later.</div>
             <input type="number" min="1" value={pointsPurse} onChange={e => setPointsPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
+
+            {/* Player Entry Fee & Organizer Payment Information */}
+            <div style={{ padding:"16px", background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12, marginBottom:16 }}>
+              <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:4, fontFamily:"var(--font-head)" }}>Player Registration Fee &amp; Payment</div>
+              <div style={{ fontSize:11, color:"#64748B", marginBottom:12 }}>Specify how much individual players must pay to register. If free, enter 0.</div>
+
+              <label style={lS}>Player Entry Fee (₹)</label>
+              <input type="number" min="0" value={playerEntryFee} onChange={e => setPlayerEntryFee(e.target.value)} placeholder="0 (Free registration)" style={{ ...iS, marginBottom: feeNum > 0 ? 12 : 0 }}/>
+
+              {feeNum > 0 && (
+                <div style={{ display:"grid", gap:10, marginTop:10, paddingTop:12, borderTop:"1px solid #F1F5F9" }}>
+                  <div>
+                    <label style={lS}>Your UPI ID (for receiving player fees) *</label>
+                    <input value={organizerUpiId} onChange={e => setOrganizerUpiId(e.target.value)} placeholder="e.g. name@oksbi or phone@paytm" style={iS}/>
+                  </div>
+                  <div>
+                    <label style={lS}>Your Phone Number (Google Pay / PhonePe / Paytm) *</label>
+                    <input type="tel" maxLength={10} value={organizerPaymentPhone} onChange={e => setOrganizerPaymentPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} placeholder="10-digit mobile number" style={iS}/>
+                  </div>
+                  <div style={{ fontSize:11, color:"#166534", marginTop:2 }}>
+                    Players will be instructed to pay ₹{feeNum} to your UPI / GPay / PhonePe and attach a payment screenshot before they can register.
+                  </div>
+                </div>
+              )}
+            </div>
+
             {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:14 }}>{error}</div>}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setStep("plan")} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, cursor:"pointer" }}>Back</button>

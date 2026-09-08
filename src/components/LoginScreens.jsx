@@ -3,7 +3,7 @@ import { Logo, Av } from "./ui.jsx"
 import { fetchPlayers, registerPlayer, fetchRecentlyRegistered, fetchPlayerCount, fetchMatchCount, fetchTeamCount, uploadProfilePhoto } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { Phone, Lock, Eye, EyeOff, UserPlus, Users, Swords, Trophy } from "lucide-react"
-import { ADMIN_PHONE, isValidName, birthDateError } from "../constants.js"
+import { ADMIN_PHONE, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { useMobile } from "../hooks/useMobile.js"
 
 export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, onRegister }) {
@@ -198,7 +198,7 @@ export function RegisterScreen({ onSuccess, onBack }) {
         <input value={city} onChange={e=>setCity(e.target.value)} placeholder="e.g. Thane" style={{...iS, marginBottom:14}}/>
 
         <label style={lS}>Date of Birth</label>
-        <input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} max={new Date().toISOString().split("T")[0]} style={{...iS, marginBottom:14}}/>
+        <input type="date" value={birthDate} onChange={e=>setBirthDate(e.target.value)} max={maxBirthDateForMinAge()} style={{...iS, marginBottom:14}}/>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
           <div>

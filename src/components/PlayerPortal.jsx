@@ -3,7 +3,7 @@ import { MapPin, User as UserIcon, Trophy, Calendar, Clock, Users, Wallet, Lock,
 import { LogoFull, Av, Tag, Card, Spinner , StatsBanner, Bell, MessageInbox, LeaderboardPage, ProRequestCard, RoleBadge} from "./ui.jsx"
 import { fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, sendMessage, setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch, subscribeToChat , updatePlayer, fetchContributions, fetchStats, fetchPlayerStats, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds, updatePlayerRole, uploadProfilePhoto} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { supabase } from "../supabase.js"
 // CALENDAR_NAV_REMOVED
 import { useMobile } from "../hooks/useMobile.js"
@@ -419,7 +419,7 @@ export default function PlayerPortal({ player, matches, onLogout }) {
                     </div>
                     <div>
                       <label style={{ fontSize:12, color:"#64748B", display:"block", marginBottom:5, fontWeight:600 }}>Date of Birth</label>
-                      <input value={pForm.birthDate} onChange={e=>setPForm({...pForm, birthDate:e.target.value})} type="date" max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", boxSizing:"border-box" }}/>
+                      <input value={pForm.birthDate} onChange={e=>setPForm({...pForm, birthDate:e.target.value})} type="date" max={maxBirthDateForMinAge()} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", boxSizing:"border-box" }}/>
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                       <div>

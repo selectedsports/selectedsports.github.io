@@ -29,6 +29,16 @@ export async function uploadProfilePhoto(file, phone) {
   return data.publicUrl
 }
 
+export async function uploadPaymentReceipt(file, auctionId, phone) {
+  const ext = file.name.split(".").pop()
+  const cleaned = (phone || "anon").replace(/[^0-9]/g, "")
+  const path = `payment-receipts/${auctionId || "auc"}-${cleaned}-${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from("team-assets").upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from("team-assets").getPublicUrl(path)
+  return data.publicUrl
+}
+
 // ── Activity log & notifications ──────────────────────────────────────────────
 async function logActivity(actorId, action, summary) {
   try { await supabase.from("activity_log").insert({ actor_player_id: actorId || null, action, summary }) } catch {}
@@ -754,16 +764,34 @@ async function computeAuctionBasePrice(auctionId) {
 export async function registerAuctionPlayer(name, phone, playingRole, birthDate = null, profileImageUrl = null, auctionId = null, extra = {}) {
   const category = computeAgeCategory(birthDate)
   const basePrice = await computeAuctionBasePrice(auctionId)
-  const { data, error } = await supabase.from("auction_players").insert({
+  const payload = {
     name, phone, playing_role: playingRole, status: "registered", birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, auction_id: auctionId || null,
     city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null, base_price: basePrice
-  }).select().single()
-  if (error) throw error
+  }
+  if (extra.paymentScreenshotUrl) payload.payment_screenshot_url = extra.paymentScreenshotUrl
+  if (extra.paymentStatus) payload.payment_status = extra.paymentStatus
+
+  let { data, error } = await supabase.from("auction_players").insert(payload).select().single()
+  if (error && (error.message?.includes("payment_screenshot_url") || error.message?.includes("payment_status"))) {
+    console.warn("Retrying registerAuctionPlayer without payment columns:", error.message)
+    delete payload.payment_screenshot_url
+    delete payload.payment_status
+    const res = await supabase.from("auction_players").insert(payload).select().single()
+    if (res.error) throw res.error
+    data = res.data
+  } else if (error) {
+    throw error
+  }
   await createNotification("auction_registration", `${name} registered for the auction`)
   // Also create a full (pending-approval) player account if this phone isn't one already,
   // so auction registrants count toward the main player roster too.
   try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, { ...extra, source: "auction" }) } catch(e) { console.error("Failed to sync auction registrant into main player roster:", e) }
   return data
+}
+
+export async function updateAuctionPlayerPaymentStatus(playerId, status) {
+  const { error } = await supabase.from("auction_players").update({ payment_status: status }).eq("id", playerId)
+  if (error) throw error
 }
 
 export async function fetchAuctionPlayers(auctionId = null) {
@@ -964,15 +992,33 @@ export async function setPlatformUpi(upiId) {
   await upsertSetting("platform_upi_id", upiId)
 }
 
-export async function createAuction({ name, organizerId, location, auctionDate, auctionTime, planTier, maxTeams, pointsPurse, amountDue }) {
+export async function createAuction({ name, organizerId, location, auctionDate, auctionTime, planTier, maxTeams, pointsPurse, amountDue, playerEntryFee = 0, organizerUpiId = null, organizerPaymentPhone = null }) {
   const paymentStatus = amountDue > 0 ? "pending" : "free"
-  const { data, error } = await supabase.from("auctions").insert({
+  const payload = {
     name, organizer_id: organizerId || null, location: location || null,
     auction_date: auctionDate || null, auction_time: auctionTime || null,
     plan_tier: planTier, max_teams: maxTeams, points_purse: pointsPurse || null,
     amount_due: amountDue || 0, payment_status: paymentStatus
-  }).select().single()
-  if (error) throw error
+  }
+  if (playerEntryFee !== undefined) payload.player_entry_fee = playerEntryFee ? Number(playerEntryFee) : 0
+  if (organizerUpiId) payload.organizer_upi_id = organizerUpiId.trim()
+  if (organizerPaymentPhone) payload.organizer_payment_phone = organizerPaymentPhone.trim()
+
+  let { data, error } = await supabase.from("auctions").insert(payload).select().single()
+  if (error && (error.message?.includes("player_entry_fee") || error.message?.includes("organizer_upi_id") || error.message?.includes("organizer_payment_phone"))) {
+    console.warn("Retrying createAuction without new payment columns:", error.message)
+    const fallbackPayload = {
+      name, organizer_id: organizerId || null, location: location || null,
+      auction_date: auctionDate || null, auction_time: auctionTime || null,
+      plan_tier: planTier, max_teams: maxTeams, points_purse: pointsPurse || null,
+      amount_due: amountDue || 0, payment_status: paymentStatus
+    }
+    const res = await supabase.from("auctions").insert(fallbackPayload).select().single()
+    if (res.error) throw res.error
+    data = res.data
+  } else if (error) {
+    throw error
+  }
   if (amountDue > 0) await createNotification("auction_payment_pending", `New auction "${name}" awaiting payment confirmation (₹${amountDue})`)
   return data
 }

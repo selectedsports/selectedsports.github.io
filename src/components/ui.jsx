@@ -1,4 +1,4 @@
-import { aColor, initials, birthDateError } from "../constants.js"
+import { aColor, initials, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye, ChevronRight, ChevronDown, Calendar, BarChart3, Zap as SixesIcon, Ban, Target } from "lucide-react"
 export function Logo({ size = 36 }) {
   return (
@@ -719,7 +719,7 @@ export function ProfileCompletionModal({ player, onComplete }) {
         <input value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Pune" style={{ ...iS, marginBottom:14 }}/>
 
         <label style={lS}>Date of Birth</label>
-        <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={new Date().toISOString().split("T")[0]} style={{ ...iS, marginBottom:14 }}/>
+        <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" max={maxBirthDateForMinAge()} style={{ ...iS, marginBottom:14 }}/>
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
           <div>

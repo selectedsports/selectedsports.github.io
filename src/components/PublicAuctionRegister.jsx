@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, fetchAuctionPlayers } from "../db.js"
+import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, uploadPaymentReceipt, fetchAuctionPlayers } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
 import { isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -30,6 +30,7 @@ function AuctionDetailsCard({ auction }) {
     ["Time", auction.auction_time || "TBD"],
     ["Venue", auction.location || "TBD"],
     ["Points / Team", auction.points_purse ? auction.points_purse.toLocaleString("en-IN") : "Not set"],
+    ["Registration Fee", Number(auction.player_entry_fee) > 0 ? `₹${Number(auction.player_entry_fee).toLocaleString("en-IN")}` : "Free"],
   ]
   return (
     <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>
@@ -66,9 +67,9 @@ function RegisteredPlayersList({ auctionId }) {
           {players.map(p => (
             <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:"#F8FAF8", borderRadius:9 }}>
               {p.profile_image_url ? (
-                <img src={p.profile_image_url} alt={p.name} style={{ width:32, height:32, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                <img src={p.profile_image_url} alt={p.name} style={{ width:38, height:38, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
               ) : (
-                <div style={{ width:32, height:32, borderRadius:"50%", background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                <div style={{ width:38, height:38, borderRadius:8, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
               )}
               <div style={{ minWidth:0, flex:1 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
@@ -99,6 +100,9 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [jerseySize, setJerseySize] = useState("")
   const [photoFile, setPhotoFile] = useState(null)
   const [photoPreview, setPhotoPreview] = useState("")
+  const [receiptFile, setReceiptFile] = useState(null)
+  const [receiptPreview, setReceiptPreview] = useState("")
+  const [copiedText, setCopiedText] = useState("")
   const [lookedUp, setLookedUp] = useState(false)
   const [profileComplete, setProfileComplete] = useState(false)
   const [editingExisting, setEditingExisting] = useState(false)
@@ -168,14 +172,22 @@ export default function PublicAuctionRegister({ auctionCode }) {
     if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
+    const fee = Number(auction?.player_entry_fee) || 0
+    if (fee > 0 && !receiptFile && !receiptPreview) {
+      setError("Please transfer the registration fee and upload your payment screenshot."); return
+    }
     setBusy(true)
     try {
       const exists = await checkAuctionPhoneExists(cleaned, auctionId)
       if (exists) { setError("This phone number is already registered for this auction."); setBusy(false); return }
       let photoUrl = photoPreview
       if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
+      let receiptUrl = receiptPreview || null
+      if (receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
       await registerAuctionPlayer(`${firstName.trim()} ${lastName.trim()}`, cleaned, role, birthDate, photoUrl, auctionId, {
-        city: city.trim(), jerseyNumber: jerseyNumber.trim(), jerseySize
+        city: city.trim(), jerseyNumber: jerseyNumber.trim(), jerseySize,
+        paymentScreenshotUrl: receiptUrl,
+        paymentStatus: fee > 0 ? "pending" : "free"
       })
       setDone(true)
     } catch(e) { setError(e.message) }
@@ -251,7 +263,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
           {lookedUp && profileComplete && !editingExisting ? (
             <>
               <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"18px 14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
-                <img src={photoPreview} alt={firstName} style={{ width:110, height:110, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                <img src={photoPreview} alt={firstName} style={{ width:120, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #166534", marginBottom:10 }}/>
                 <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
                 <div style={{ fontSize:12, color:"#64748B", marginTop:3 }}>{city} · {role}</div>
                 <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
@@ -326,6 +338,93 @@ export default function PublicAuctionRegister({ auctionCode }) {
               <button key={r} type="button" onClick={() => setRole(r)} style={{ padding:"10px 6px", borderRadius:9, border:role===r?"2px solid #166534":"1.5px solid #E2E8F0", background:role===r?"rgba(22,101,52,0.08)":"#FFFFFF", color:role===r?"#166534":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-body)" }}>{r}</button>
             ))}
           </div>
+
+          {/* Mandatory Payment Section if auction has entry fee */}
+          {Number(auction?.player_entry_fee) > 0 && (
+            <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Registration Fee Required</div>
+                <span style={{ background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, padding:"4px 10px", borderRadius:8 }}>₹{Number(auction.player_entry_fee).toLocaleString("en-IN")}</span>
+              </div>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:14, lineHeight:1.5 }}>
+                Please transfer ₹{Number(auction.player_entry_fee).toLocaleString("en-IN")} to the organizer's details below and upload your payment screenshot. Form cannot be submitted without payment proof.
+              </div>
+
+              {/* Organizer Payment Info */}
+              <div style={{ background:"#FFFFFF", padding:"12px 14px", borderRadius:10, border:"1px solid #E2E8F0", display:"grid", gap:10, marginBottom:14 }}>
+                {auction.organizer_upi_id && (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>UPI ID</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{auction.organizer_upi_id}</div>
+                    </div>
+                    <button type="button" onClick={() => { navigator.clipboard?.writeText(auction.organizer_upi_id); setCopiedText("upi"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="upi"?"#166534":"#64748B" }}>
+                      {copiedText === "upi" ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                )}
+
+                {auction.organizer_payment_phone && (
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop: auction.organizer_upi_id ? 8 : 0, borderTop: auction.organizer_upi_id ? "1px solid #F1F5F9" : "none" }}>
+                    <div>
+                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>+91 {auction.organizer_payment_phone}</div>
+                    </div>
+                    <button type="button" onClick={() => { navigator.clipboard?.writeText(auction.organizer_payment_phone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
+                      {copiedText === "phone" ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                )}
+
+                {auction.organizer_upi_id && (
+                  <a href={`upi://pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:700, marginTop:4, textAlign:"center" }}>
+                    Pay ₹{auction.player_entry_fee} via UPI App →
+                  </a>
+                )}
+              </div>
+
+              {/* Screenshot Upload Field */}
+              <div style={{ borderTop:"1px dashed #CBD5E1", paddingTop:14 }}>
+                <label style={{ ...lS, color:"#0F172A", fontWeight:700 }}>Upload Payment Screenshot *</label>
+                <div style={{ fontSize:11, color:"#64748B", marginBottom:10 }}>Attach a screenshot of the completed payment transaction.</div>
+
+                {receiptPreview ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:12, background:"#FFFFFF", padding:"10px", borderRadius:10, border:"1.5px solid #166534" }}>
+                    <img src={receiptPreview} alt="Receipt" style={{ width:56, height:56, objectFit:"cover", borderRadius:8, border:"1px solid #E2E8F0" }}/>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#166534" }}>✓ Screenshot Attached</div>
+                      <div style={{ fontSize:11, color:"#64748B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{receiptFile?.name || "Payment receipt"}</div>
+                    </div>
+                    <label style={{ padding:"6px 12px", borderRadius:7, background:"#F1F5F9", fontSize:11, fontWeight:700, cursor:"pointer", color:"#0F172A" }}>
+                      Change
+                      <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setReceiptFile(file)
+                        const r = new FileReader()
+                        r.onload = () => setReceiptPreview(r.result)
+                        r.readAsDataURL(file)
+                      }}/>
+                    </label>
+                  </div>
+                ) : (
+                  <label style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"18px 12px", borderRadius:10, border:"2px dashed #94A3B8", background:"#FFFFFF", cursor:"pointer", textAlign:"center" }}>
+                    <div style={{ fontSize:22, marginBottom:4 }}>📸</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#166534" }}>Tap to Upload Payment Screenshot *</div>
+                    <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>JPG, PNG, or WebP (Mandatory)</div>
+                    <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      setReceiptFile(file)
+                      const r = new FileReader()
+                      r.onload = () => setReceiptPreview(r.result)
+                      r.readAsDataURL(file)
+                    }}/>
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
 
           {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
 

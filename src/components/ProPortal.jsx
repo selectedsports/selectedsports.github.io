@@ -206,6 +206,7 @@ export default function ProPortal({ player, onLogout }) {
   const [auctionTeamOwner, setAuctionTeamOwner] = useState("")
   const [auctionTeamPurse, setAuctionTeamPurse] = useState("")
   const [auctionBusy, setAuctionBusy] = useState(false)
+  const [receiptModalImg, setReceiptModalImg] = useState(null)
 
   const loadMyAuctions = async () => {
     setLoadingAuctions(true)
@@ -806,11 +807,20 @@ export default function ProPortal({ player, onLogout }) {
                   {auctionPlayers.map(p => (
                     <Card key={p.id} style={{ padding: "14px 16px" }}>
                       <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, cursor: "pointer" }}>
-                        <Av name={p.name} id={p.id} sz={38}/>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width: 42, height: 42, borderRadius: 9, objectFit: "cover", flexShrink: 0 }}/>
+                        ) : (
+                          <div style={{ width: 42, height: 42, borderRadius: 9, background: "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#64748B", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                        )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)" }}>{p.name}</div>
                           <div style={{ fontSize: 12, color: "#94A3B8", display: "flex", alignItems: "center", gap: 4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
                         </div>
+                        {p.payment_screenshot_url && (
+                          <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #166534", background: "rgba(34,197,94,0.08)", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                            🧾 Receipt
+                          </button>
+                        )}
                         <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -905,11 +915,11 @@ export default function ProPortal({ player, onLogout }) {
                   </div>
                   <div style={{ display: "flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom: 18 }}>
                     {viewingAuctionPlayer.profile_image_url ? (
-                      <img src={viewingAuctionPlayer.profile_image_url} alt={viewingAuctionPlayer.name} style={{ width: 100, height: 100, borderRadius: "50%", objectFit: "cover", border:"3px solid #166534", marginBottom:10 }}/>
+                      <img src={viewingAuctionPlayer.profile_image_url} alt={viewingAuctionPlayer.name} style={{ width: 140, height: 160, borderRadius: 14, objectFit: "cover", border: "2px solid #E2E8F0", marginBottom: 10 }}/>
                     ) : (
-                      <Av name={viewingAuctionPlayer.name} id={viewingAuctionPlayer.id} sz={100}/>
+                      <div style={{ width: 140, height: 160, borderRadius: 14, background: "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 44, fontWeight: 700, color: "#64748B", marginBottom: 10 }}>{(viewingAuctionPlayer.name || "?")[0]}</div>
                     )}
-                    <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)", marginTop:8 }}>{viewingAuctionPlayer.name}</div>
+                    <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)", marginTop: 4 }}>{viewingAuctionPlayer.name}</div>
                     <div style={{ fontSize: 13, color: "#64748B", display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}><Phone size={12}/> {viewingAuctionPlayer.phone}</div>
                     {viewingAuctionPlayer.category && <span style={{ display: "inline-block", marginTop: 6, fontSize: 10, fontWeight: 700, color: "#B8860B", background: "rgba(246,196,83,0.15)", padding: "2px 8px", borderRadius: 999 }}>{viewingAuctionPlayer.category}</span>}
                   </div>
@@ -921,9 +931,36 @@ export default function ProPortal({ player, onLogout }) {
                     <div style={{ padding: "10px 12px", background: "#F8FAF8", borderRadius: 9 }}><div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 600 }}>JERSEY NUMBER</div><div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>{viewingAuctionPlayer.jersey_number || "—"}</div></div>
                     <div style={{ padding: "10px 12px", background: "#F8FAF8", borderRadius: 9 }}><div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 600 }}>JERSEY SIZE</div><div style={{ fontSize: 13, color: "#0F172A", fontWeight: 600 }}>{viewingAuctionPlayer.jersey_size || "—"}</div></div>
                   </div>
+
+                  {viewingAuctionPlayer.payment_screenshot_url && (
+                    <div style={{ marginBottom: 16, padding: "12px", background: "rgba(34,197,94,0.06)", border: "1.5px solid rgba(34,197,94,0.3)", borderRadius: 10, textAlign: "left" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#166534", textTransform: "uppercase" }}>Payment Screenshot</div>
+                        <button onClick={() => setReceiptModalImg(viewingAuctionPlayer.payment_screenshot_url)} style={{ background: "none", border: "none", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Enlarge View ↗</button>
+                      </div>
+                      <img src={viewingAuctionPlayer.payment_screenshot_url} alt="Payment Receipt" onClick={() => setReceiptModalImg(viewingAuctionPlayer.payment_screenshot_url)} style={{ width: "100%", maxHeight: 180, objectFit: "contain", borderRadius: 8, background: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer" }}/>
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "12px", background: "rgba(34,197,94,0.08)", borderRadius: 9 }}>
                     <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>Base Price ₹</span>
                     <input type="number" min="0" value={priceDrafts[viewingAuctionPlayer.id] !== undefined ? priceDrafts[viewingAuctionPlayer.id] : (viewingAuctionPlayer.base_price ?? "")} onChange={e => setPriceDrafts({ ...priceDrafts, [viewingAuctionPlayer.id]: e.target.value })} onBlur={() => saveAuctionPrice(viewingAuctionPlayer.id)} placeholder="0" style={{ ...aiS, flex: 1, padding: "8px 10px", background: "#FFFFFF" }}/>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {receiptModalImg && (
+              <div style={mStyle} onClick={() => setReceiptModalImg(null)}>
+                <div style={{ ...mBox, maxWidth: 520, textAlign: "center" }} onClick={e => e.stopPropagation()}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                    <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>Payment Receipt</h3>
+                    <button onClick={() => setReceiptModalImg(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#9ca3af" }}>×</button>
+                  </div>
+                  <img src={receiptModalImg} alt="Payment Receipt" style={{ width: "100%", maxHeight: "65vh", objectFit: "contain", borderRadius: 12, background: "#0F172A", marginBottom: 14 }}/>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <a href={receiptModalImg} target="_blank" rel="noreferrer" style={{ flex: 1, padding: "11px", borderRadius: 8, background: "#166534", color: "#FFFFFF", textDecoration: "none", fontSize: 13, fontWeight: 700, textAlign: "center" }}>Open Full Image ↗</a>
+                    <button onClick={() => setReceiptModalImg(null)} style={{ padding: "11px 18px", borderRadius: 8, border: "1.5px solid #E2E8F0", background: "#F8FAF8", fontSize: 13, fontWeight: 700, cursor: "pointer", color: "#64748B" }}>Close</button>
                   </div>
                 </div>
               </div>

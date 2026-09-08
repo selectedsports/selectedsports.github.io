@@ -86,15 +86,15 @@ export default function PublicAuctionView({ auctionCode }) {
       <div style={{ maxWidth:520, margin:"0 auto", padding:"20px 16px 40px" }}>
 
         {sponsors.length > 0 && (
-          <div style={{ display:"flex", gap:10, overflowX:"auto", marginBottom:18, paddingBottom:2 }}>
+          <div style={{ display:"flex", gap:12, overflowX:"auto", marginBottom:20, paddingBottom:6 }}>
             {sponsors.map(s => (
-              <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:64 }}>
+              <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:84 }}>
                 {s.logo_url ? (
-                  <img src={s.logo_url} alt={s.name} style={{ width:48, height:48, borderRadius:12, objectFit:"cover" }}/>
+                  <img src={s.logo_url} alt={s.name} style={{ width:80, height:80, borderRadius:14, objectFit:"cover", border:"1.5px solid #E2E8F0", background:"#FFFFFF", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}/>
                 ) : (
-                  <div style={{ width:48, height:48, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ fontSize:18 }}>⭐</span></div>
+                  <div style={{ width:80, height:80, borderRadius:14, background:"rgba(184,134,11,0.08)", border:"1.5px solid rgba(184,134,11,0.2)", display:"flex", alignItems:"center", justifyContent:"center" }}><span style={{ fontSize:26 }}>⭐</span></div>
                 )}
-                <div style={{ fontSize:9, color:"#64748B", marginTop:4, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>{s.name}</div>
+                <div style={{ fontSize:10, fontWeight:600, color:"#0F172A", marginTop:5, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>{s.name}</div>
               </div>
             ))}
           </div>
@@ -118,9 +118,12 @@ export default function PublicAuctionView({ auctionCode }) {
               <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"2px solid #166534", marginBottom:20 }}>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:16 }}>
                   {currentPlayer.profile_image_url ? (
-                    <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:180, height:200, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+                    <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:220, height:250, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10, boxShadow:"0 6px 20px rgba(0,0,0,0.08)" }}/>
                   ) : (
-                    <Av name={currentPlayer.name} id={currentPlayer.id} sz={120}/>
+                    <div style={{ width:220, height:250, borderRadius:16, background:"#F1F5F9", border:"3px solid #166534", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
+                      <div style={{ fontSize:52, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>{(currentPlayer.name||"?")[0]}</div>
+                      {currentPlayer.jersey_number && <div style={{ fontSize:15, fontWeight:700, color:"#64748B", marginTop:6 }}>#{currentPlayer.jersey_number}</div>}
+                    </div>
                   )}
                   <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{currentPlayer.name}</div>
                   <div style={{ fontSize:13, color:"#94A3B8", marginTop:2 }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
@@ -157,7 +160,11 @@ export default function PublicAuctionView({ auctionCode }) {
                       const team = teams.find(t => t.id === p.sold_team_id)
                       return (
                         <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:9 }}>
-                          <Av name={p.name} id={p.id} sz={26}/>
+                          {p.profile_image_url ? (
+                            <img src={p.profile_image_url} alt={p.name} style={{ width:34, height:34, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
+                          ) : (
+                            <div style={{ width:34, height:34, borderRadius:8, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                          )}
                           <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
                           <div style={{ fontSize:11, color:"#94A3B8", flexShrink:0 }}>{team?.name || "—"}</div>
                           <div style={{ fontSize:12, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>₹{p.sold_price}</div>
@@ -190,9 +197,9 @@ export default function PublicAuctionView({ auctionCode }) {
                     <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 0", color:"#0F172A" }}>
                       <span style={{ display:"flex", alignItems:"center", gap:8 }}>
                         {p.profile_image_url ? (
-                          <img src={p.profile_image_url} alt={p.name} style={{ width:26, height:26, borderRadius:"50%", objectFit:"cover" }}/>
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:32, height:32, borderRadius:7, objectFit:"cover" }}/>
                         ) : (
-                          <Av name={p.name} id={p.id} sz={26}/>
+                          <div style={{ width:32, height:32, borderRadius:7, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#64748B" }}>{(p.name||"?")[0]}</div>
                         )}
                         {p.name}
                       </span>

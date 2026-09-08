@@ -157,9 +157,12 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:14 }}>
             {currentPlayer.profile_image_url ? (
-              <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:180, height:200, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
+              <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:220, height:250, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10, boxShadow:"0 6px 20px rgba(0,0,0,0.08)" }}/>
             ) : (
-              <Av name={currentPlayer.name} id={currentPlayer.id} sz={120}/>
+              <div style={{ width:220, height:250, borderRadius:16, background:"#F1F5F9", border:"3px solid #166534", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
+                <div style={{ fontSize:52, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>{(currentPlayer.name||"?")[0]}</div>
+                {currentPlayer.jersey_number && <div style={{ fontSize:15, fontWeight:700, color:"#64748B", marginTop:6 }}>#{currentPlayer.jersey_number}</div>}
+              </div>
             )}
             <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{currentPlayer.name}</div>
             <div style={{ fontSize:13, color:"#94A3B8", marginTop:2 }}>{currentPlayer.city ? `${currentPlayer.city} · ` : ""}{currentPlayer.playing_role || "—"} · Base ₹{currentPlayer.base_price || 0}</div>
@@ -234,7 +237,11 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
                 const team = auctionTeams.find(t => t.id === p.sold_team_id)
                 return (
                   <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#FFFFFF", border:"1px solid #F1F5F9", borderRadius:9 }}>
-                    <Av name={p.name} id={p.id} sz={26}/>
+                    {p.profile_image_url ? (
+                      <img src={p.profile_image_url} alt={p.name} style={{ width:32, height:32, borderRadius:7, objectFit:"cover", flexShrink:0 }}/>
+                    ) : (
+                      <div style={{ width:32, height:32, borderRadius:7, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                    )}
                     <div style={{ flex:1, minWidth:0, fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
                     <div style={{ fontSize:11, color:"#94A3B8", flexShrink:0 }}>{team?.name || "—"}</div>
                     <div style={{ fontSize:12, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>₹{p.sold_price}</div>

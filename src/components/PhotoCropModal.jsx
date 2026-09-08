@@ -26,9 +26,12 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
     const ctx = canvas.getContext("2d")
     ctx.clearRect(0, 0, SIZE, SIZE)
     ctx.save()
-    ctx.beginPath()
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2, 0, Math.PI * 2)
-    ctx.clip()
+    const radius = 16
+    if (typeof ctx.roundRect === "function") {
+      ctx.beginPath()
+      ctx.roundRect(0, 0, SIZE, SIZE, radius)
+      ctx.clip()
+    }
     const baseScale = Math.max(SIZE / img.width, SIZE / img.height)
     const scale = baseScale * zoom
     const w = img.width * scale, h = img.height * scale
@@ -38,9 +41,11 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
     ctx.restore()
     ctx.strokeStyle = "#166534"
     ctx.lineWidth = 3
-    ctx.beginPath()
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 1.5, 0, Math.PI * 2)
-    ctx.stroke()
+    if (typeof ctx.roundRect === "function") {
+      ctx.beginPath()
+      ctx.roundRect(1.5, 1.5, SIZE - 3, SIZE - 3, radius)
+      ctx.stroke()
+    }
   }
 
   useEffect(() => { if (ready) draw() }, [ready, zoom, offset])
@@ -59,10 +64,6 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
     const out = document.createElement("canvas")
     out.width = OUTPUT_SIZE; out.height = OUTPUT_SIZE
     const ctx = out.getContext("2d")
-    ctx.save()
-    ctx.beginPath()
-    ctx.arc(OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, OUTPUT_SIZE / 2, 0, Math.PI * 2)
-    ctx.clip()
     const ratio = OUTPUT_SIZE / SIZE
     const baseScale = Math.max(SIZE / img.width, SIZE / img.height)
     const scale = baseScale * zoom
@@ -70,7 +71,6 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
     const x = (SIZE / 2 - (img.width * scale) / 2 + offset.x) * ratio
     const y = (SIZE / 2 - (img.height * scale) / 2 + offset.y) * ratio
     ctx.drawImage(img, x, y, w, h)
-    ctx.restore()
     out.toBlob(blob => {
       const file = new File([blob], "profile.jpg", { type: "image/jpeg" })
       onSave(file, out.toDataURL("image/jpeg", 0.9))
@@ -83,7 +83,7 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
         <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", marginBottom:14, textAlign:"center", fontFamily:"var(--font-head)" }}>Adjust Photo</div>
         <canvas
           ref={canvasRef} width={SIZE} height={SIZE}
-          style={{ display:"block", margin:"0 auto 14px", cursor:"grab", touchAction:"none", background:"#F1F5F9", borderRadius:"50%" }}
+          style={{ display:"block", margin:"0 auto 14px", cursor:"grab", touchAction:"none", background:"#F1F5F9", borderRadius:16 }}
           onMouseDown={e => startDrag(e.clientX, e.clientY)}
           onMouseMove={e => moveDrag(e.clientX, e.clientY)}
           onMouseUp={endDrag} onMouseLeave={endDrag}
@@ -102,7 +102,7 @@ export default function PhotoCropModal({ imageSrc, onCancel, onSave }) {
   )
 }
 
-// Convenience wrapper: a circular "tap to add/change photo" control that opens
+// Convenience wrapper: a rounded rectangle "tap to add/change photo" control that opens
 // the crop modal automatically when a file is picked.
 export function PhotoUploadField({ photoPreview, onPhotoSaved, size = 88, label = "Upload Photo *" }) {
   const [cropSrc, setCropSrc] = useState("")
@@ -117,7 +117,7 @@ export function PhotoUploadField({ photoPreview, onPhotoSaved, size = 88, label 
   return (
     <>
       <div style={{ textAlign:"center" }}>
-        <div style={{ width:size, height:size, borderRadius:"50%", background:"#F8FAF8", border: photoPreview ? "2px solid #166534" : "2px dashed #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", margin:"0 auto 8px" }}>
+        <div style={{ width:size, height:size, borderRadius:14, background:"#F8FAF8", border: photoPreview ? "2px solid #166534" : "2px dashed #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", margin:"0 auto 8px" }}>
           {photoPreview ? <img src={photoPreview} alt="Profile" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <span style={{ fontSize:11, color:"#94A3B8" }}>Add Photo</span>}
         </div>
         <label style={{ cursor:"pointer" }}>
