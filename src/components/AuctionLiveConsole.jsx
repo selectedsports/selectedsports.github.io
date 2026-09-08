@@ -3,7 +3,7 @@ import { Card, Spinner, Av } from "./ui.jsx"
 import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer } from "../db.js"
 import { Trophy, Users, Wallet, RotateCcw, XCircle, CheckCircle2, ChevronRight, Zap, Gavel } from "lucide-react"
 
-export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTeams, onPoolChange, auctionId }) {
+export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTeams, onPoolChange, auctionId, auctionDate }) {
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -90,6 +90,8 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   if (loading) return <Spinner/>
 
   if (!state || state.status === "setup") {
+    const todayStr = new Date().toISOString().split("T")[0]
+    const tooEarly = auctionDate && todayStr < auctionDate
     return (
       <Card style={{ padding:"28px 20px" }}>
         <div style={{ width:44, height:44, borderRadius:12, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}><Gavel size={22} color="#166534"/></div>
@@ -99,10 +101,11 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           <span>·</span>
           <span style={{ display:"flex", alignItems:"center", gap:4 }}><Trophy size={13}/> {auctionTeams.length} teams ready</span>
         </div>
+        {tooEarly && <div style={{ padding:"10px 12px", background:"rgba(184,134,11,0.08)", borderRadius:9, color:"#B8860B", fontSize:12, marginBottom:14 }}>This auction is scheduled for {new Date(auctionDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})} — it can't be started before then.</div>}
         {auctionTeams.length < 2 && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:14 }}>Add at least 2 teams (in the Teams tab) before starting.</div>}
         <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Bid Increment (₹)</div>
         <input type="number" min="1" value={increment} onChange={e=>setIncrement(e.target.value)} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #e5e7eb", fontSize:14, outline:"none", background:"#fafafa", boxSizing:"border-box", marginBottom:16 }}/>
-        <button onClick={doStart} disabled={busy || auctionTeams.length < 2} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy||auctionTeams.length<2?"not-allowed":"pointer", opacity:busy||auctionTeams.length<2?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
+        <button onClick={doStart} disabled={busy || auctionTeams.length < 2 || tooEarly} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:(busy||auctionTeams.length<2||tooEarly)?"not-allowed":"pointer", opacity:(busy||auctionTeams.length<2||tooEarly)?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
       </Card>
     )
   }

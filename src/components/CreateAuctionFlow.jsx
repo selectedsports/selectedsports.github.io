@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { AUCTION_PLANS } from "../constants.js"
 import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction } from "../db.js"
 import { Av } from "./ui.jsx"
+import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
 
 const iS = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
 const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }
@@ -33,9 +34,13 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [step, setStep] = useState("plan") // plan | details | payment | done
   const [planId, setPlanId] = useState("free")
   const [name, setName] = useState("")
-  const [location, setLocation] = useState("")
+  const [selectedState, setSelectedState] = useState("")
+  const [city, setCity] = useState("")
+  const [cityMode, setCityMode] = useState("select") // "select" | "other"
   const [auctionDate, setAuctionDate] = useState("")
-  const [auctionTime, setAuctionTime] = useState("")
+  const [timeHour, setTimeHour] = useState("7")
+  const [timeMinute, setTimeMinute] = useState("00")
+  const [timePeriod, setTimePeriod] = useState("AM")
   const [pointsPurse, setPointsPurse] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
@@ -58,10 +63,18 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const submitDetails = async () => {
     setError("")
     if (!name.trim()) { setError("Please enter a name for this auction."); return }
+    if (!selectedState) { setError("Please select a state."); return }
+    if (!city.trim()) { setError("Please select or enter a city."); return }
+    if (!auctionDate) { setError("Please select an auction date."); return }
+    const todayStr = new Date().toISOString().split("T")[0]
+    if (auctionDate < todayStr) { setError("Auction date can't be in the past."); return }
+    if (!pointsPurse || Number(pointsPurse) <= 0) { setError("Please enter a default points purse per team."); return }
+    const location = `${city.trim()}, ${selectedState}`
+    const auctionTime = `${timeHour}:${timeMinute} ${timePeriod}`
     setBusy(true)
     try {
       const auction = await createAuction({
-        name: name.trim(), organizerId, location: location.trim(),
+        name: name.trim(), organizerId, location,
         auctionDate: auctionDate || null, auctionTime: auctionTime || null,
         planTier: plan.id, maxTeams: plan.maxTeams,
         pointsPurse: pointsPurse ? Number(pointsPurse) : null,
@@ -131,34 +144,71 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
           </>
         )}
 
-        {step === "details" && (
+        {step === "details" && (() => {
+          const todayStr = new Date().toISOString().split("T")[0]
+          const allFilled = name.trim() && selectedState && city.trim() && auctionDate && auctionDate >= todayStr && pointsPurse && Number(pointsPurse) > 0
+          return (
           <>
             <div style={{ padding:"10px 12px", background:"rgba(34,197,94,0.08)", borderRadius:9, marginBottom:16, fontSize:12, color:"#166534", fontWeight:600 }}>
               {plan.label} · Up to {plan.maxTeams} teams · {plan.price === 0 ? "Free" : `₹${plan.price.toLocaleString("en-IN")}`}
             </div>
             <label style={lS}>Auction Name *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sunday Premier League Auction" style={{ ...iS, marginBottom:14 }}/>
-            <label style={lS}>Location</label>
-            <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Amritsar" style={{ ...iS, marginBottom:14 }}/>
+
+            <label style={lS}>State *</label>
+            <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select") }} style={{ ...iS, marginBottom:14 }}>
+              <option value="">Select state</option>
+              {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+
+            <label style={lS}>City *</label>
+            {cityMode === "other" ? (
+              <div style={{ marginBottom:14 }}>
+                <input value={city} onChange={e => setCity(e.target.value)} placeholder="Type your city" style={iS}/>
+                {selectedState && CITIES_BY_STATE[selectedState] && (
+                  <button type="button" onClick={() => { setCityMode("select"); setCity("") }} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, marginTop:6 }}>← Choose from list instead</button>
+                )}
+              </div>
+            ) : (
+              <select value={city} onChange={e => { if (e.target.value === "__other__") { setCityMode("other"); setCity("") } else { setCity(e.target.value) } }} disabled={!selectedState} style={{ ...iS, marginBottom:14, opacity: selectedState ? 1 : 0.6 }}>
+                <option value="">{selectedState ? "Select city" : "Select a state first"}</option>
+                {selectedState && (CITIES_BY_STATE[selectedState] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                {selectedState && <option value="__other__">My city isn't listed...</option>}
+              </select>
+            )}
+
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
               <div>
-                <label style={lS}>Date</label>
-                <input type="date" value={auctionDate} onChange={e => setAuctionDate(e.target.value)} style={iS}/>
+                <label style={lS}>Date *</label>
+                <input type="date" min={todayStr} value={auctionDate} onChange={e => setAuctionDate(e.target.value)} style={iS}/>
               </div>
               <div>
-                <label style={lS}>Time</label>
-                <input type="time" value={auctionTime} onChange={e => setAuctionTime(e.target.value)} style={iS}/>
+                <label style={lS}>Time *</label>
+                <div style={{ display:"flex", gap:6 }}>
+                  <select value={timeHour} onChange={e => setTimeHour(e.target.value)} style={{ ...iS, padding:"11px 6px" }}>
+                    {Array.from({length:12},(_,i)=>String(i+1)).map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                  <select value={timeMinute} onChange={e => setTimeMinute(e.target.value)} style={{ ...iS, padding:"11px 6px" }}>
+                    {["00","15","30","45"].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select value={timePeriod} onChange={e => setTimePeriod(e.target.value)} style={{ ...iS, padding:"11px 6px" }}>
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <label style={lS}>Default Points Purse (per team)</label>
-            <input type="number" min="0" value={pointsPurse} onChange={e => setPointsPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
+            <label style={lS}>Default Points Purse (per team) *</label>
+            <div style={{ fontSize:11, color:"#94A3B8", marginBottom:6, marginTop:-8 }}>This will be the fixed starting purse for every team — it can't be changed per-team later.</div>
+            <input type="number" min="1" value={pointsPurse} onChange={e => setPointsPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
             {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:14 }}>{error}</div>}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={() => setStep("plan")} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, cursor:"pointer" }}>Back</button>
-              <button onClick={submitDetails} disabled={busy} style={{ flex:2, padding:"12px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:busy?"not-allowed":"pointer", fontFamily:"var(--font-head)" }}>{busy ? "Creating..." : (plan.price === 0 ? "Create Auction" : "Continue to Payment")}</button>
+              <button onClick={submitDetails} disabled={busy || !allFilled} style={{ flex:2, padding:"12px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:(busy||!allFilled)?"not-allowed":"pointer", opacity:(busy||!allFilled)?0.5:1, fontFamily:"var(--font-head)" }}>{busy ? "Creating..." : (plan.price === 0 ? "Create Auction" : "Continue to Payment")}</button>
             </div>
           </>
-        )}
+          )
+        })()}
 
         {step === "roster" && createdAuction && (() => {
           const q = rosterSearch.trim().toLowerCase()

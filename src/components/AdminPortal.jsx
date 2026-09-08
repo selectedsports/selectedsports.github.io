@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
 import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -178,7 +178,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
     try {
       const [p,g,m,t,s] = await Promise.all([fetchPlayers(),fetchGrounds(),fetchMatches(),fetchTeams(),fetchSettings()])
       setPlayers(p); setGrounds(g); setMatches(m); setTeams(t);
-      try { const pend = await fetchPendingPlayers(); setPendingCount(pend.length) } catch {} setSettings(s||{})
+      setSettings(s||{})
     } catch(e) { alert("Load error: "+e.message) }
     setLoading(false)
   }
@@ -2417,7 +2417,7 @@ function AuctionPage({ isMobile, isFounder }) {
         )
       })()}
 
-      {subTab === "live" && <AuctionLiveConsole isMobile={isMobile} auctionPlayers={auctionPlayers} auctionTeams={auctionTeams} onPoolChange={load} auctionId={managingAuction?.id || null}/>}
+      {subTab === "live" && <AuctionLiveConsole isMobile={isMobile} auctionPlayers={auctionPlayers} auctionTeams={auctionTeams} onPoolChange={load} auctionId={managingAuction?.id || null} auctionDate={managingAuction?.auction_date || null}/>}
 
       {subTab === "payments" && isFounder && (
         pendingPayments.length === 0 ? (
@@ -2468,8 +2468,8 @@ function AuctionPage({ isMobile, isFounder }) {
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Captain Name</div>
             <input value={teamCaptain} onChange={e=>setTeamCaptain(e.target.value)} disabled={sameAsOwner} placeholder="e.g. Sahir Attar" style={{ ...iS, marginBottom:12, background:sameAsOwner?"#F1F5F9":iS.background, color:sameAsOwner?"#64748B":iS.color }}/>
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Starting Purse (₹) *</div>
-            <input type="number" min="0" value={teamPurse} onChange={e=>setTeamPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
-            {!editTeam && managingAuction?.points_purse && <div style={{ fontSize:11, color:"#166534", marginBottom:16, marginTop:-8 }}>Pre-filled from this auction's default purse — edit if this team should start with a different amount.</div>}
+            <input type="number" min="0" value={teamPurse} onChange={e=>setTeamPurse(e.target.value)} disabled={!editTeam} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16, background:!editTeam?"#F1F5F9":iS.background, color:!editTeam?"#64748B":iS.color }}/>
+            {!editTeam && (managingAuction?.points_purse ? <div style={{ fontSize:11, color:"#166534", marginBottom:16, marginTop:-8 }}>Every team starts with this auction's fixed purse — set once when the auction was created, can't be changed per-team here.</div> : <div style={{ fontSize:11, color:"#EF4444", marginBottom:16, marginTop:-8 }}>This auction has no default purse set. Set one in the auction's Details tab first.</div>)}
             {editTeam && <div style={{ fontSize:11, color:"#94A3B8", marginBottom:16, marginTop:-8 }}>Note: editing the purse resets the remaining balance to match — only do this before bidding starts.</div>}
             <div style={{ display:"flex", gap:10 }}>
               <button onClick={()=>setShowAddTeam(false)} style={{ flex:1, padding:"12px", borderRadius:9, border:"1.5px solid #e5e7eb", background:"#F8FAF8", fontSize:14, cursor:"pointer" }}>Cancel</button>
