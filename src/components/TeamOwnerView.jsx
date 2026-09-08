@@ -87,12 +87,12 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"16px", border:"2px solid #166534", textAlign:"center" }}>
-            <div style={{ fontSize:24, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>₹{team.purse_remaining}</div>
-            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Points Left</div>
+            <div style={{ fontSize:24, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(team.purse_remaining||0).toLocaleString("en-IN")}</div>
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Coins Left</div>
           </div>
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"16px", border:"1px solid #E2E8F0", textAlign:"center" }}>
-            <div style={{ fontSize:24, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>₹{spent}</div>
-            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Points Spent</div>
+            <div style={{ fontSize:24, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>🪙 {Number(spent||0).toLocaleString("en-IN")}</div>
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Coins Spent</div>
           </div>
         </div>
 
@@ -106,7 +106,7 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
             {players.map(p => (
               <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10 }}>
                 {p.profile_image_url ? (
-                  <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:"50%", objectFit:"cover", flexShrink:0 }}/>
+                  <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
                 ) : (
                   <Av name={p.name} id={p.id} sz={40}/>
                 )}
@@ -114,7 +114,7 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
                   <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
                   <div style={{ fontSize:11, color:"#94A3B8" }}>{p.city ? `${p.city} · ` : ""}{p.playing_role || "—"}</div>
                 </div>
-                <div style={{ fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>₹{p.sold_price}</div>
+                <div style={{ fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}</div>
               </div>
             ))}
           </div>

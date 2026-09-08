@@ -28,6 +28,21 @@ export const auctionPlanById = id => AUCTION_PLANS.find(p => p.id === id) || AUC
 
 export const MIN_REGISTRATION_AGE = 15
 
+export const DEFAULT_SQUAD_TARGET = 10
+export const MIN_PLAYER_RESERVE = 1000
+
+export function calculateMaxBid(purseRemaining, currentSquadCount, squadTarget = DEFAULT_SQUAD_TARGET, minReserve = MIN_PLAYER_RESERVE) {
+  if (currentSquadCount >= squadTarget) return 0
+  const remainingSlotsNeeded = Math.max(0, squadTarget - currentSquadCount)
+  const slotsAfterCurrent = Math.max(0, remainingSlotsNeeded - 1)
+  const reserveNeeded = slotsAfterCurrent * minReserve
+  return Math.max(0, (purseRemaining || 0) - reserveNeeded)
+}
+
+export function formatCoins(amount) {
+  return `🪙 ${Number(amount || 0).toLocaleString("en-IN")}`
+}
+
 // The latest birth date that still satisfies the minimum age — use this as
 // a date input's `max` so the calendar picker itself only offers valid dates,
 // rather than letting someone pick an invalid one and rejecting it after.

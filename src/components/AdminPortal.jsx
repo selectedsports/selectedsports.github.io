@@ -2047,15 +2047,15 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Wallet size={17} color="#166534"/></div>
-                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Points / Team</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.points_purse ? managingAuction.points_purse.toLocaleString("en-IN") : "Not set"}</div></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Points / Team</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.points_purse ? `🪙 ${Number(managingAuction.points_purse).toLocaleString("en-IN")}` : "Not set"}</div></div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:"rgba(37,99,235,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><ArrowUpDown size={17} color="#2563EB"/></div>
-                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Bid Increment</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.bid_increment ? `₹${managingAuction.bid_increment}` : "Not started yet"}</div></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Bid Increment</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{managingAuction.bid_increment ? `🪙 ${Number(managingAuction.bid_increment).toLocaleString("en-IN")}` : "Not started yet"}</div></div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Gavel size={17} color="#B8860B"/></div>
-                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Lowest Base Price</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{lowestBase ? `₹${lowestBase}` : "No players priced yet"}</div></div>
+                  <div><div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Lowest Base Price</div><div style={{ fontSize:14, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{lowestBase ? `🪙 ${Number(lowestBase).toLocaleString("en-IN")}` : "No players priced yet"}</div></div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                   <div style={{ width:36, height:36, borderRadius:10, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><UsersRound size={17} color="#166534"/></div>
@@ -2360,7 +2360,7 @@ function AuctionPage({ isMobile, isFounder }) {
                     <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
                   </div>
                   <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <span style={{ fontSize:12, color:"#64748B", fontWeight:600 }}>Base Price ₹</span>
+                    <span style={{ fontSize:12, color:"#64748B", fontWeight:600 }}>Base Price 🪙</span>
                     <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [p.id]: e.target.value})} onBlur={()=>savePrice(p.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px" }}/>
                   </div>
                 </Card>
@@ -2419,8 +2419,8 @@ function AuctionPage({ isMobile, isFounder }) {
                       {t.owner_name && <div style={{ fontSize:12, color:"#94A3B8" }}>{t.owner_name}</div>}
                     </div>
                     <div style={{ textAlign:"right" }}>
-                      <div style={{ fontWeight:800, fontSize:15, color:"#166534", fontFamily:"var(--font-head)" }}>₹{t.purse_remaining}</div>
-                      <div style={{ fontSize:10, color:"#94A3B8" }}>of ₹{t.purse_total}</div>
+                      <div style={{ fontWeight:800, fontSize:15, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
+                      <div style={{ fontSize:10, color:"#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8"/>
                     <button onClick={(e)=>{ e.stopPropagation(); copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`) }} style={{ background:"none", border:"none", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#64748B", padding:4, fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>{copiedLink===`team-${t.id}` ? "Copied!" : "Team Link"}</button>
@@ -2559,15 +2559,15 @@ function AuctionPage({ isMobile, isFounder }) {
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:18 }}>
               <div style={{ padding:"10px 8px", background:"#F8FAF8", borderRadius:9, textAlign:"center" }}>
                 <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>STARTING PURSE</div>
-                <div style={{ fontSize:14, color:"#0F172A", fontWeight:800, fontFamily:"var(--font-head)" }}>₹{viewingTeam.purse_total}</div>
+                <div style={{ fontSize:14, color:"#0F172A", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(viewingTeam.purse_total||0).toLocaleString("en-IN")}</div>
               </div>
               <div style={{ padding:"10px 8px", background:"rgba(231,76,60,0.08)", borderRadius:9, textAlign:"center" }}>
                 <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>SPENT</div>
-                <div style={{ fontSize:14, color:"#EF4444", fontWeight:800, fontFamily:"var(--font-head)" }}>₹{spent}</div>
+                <div style={{ fontSize:14, color:"#EF4444", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(spent||0).toLocaleString("en-IN")}</div>
               </div>
               <div style={{ padding:"10px 8px", background:"rgba(34,197,94,0.08)", borderRadius:9, textAlign:"center" }}>
                 <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>REMAINING</div>
-                <div style={{ fontSize:14, color:"#166534", fontWeight:800, fontFamily:"var(--font-head)" }}>₹{viewingTeam.purse_remaining}</div>
+                <div style={{ fontSize:14, color:"#166534", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(viewingTeam.purse_remaining||0).toLocaleString("en-IN")}</div>
               </div>
             </div>
 
@@ -2587,7 +2587,7 @@ function AuctionPage({ isMobile, isFounder }) {
                       <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{p.name}</div>
                       <div style={{ fontSize:11, color:"#94A3B8" }}>{p.playing_role || "—"}</div>
                     </div>
-                    <div style={{ fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>₹{p.sold_price}</div>
+                    <div style={{ fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}</div>
                   </div>
                 ))}
               </div>
@@ -2634,7 +2634,7 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
               <div style={{ padding:"10px 12px", background:"#F8FAF8", borderRadius:9 }}>
                 <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>STATUS</div>
-                <div style={{ fontSize:13, color:"#0F172A", fontWeight:600, textTransform:"capitalize" }}>{viewingPlayer.status}{viewingPlayer.status==="sold" && viewingPlayer.sold_price ? ` · ₹${viewingPlayer.sold_price}` : ""}</div>
+                <div style={{ fontSize:13, color:"#0F172A", fontWeight:600, textTransform:"capitalize" }}>{viewingPlayer.status}{viewingPlayer.status==="sold" && viewingPlayer.sold_price ? ` · 🪙 ${Number(viewingPlayer.sold_price).toLocaleString("en-IN")}` : ""}</div>
               </div>
               <div style={{ padding:"10px 12px", background:"#F8FAF8", borderRadius:9 }}>
                 <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>JERSEY NUMBER</div>
@@ -2657,7 +2657,7 @@ function AuctionPage({ isMobile, isFounder }) {
             )}
 
             <div style={{ display:"flex", gap:8, alignItems:"center", padding:"12px", background:"rgba(34,197,94,0.08)", borderRadius:9, marginBottom:18 }}>
-              <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>Base Price ₹</span>
+              <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>Base Price 🪙</span>
               <input type="number" min="0" value={priceDrafts[viewingPlayer.id] !== undefined ? priceDrafts[viewingPlayer.id] : (viewingPlayer.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [viewingPlayer.id]: e.target.value})} onBlur={()=>savePrice(viewingPlayer.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px", background:"#FFFFFF" }}/>
             </div>
 
@@ -2686,7 +2686,7 @@ function AuctionPage({ isMobile, isFounder }) {
                               <div style={{ fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{h.auctions?.name || "—"}</div>
                               <div style={{ fontSize:11, color:"#94A3B8" }}>{h.auctions?.auction_date ? fmtDate(h.auctions.auction_date) : "Date TBD"}</div>
                             </div>
-                            <span style={{ fontSize:11, fontWeight:700, color:h.status==="sold"?"#166534":h.status==="unsold"?"#EF4444":"#B8860B", flexShrink:0, marginLeft:8 }}>{h.status==="sold" ? `Sold ₹${h.sold_price}` : h.status==="unsold" ? "Unsold" : "Registered"}</span>
+                            <span style={{ fontSize:11, fontWeight:700, color:h.status==="sold"?"#166534":h.status==="unsold"?"#EF4444":"#B8860B", flexShrink:0, marginLeft:8 }}>{h.status==="sold" ? `Sold 🪙 ${Number(h.sold_price).toLocaleString("en-IN")}` : h.status==="unsold" ? "Unsold" : "Registered"}</span>
                           </div>
                         ))}
                       </div>

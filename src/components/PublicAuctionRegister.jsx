@@ -367,7 +367,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
                 {auction.organizer_payment_phone && (
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop: auction.organizer_upi_id ? 8 : 0, borderTop: auction.organizer_upi_id ? "1px solid #F1F5F9" : "none" }}>
                     <div>
-                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+                      <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
                       <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>+91 {auction.organizer_payment_phone}</div>
                     </div>
                     <button type="button" onClick={() => { navigator.clipboard?.writeText(auction.organizer_payment_phone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
@@ -377,9 +377,21 @@ export default function PublicAuctionRegister({ auctionCode }) {
                 )}
 
                 {auction.organizer_upi_id && (
-                  <a href={`upi://pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:700, marginTop:4, textAlign:"center" }}>
-                    Pay ₹{auction.player_entry_fee} via UPI App →
-                  </a>
+                  <div style={{ display:"grid", gap:8, marginTop:6 }}>
+                    <a
+                      href={`tez://upi/pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
+                      onClick={() => { if (auction.organizer_payment_phone) navigator.clipboard?.writeText(auction.organizer_payment_phone) }}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"11px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
+                    >
+                      <span>📱</span> Pay ₹{auction.player_entry_fee} with Google Pay
+                    </a>
+                    <a
+                      href={`upi://pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
+                      style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:12, fontWeight:700, textAlign:"center" }}
+                    >
+                      <span>⚡</span> Pay via Any UPI App
+                    </a>
+                  </div>
                 )}
               </div>
 

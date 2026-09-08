@@ -221,9 +221,9 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
               </div>
             </div>
 
-            <label style={lS}>Default Points Purse (per team) *</label>
-            <div style={{ fontSize:11, color:"#94A3B8", marginBottom:6, marginTop:-8 }}>This will be the fixed starting purse for every team — it can't be changed per-team later.</div>
-            <input type="number" min="1" value={pointsPurse} onChange={e => setPointsPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...iS, marginBottom:16 }}/>
+            <label style={lS}>Default Points Purse (🪙 Coins per team) *</label>
+            <div style={{ fontSize:11, color:"#94A3B8", marginBottom:6, marginTop:-8 }}>Starting coin wallet for every team (e.g. 100000 for 1 Lac Coins, or 10000).</div>
+            <input type="number" min="1" value={pointsPurse} onChange={e => setPointsPurse(e.target.value)} placeholder="e.g. 100000 (1 Lac Coins)" style={{ ...iS, marginBottom:16 }}/>
 
             {/* Player Entry Fee & Organizer Payment Information */}
             <div style={{ padding:"16px", background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12, marginBottom:16 }}>
@@ -237,14 +237,14 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
                 <div style={{ display:"grid", gap:10, marginTop:10, paddingTop:12, borderTop:"1px solid #F1F5F9" }}>
                   <div>
                     <label style={lS}>Your UPI ID (for receiving player fees) *</label>
-                    <input value={organizerUpiId} onChange={e => setOrganizerUpiId(e.target.value)} placeholder="e.g. name@oksbi or phone@paytm" style={iS}/>
+                    <input value={organizerUpiId} onChange={e => setOrganizerUpiId(e.target.value)} placeholder="e.g. name@okhdfcbank" style={iS}/>
                   </div>
                   <div>
-                    <label style={lS}>Your Phone Number (Google Pay / PhonePe / Paytm) *</label>
+                    <label style={lS}>Your Google Pay Number *</label>
                     <input type="tel" maxLength={10} value={organizerPaymentPhone} onChange={e => setOrganizerPaymentPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} placeholder="10-digit mobile number" style={iS}/>
                   </div>
                   <div style={{ fontSize:11, color:"#166534", marginTop:2 }}>
-                    Players will be instructed to pay ₹{feeNum} to your UPI / GPay / PhonePe and attach a payment screenshot before they can register.
+                    Players will be instructed to pay ₹{feeNum} to your Google Pay / UPI and attach a payment screenshot before they can register.
                   </div>
                 </div>
               )}
@@ -343,7 +343,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
 
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:8 }}>
                 <div>
-                  <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+                  <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
                   <div style={{ fontSize:14, fontWeight:800, color:"#0F172A", letterSpacing:"0.5px" }}>{ADMIN_PHONE}</div>
                 </div>
                 <button
@@ -369,12 +369,21 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
                 </button>
               </div>
 
-              <a
-                href={`upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
-                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box" }}
-              >
-                <span>⚡</span> Pay ₹{plan.price.toLocaleString("en-IN")} via UPI App
-              </a>
+              <div style={{ display:"grid", gap:8 }}>
+                <a
+                  href={`tez://upi/pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
+                  onClick={() => copyText(ADMIN_PHONE, "phone")}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#1A73E8", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
+                >
+                  <span>📱</span> Pay ₹{plan.price.toLocaleString("en-IN")} with Google Pay
+                </a>
+                <a
+                  href={`upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:700, textDecoration:"none", boxSizing:"border-box" }}
+                >
+                  <span>⚡</span> Pay via Any UPI App
+                </a>
+              </div>
             </div>
 
             <div style={{ background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
@@ -382,7 +391,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
                 📋 Next Steps to Activate:
               </div>
               <div style={{ fontSize:12, color:"#334155", lineHeight:1.5, display:"flex", flexDirection:"column", gap:6 }}>
-                <div><strong>1.</strong> Make payment of <strong>₹{plan.price.toLocaleString("en-IN")}</strong> via Google Pay / PhonePe / UPI above.</div>
+                <div><strong>1.</strong> Make payment of <strong>₹{plan.price.toLocaleString("en-IN")}</strong> via Google Pay or UPI above.</div>
                 <div><strong>2.</strong> Send your payment screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong>.</div>
                 <div><strong>3.</strong> Once confirmed by the admin, you will be able to access the auction platform.</div>
               </div>
@@ -504,7 +513,7 @@ export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:8 }}>
             <div>
-              <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+              <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
               <div style={{ fontSize:14, fontWeight:800, color:"#0F172A", letterSpacing:"0.5px" }}>{ADMIN_PHONE}</div>
             </div>
             <button
@@ -530,12 +539,21 @@ export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
             </button>
           </div>
 
-          <a
-            href={upiDeepLink}
-            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box" }}
-          >
-            <span>⚡</span> Pay ₹{amount.toLocaleString("en-IN")} via UPI App
-          </a>
+          <div style={{ display:"grid", gap:8 }}>
+            <a
+              href={`tez://upi/pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${amount}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (auction?.name || "Cricket Auction"))}`}
+              onClick={() => copyText(ADMIN_PHONE, "phone")}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#1A73E8", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
+            >
+              <span>📱</span> Pay ₹{amount.toLocaleString("en-IN")} with Google Pay
+            </a>
+            <a
+              href={upiDeepLink}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:700, textDecoration:"none", boxSizing:"border-box" }}
+            >
+              <span>⚡</span> Pay via Any UPI App
+            </a>
+          </div>
         </div>
 
         <div style={{ background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
@@ -543,7 +561,7 @@ export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
             📋 Next Steps to Activate:
           </div>
           <div style={{ fontSize:12, color:"#334155", lineHeight:1.5, display:"flex", flexDirection:"column", gap:6 }}>
-            <div><strong>1.</strong> Make payment of <strong>₹{amount.toLocaleString("en-IN")}</strong> via Google Pay / PhonePe / UPI above.</div>
+            <div><strong>1.</strong> Make payment of <strong>₹{amount.toLocaleString("en-IN")}</strong> via Google Pay or UPI above.</div>
             <div><strong>2.</strong> Send your payment screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong>.</div>
             <div><strong>3.</strong> Once confirmed by the admin, you will be able to access the auction platform.</div>
           </div>

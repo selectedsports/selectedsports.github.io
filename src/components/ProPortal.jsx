@@ -830,7 +830,7 @@ export default function ProPortal({ player, onLogout }) {
                         <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600 }}>Base Price ₹</span>
+                        <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600 }}>Base Price 🪙</span>
                         <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e => setPriceDrafts({ ...priceDrafts, [p.id]: e.target.value })} onBlur={() => saveAuctionPrice(p.id)} placeholder="0" style={{ ...aiS, flex: 1, padding: "8px 10px" }}/>
                       </div>
                     </Card>
@@ -860,8 +860,8 @@ export default function ProPortal({ player, onLogout }) {
                             {t.owner_name && <div style={{ fontSize: 12, color: "#94A3B8" }}>{t.owner_name}</div>}
                           </div>
                           <div style={{ textAlign: "right" }}>
-                            <div style={{ fontWeight: 800, fontSize: 15, color: "#166534", fontFamily: "var(--font-head)" }}>₹{t.purse_remaining}</div>
-                            <div style={{ fontSize: 10, color: "#94A3B8" }}>of ₹{t.purse_total}</div>
+                            <div style={{ fontWeight: 800, fontSize: 15, color: "#166534", fontFamily: "var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
+                            <div style={{ fontSize: 10, color: "#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                           </div>
                           <button onClick={() => openEditAuctionTeam(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}>Edit</button>
                           <button onClick={() => setDelAuctionTeam(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
@@ -949,7 +949,7 @@ export default function ProPortal({ player, onLogout }) {
                   )}
 
                   <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "12px", background: "rgba(34,197,94,0.08)", borderRadius: 9 }}>
-                    <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>Base Price ₹</span>
+                    <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>Base Price 🪙</span>
                     <input type="number" min="0" value={priceDrafts[viewingAuctionPlayer.id] !== undefined ? priceDrafts[viewingAuctionPlayer.id] : (viewingAuctionPlayer.base_price ?? "")} onChange={e => setPriceDrafts({ ...priceDrafts, [viewingAuctionPlayer.id]: e.target.value })} onBlur={() => saveAuctionPrice(viewingAuctionPlayer.id)} placeholder="0" style={{ ...aiS, flex: 1, padding: "8px 10px", background: "#FFFFFF" }}/>
                   </div>
                 </div>
