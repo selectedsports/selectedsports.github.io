@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { fetchAuctionByCode, fetchAuctionTeams, fetchAuctionPlayers } from "../db.js"
 import { Av } from "./ui.jsx"
-import { exportTeamRosterCsv } from "../constants.js"
+import { exportTeamRosterCsv, exportTeamRosterPdf } from "../constants.js"
 
 const POLL_MS = 5000
 
@@ -104,10 +104,10 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
           <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Squad Members ({players.length}/9)</div>
           {players.length > 0 && (
             <button
-              onClick={() => exportTeamRosterCsv(team, players, auctionMeta?.name)}
+              onClick={() => exportTeamRosterPdf(team, players, auctionMeta?.name)}
               style={{ padding:"6px 12px", borderRadius:8, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}
             >
-              <span>📥</span> Export Roster (CSV)
+              <span>📄</span> Export PDF (Roster)
             </button>
           )}
         </div>

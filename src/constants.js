@@ -163,3 +163,292 @@ export function shareTeamOnWhatsApp(team, auction) {
     : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
   window.open(waUrl, "_blank")
 }
+
+export function exportTeamRosterPdf(team, auctionPlayers, auctionName = "Cricket Tournament") {
+  if (!team) return
+  const squad = (auctionPlayers || [])
+    .filter(p => p.sold_team_id === team.id)
+    .sort((a,b) => {
+      const aCap = a.is_captain || a.status === "captain" || (team.captain_player_id && a.id === team.captain_player_id) ? 1 : 0
+      const bCap = b.is_captain || b.status === "captain" || (team.captain_player_id && b.id === team.captain_player_id) ? 1 : 0
+      return bCap - aCap
+    })
+
+  if (squad.length === 0) {
+    alert(`No players found in ${team.name}'s squad yet. Players will appear here once acquired in the auction.`)
+    return
+  }
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+
+  const rows = squad.map((p, idx) => {
+    const isCap = p.is_captain || p.status === "captain" || (team.captain_player_id && p.id === team.captain_player_id)
+    const teamRole = isCap ? '<span class="captain-badge">👑 CAPTAIN</span>' : '<span class="player-badge">PLAYER</span>'
+    const priceStr = isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price || 0).toLocaleString("en-IN")}`
+    const dob = p.birth_date ? p.birth_date : "—"
+    return `
+      <tr>
+        <td style="text-align:center;font-weight:700;color:#64748B;">${idx + 1}</td>
+        <td>
+          <div style="font-weight:800;color:#0F172A;font-size:13px;">${esc(p.name || "")}</div>
+        </td>
+        <td>${teamRole}</td>
+        <td><strong>${esc(p.playing_role || "—")}</strong></td>
+        <td style="text-align:center;">${esc(p.jersey_number ? `#${p.jersey_number}` : "—")}${p.jersey_size ? ` (${esc(p.jersey_size)})` : ""}</td>
+        <td>${esc(p.city || "—")}</td>
+        <td>${esc(dob)}</td>
+        <td><strong style="color:#166534;">${esc(p.phone || "—")}</strong></td>
+        <td style="font-weight:800;color:#166534;text-align:right;">${priceStr}</td>
+        <td style="text-align:center;"><span class="status-sold">${esc(isCap ? "Captain" : "Sold")}</span></td>
+      </tr>
+    `
+  }).join("")
+
+  const spent = (team.purse_total || 0) - (team.purse_remaining || 0)
+  const dateStr = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${esc(team.name)} — Official Team Roster</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 12mm 12mm 14mm 12mm;
+    }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0F172A;
+      background: #FFFFFF;
+      margin: 0;
+      padding: 16px;
+      font-size: 12px;
+    }
+    .header {
+      border-bottom: 2.5px solid #166534;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tournament-tag {
+      font-size: 11px;
+      color: #B8860B;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .team-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #166534;
+      margin: 2px 0 0;
+      letter-spacing: -0.5px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      background: #F8FAF8;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .meta-label {
+      font-size: 10px;
+      color: #64748B;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-val {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-top: 2px;
+    }
+    .purse-val {
+      color: #166534;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    th {
+      background: #166534;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 8px 9px;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 800;
+    }
+    td {
+      padding: 7px 9px;
+      border-bottom: 1px solid #E2E8F0;
+      font-size: 11.5px;
+    }
+    tr:nth-child(even) td {
+      background: #FAFCFA;
+    }
+    .captain-badge {
+      background: #B8860B;
+      color: #FFFFFF;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 800;
+      display: inline-block;
+    }
+    .player-badge {
+      background: #E2E8F0;
+      color: #475569;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 700;
+      display: inline-block;
+    }
+    .status-sold {
+      background: #DCFCE7;
+      color: #166534;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10.5px;
+      color: #64748B;
+    }
+    .no-print-bar {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .no-print-btn {
+      background: #166534;
+      color: #FFFFFF;
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <span style="font-weight:700;color:#166534;font-size:13px;">📄 Team Roster PDF: Click "Save as PDF" in the print dialog.</span>
+    <button class="no-print-btn" onclick="window.print()">🖨️ Save as PDF / Print</button>
+  </div>
+
+  <div class="header">
+    <div class="brand">
+      <img src="${window.location.origin}/logo-full.png?v=1" alt="Selected Sports" style="height:44px;width:auto;" onerror="this.style.display='none'"/>
+      <div>
+        <div class="tournament-tag">${esc(auctionName || "Selected Sports Cricket Tournament")}</div>
+        <h1 class="team-title">${esc(team.name)}</h1>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;font-weight:800;color:#0F172A;">OFFICIAL SQUAD ROSTER</div>
+      <div style="font-size:10px;color:#64748B;margin-top:2px;">Generated: ${dateStr}</div>
+      <div style="font-size:10px;color:#166534;font-weight:700;margin-top:2px;">Squad Size: ${squad.length} / 9 Players</div>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div class="meta-item">
+      <span class="meta-label">Team Captain</span>
+      <span class="meta-val">👑 ${esc(team.captain_name || "—")}</span>
+      ${team.captain_phone ? `<span style="font-size:10.5px;color:#64748B;margin-top:2px;">📞 ${esc(team.captain_phone)}</span>` : ""}
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Team Owner</span>
+      <span class="meta-val">${esc(team.owner_name || "—")}</span>
+      ${team.owner_phone ? `<span style="font-size:10.5px;color:#64748B;margin-top:2px;">📞 ${esc(team.owner_phone)}</span>` : ""}
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Purse Budget</span>
+      <span class="meta-val purse-val">🪙 ${Number(team.purse_total || 0).toLocaleString("en-IN")}</span>
+      <span style="font-size:10.5px;color:#EF4444;margin-top:2px;">Spent: 🪙 ${Number(spent || 0).toLocaleString("en-IN")}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Remaining Purse</span>
+      <span class="meta-val purse-val">🪙 ${Number(team.purse_remaining || 0).toLocaleString("en-IN")}</span>
+      <span style="font-size:10.5px;color:#64748B;margin-top:2px;">Available to Bid</span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:36px;text-align:center;">#</th>
+        <th>Player Name</th>
+        <th style="width:95px;">Team Role</th>
+        <th style="width:110px;">Playing Role</th>
+        <th style="width:90px;text-align:center;">Jersey</th>
+        <th style="width:95px;">City</th>
+        <th style="width:90px;">Date of Birth</th>
+        <th style="width:110px;">Mobile Number</th>
+        <th style="width:105px;text-align:right;">Price Paid</th>
+        <th style="width:65px;text-align:center;">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rows}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <div>Official Roster Document · Selected Sports Auction Platform</div>
+    <div>Confidential &amp; Proprietary · Tournament Organizer &amp; Team Management Copy</div>
+  </div>
+</body>
+</html>`
+
+  const w = window.open("", "_blank")
+  if (!w) {
+    alert("Please allow pop-ups to open the PDF export.")
+    return
+  }
+  w.document.write(html)
+  w.document.close()
+  w.onload = () => {
+    setTimeout(() => {
+      w.print()
+    }, 250)
+  }
+}

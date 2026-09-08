@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, shareTeamOnWhatsApp } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -2535,11 +2535,11 @@ function AuctionPage({ isMobile, isFounder }) {
                         <span>📱</span> WhatsApp
                       </button>
                       <button
-                        onClick={(e)=>{ e.stopPropagation(); exportTeamRosterCsv(t, auctionPlayers, managingAuction?.name) }}
-                        style={{ padding:"5px 10px", borderRadius:7, border:"1.5px solid #166534", background:"#FFFFFF", cursor:"pointer", color:"#166534", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
-                        title="Export team roster CSV with full player details"
+                        onClick={(e)=>{ e.stopPropagation(); exportTeamRosterPdf(t, auctionPlayers, managingAuction?.name) }}
+                        style={{ padding:"5px 10px", borderRadius:7, border:"1.5px solid #166534", background:"#166534", cursor:"pointer", color:"#FFFFFF", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        title="Export official team roster as print-ready PDF"
                       >
-                        <span>📥</span> Export Roster
+                        <span>📄</span> Export PDF
                       </button>
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:4 }}>
@@ -2802,10 +2802,10 @@ function AuctionPage({ isMobile, isFounder }) {
                 <span>📱</span> WhatsApp
               </button>
               <button
-                onClick={()=>exportTeamRosterCsv(viewingTeam, auctionPlayers, managingAuction?.name)}
+                onClick={()=>exportTeamRosterPdf(viewingTeam, auctionPlayers, managingAuction?.name)}
                 style={{ flex:1, minWidth:130, padding:"8px 12px", borderRadius:8, border:"1px solid #166534", background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
               >
-                <span>📥</span> Export Roster
+                <span>📄</span> Export PDF
               </button>
             </div>
 

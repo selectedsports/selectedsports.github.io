@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
 import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI } from "../constants.js"
-import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction } from "../db.js"
+import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction, fetchGrounds, addGround } from "../db.js"
 import { Av } from "./ui.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
+import { MapPin } from "lucide-react"
 
 const iS = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
 const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }
@@ -37,6 +38,12 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [selectedState, setSelectedState] = useState("")
   const [city, setCity] = useState("")
   const [cityMode, setCityMode] = useState("select") // "select" | "other"
+  const [groundName, setGroundName] = useState("")
+  const [groundMapsLink, setGroundMapsLink] = useState("")
+  const [savedGrounds, setSavedGrounds] = useState([])
+  const [mapGrounds, setMapGrounds] = useState([])
+  const [loadingMapGrounds, setLoadingMapGrounds] = useState(false)
+  const [mapSearched, setMapSearched] = useState(false)
   const [auctionDate, setAuctionDate] = useState("")
   const [timeHour, setTimeHour] = useState("7")
   const [timeMinute, setTimeMinute] = useState("00")
@@ -66,7 +73,45 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
     setTimeout(() => setCopiedField(""), 2000)
   }
 
-  useEffect(() => { fetchPlatformUpi().then(setPlatformUpi).catch(() => {}) }, [])
+  useEffect(() => {
+    fetchPlatformUpi().then(setPlatformUpi).catch(() => {})
+    fetchGrounds().then(setSavedGrounds).catch(() => {})
+  }, [])
+
+  const searchFreeMapGrounds = async (targetCity, targetState) => {
+    const c = (targetCity !== undefined ? targetCity : city).trim()
+    const s = (targetState !== undefined ? targetState : selectedState).trim()
+    if (!c) return
+    setLoadingMapGrounds(true)
+    setMapSearched(true)
+    try {
+      const q = encodeURIComponent(`cricket ground in ${c} ${s}`)
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=12&addressdetails=1`, {
+        headers: { "Accept": "application/json" }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const found = []
+        const seen = new Set()
+        for (const item of (data || [])) {
+          const rawName = item.name || (item.display_name ? item.display_name.split(",")[0] : "")
+          const cleanName = rawName.replace(/,\s*India$/i, "").trim()
+          if (cleanName && !seen.has(cleanName.toLowerCase())) {
+            seen.add(cleanName.toLowerCase())
+            found.push({
+              name: cleanName,
+              mapsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanName + " " + c)}`
+            })
+          }
+        }
+        setMapGrounds(found)
+      }
+    } catch (err) {
+      console.warn("Free map search failed:", err)
+    } finally {
+      setLoadingMapGrounds(false)
+    }
+  }
 
   const goDetails = () => setStep("details")
 
@@ -85,10 +130,18 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
       const cleanPhone = organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10)
       if (cleanPhone.length !== 10) { setError("Please enter a valid 10-digit mobile number for GPay/PhonePe."); return }
     }
-    const location = `${city.trim()}, ${selectedState}`
+    const groundClean = groundName.trim()
+    const location = groundClean ? `${groundClean} · ${city.trim()}, ${selectedState}` : `${city.trim()}, ${selectedState}`
     const auctionTime = `${timeHour}:${timeMinute} ${timePeriod}`
     setBusy(true)
     try {
+      if (groundClean) {
+        const alreadyExists = (savedGrounds || []).some(g => (g.name || "").trim().toLowerCase() === groundClean.toLowerCase())
+        if (!alreadyExists) {
+          const mapsLinkToSave = groundMapsLink.trim() || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(groundClean + " " + city.trim())}`
+          addGround(groundClean, `${city.trim()}, ${selectedState}`, mapsLinkToSave, "Added during auction setup").catch(e => console.warn("Auto add ground error:", e))
+        }
+      }
       const cleanPhone = organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10)
       const auction = await createAuction({
         name: name.trim(), organizerId, location,
@@ -178,7 +231,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sunday Premier League Auction" style={{ ...iS, marginBottom:14 }}/>
 
             <label style={lS}>State *</label>
-            <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select") }} style={{ ...iS, marginBottom:14 }}>
+            <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select"); setGroundName(""); setMapGrounds([]); setMapSearched(false) }} style={{ ...iS, marginBottom:14 }}>
               <option value="">Select state</option>
               {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -186,18 +239,135 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
             <label style={lS}>City *</label>
             {cityMode === "other" ? (
               <div style={{ marginBottom:14 }}>
-                <input value={city} onChange={e => setCity(e.target.value)} placeholder="Type your city" style={iS}/>
+                <input value={city} onChange={e => { setCity(e.target.value); setGroundName("") }} placeholder="Type your city" style={iS}/>
                 {selectedState && CITIES_BY_STATE[selectedState] && (
-                  <button type="button" onClick={() => { setCityMode("select"); setCity("") }} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, marginTop:6 }}>← Choose from list instead</button>
+                  <button type="button" onClick={() => { setCityMode("select"); setCity(""); setGroundName("") }} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, marginTop:6 }}>← Choose from list instead</button>
                 )}
               </div>
             ) : (
-              <select value={city} onChange={e => { if (e.target.value === "__other__") { setCityMode("other"); setCity("") } else { setCity(e.target.value) } }} disabled={!selectedState} style={{ ...iS, marginBottom:14, opacity: selectedState ? 1 : 0.6 }}>
+              <select value={city} onChange={e => { if (e.target.value === "__other__") { setCityMode("other"); setCity(""); setGroundName(""); setMapGrounds([]); setMapSearched(false) } else { setCity(e.target.value); setGroundName(""); if (e.target.value) searchFreeMapGrounds(e.target.value, selectedState) } }} disabled={!selectedState} style={{ ...iS, marginBottom:14, opacity: selectedState ? 1 : 0.6 }}>
                 <option value="">{selectedState ? "Select city" : "Select a state first"}</option>
                 {selectedState && (CITIES_BY_STATE[selectedState] || []).map(c => <option key={c} value={c}>{c}</option>)}
                 {selectedState && <option value="__other__">My city isn't listed...</option>}
               </select>
             )}
+
+            {/* Ground / Venue Selection with Free Map Pickup */}
+            <div style={{ padding:"14px", background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12, marginBottom:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+                <label style={{ ...lS, marginBottom:0, fontWeight:700, color:"#0F172A", display:"flex", alignItems:"center", gap:6 }}>
+                  <MapPin size={14} color="#166534"/> Ground / Venue (Optional)
+                </label>
+                {city.trim() && (
+                  <a
+                    href={`https://www.google.com/maps/search/cricket+grounds+in+${encodeURIComponent(city)}+${encodeURIComponent(selectedState)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize:11, color:"#166534", fontWeight:700, textDecoration:"none", display:"flex", alignItems:"center", gap:3 }}
+                  >
+                    Google Maps ↗
+                  </a>
+                )}
+              </div>
+              <div style={{ fontSize:11, color:"#64748B", marginBottom:10 }}>
+                Enter tournament ground name, or pick an available ground found in {city || "your city"}.
+              </div>
+
+              <input
+                value={groundName}
+                onChange={e => setGroundName(e.target.value)}
+                placeholder="e.g. Shinde High School Cricket Ground, Sahakar Nagar"
+                style={{ ...iS, marginBottom:8 }}
+              />
+
+              {/* Quick Pick Chips */}
+              {city.trim() && (() => {
+                const citySavedGrounds = (savedGrounds || []).filter(g => {
+                  const loc = (g.location || "").toLowerCase()
+                  const c = city.trim().toLowerCase()
+                  return loc.includes(c) || (g.name || "").toLowerCase().includes(c)
+                })
+                return (
+                  <div style={{ marginTop:6 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                      <div style={{ fontSize:10.5, fontWeight:700, color:"#64748B", textTransform:"uppercase", letterSpacing:"0.5px" }}>
+                        Available Cricket Grounds in {city}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => searchFreeMapGrounds(city, selectedState)}
+                        disabled={loadingMapGrounds}
+                        style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, display:"flex", alignItems:"center", gap:3 }}
+                      >
+                        {loadingMapGrounds ? "Searching Map..." : "🔄 Scan Map"}
+                      </button>
+                    </div>
+
+                    {/* Saved Platform Grounds */}
+                    {citySavedGrounds.length > 0 && (
+                      <div style={{ marginBottom:8 }}>
+                        <div style={{ fontSize:10, color:"#166534", fontWeight:600, marginBottom:4 }}>Platform Grounds:</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                          {citySavedGrounds.map(g => (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => { setGroundName(g.name); if (g.maps_link) setGroundMapsLink(g.maps_link) }}
+                              style={{
+                                padding:"5px 9px", borderRadius:7,
+                                border: groundName === g.name ? "1.5px solid #166534" : "1px solid #BBF7D0",
+                                background: groundName === g.name ? "#DCFCE7" : "#F0FDF4",
+                                color:"#166534", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"left"
+                              }}
+                            >
+                              🏟️ {g.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Map Discovered Grounds */}
+                    {loadingMapGrounds ? (
+                      <div style={{ fontSize:11, color:"#64748B", padding:"4px 0" }}>Searching cricket grounds on map...</div>
+                    ) : mapGrounds.length > 0 ? (
+                      <div>
+                        <div style={{ fontSize:10, color:"#0369A1", fontWeight:600, marginBottom:4 }}>Discovered on Map:</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:5, maxHeight:120, overflowY:"auto" }}>
+                          {mapGrounds.map((m, idx) => (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => { setGroundName(m.name); setGroundMapsLink(m.mapsUrl) }}
+                              style={{
+                                padding:"5px 9px", borderRadius:7,
+                                border: groundName === m.name ? "1.5px solid #0284C7" : "1px solid #BAE6FD",
+                                background: groundName === m.name ? "#E0F2FE" : "#F0F9FF",
+                                color:"#0369A1", fontSize:11, fontWeight:600, cursor:"pointer", textAlign:"left"
+                              }}
+                            >
+                              📍 {m.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : mapSearched ? (
+                      <div style={{ fontSize:11, color:"#94A3B8" }}>
+                        No cricket grounds indexed on map for {city}. You can type the ground name above or browse via the Google Maps link.
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => searchFreeMapGrounds(city, selectedState)}
+                        style={{ padding:"6px 10px", borderRadius:6, border:"1px dashed #CBD5E1", background:"#F8FAF8", color:"#475569", fontSize:11, fontWeight:600, cursor:"pointer" }}
+                      >
+                        🔍 Fetch available grounds from map
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+            </div>
 
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
               <div>

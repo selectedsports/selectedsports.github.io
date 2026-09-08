@@ -5,7 +5,7 @@ import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMat
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, shareTeamOnWhatsApp } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -965,11 +965,11 @@ export default function ProPortal({ player, onLogout }) {
                               <span>📱</span> WhatsApp
                             </button>
                             <button
-                              onClick={() => exportTeamRosterCsv(t, auctionPlayers, managingAuction.name)}
+                              onClick={() => exportTeamRosterPdf(t, auctionPlayers, managingAuction.name)}
                               style={{ padding: "5px 10px", borderRadius: 7, border: "1.5px solid #166534", background: "#FFFFFF", cursor: "pointer", color: "#166534", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}
-                              title="Export team roster CSV with full player details"
+                              title="Export print-ready team roster PDF with full player details"
                             >
-                              <span>📥</span> Export Roster
+                              <span>📄</span> Export PDF
                             </button>
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
