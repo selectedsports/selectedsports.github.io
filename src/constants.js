@@ -480,32 +480,68 @@ export const PUNE_CRICKET_GROUNDS = [
   { name: "Telco Cricket Ground", location: "Pimpri-Chinchwad, Pune" }
 ]
 
-export async function searchPuneMapGrounds(query = "") {
-  let mapResults = []
-  try {
-    const searchQuery = encodeURIComponent(query ? `${query} cricket ground Pune` : "cricket ground Pune Maharashtra")
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=12&addressdetails=1`, {
-      headers: { "Accept": "application/json" }
+export async function searchMapGrounds(query = "", city = "Pune", state = "Maharashtra") {
+  const q = (query || "").trim()
+  const c = (city || "Pune").trim()
+  const s = (state || "Maharashtra").trim()
+  const results = []
+  const seen = new Set()
+
+  // 1. If city is Pune or unspecified, search our curated list first for instant hits
+  if (!c || c.toLowerCase() === "pune") {
+    const localMatches = PUNE_CRICKET_GROUNDS.filter(g => {
+      if (!q) return true
+      const qLower = q.toLowerCase()
+      return g.name.toLowerCase().includes(qLower) || g.location.toLowerCase().includes(qLower)
     })
+    for (const g of localMatches) {
+      if (!seen.has(g.name.toLowerCase())) {
+        seen.add(g.name.toLowerCase())
+        results.push({
+          name: g.name,
+          location: g.location,
+          maps_link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(g.name + " " + g.location)}`,
+          isCurated: true
+        })
+      }
+    }
+  }
+
+  // 2. Fetch live from OpenStreetMap Nominatim for the specific query
+  try {
+    const searchParam = q
+      ? `${q} cricket ground ${c} ${s}`
+      : `cricket ground in ${c} ${s}`
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchParam)}&limit=10&addressdetails=1`
+    const res = await fetch(url, { headers: { "Accept": "application/json" } })
     if (res.ok) {
       const data = await res.json()
-      const seen = new Set()
       for (const item of (data || [])) {
         const rawName = item.name || (item.display_name ? item.display_name.split(",")[0] : "")
         const cleanName = rawName.replace(/,\s*India$/i, "").trim()
         if (cleanName && !seen.has(cleanName.toLowerCase())) {
           seen.add(cleanName.toLowerCase())
-          mapResults.push({
+          // Extract address/neighborhood if available
+          const addr = item.address || {}
+          const suburb = addr.suburb || addr.neighbourhood || addr.residential || addr.city_district || c
+          const locStr = `${suburb}, ${c}`
+          results.push({
             name: cleanName,
-            location: "Pune, Maharashtra",
-            maps_link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanName + " Pune")}`,
+            location: locStr,
+            maps_link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanName + " " + c)}`,
             isMap: true
           })
         }
       }
     }
   } catch (err) {
-    console.warn("Pune map grounds search failed:", err)
+    console.warn("Map grounds search failed:", err)
   }
-  return mapResults
+
+  return results
 }
+
+export async function searchPuneMapGrounds(query = "") {
+  return searchMapGrounds(query, "Pune", "Maharashtra")
+}
+

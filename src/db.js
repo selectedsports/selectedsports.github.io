@@ -1229,6 +1229,41 @@ export async function createAuction({ name, organizerId, location, auctionDate, 
   return normalizeAuctionOrganizedBy(data)
 }
 
+export async function updateAuction(id, updates = {}) {
+  const payload = {}
+  if (updates.auctionDate !== undefined) payload.auction_date = updates.auctionDate || null
+  if (updates.auction_date !== undefined) payload.auction_date = updates.auction_date || null
+  if (updates.auctionTime !== undefined) payload.auction_time = updates.auctionTime || null
+  if (updates.auction_time !== undefined) payload.auction_time = updates.auction_time || null
+  if (updates.name !== undefined) payload.name = updates.name.trim()
+  if (updates.location !== undefined) payload.location = updates.location ? updates.location.trim() : null
+  if (updates.pointsPurse !== undefined) payload.points_purse = updates.pointsPurse ? Number(updates.pointsPurse) : null
+  if (updates.points_purse !== undefined) payload.points_purse = updates.points_purse ? Number(updates.points_purse) : null
+
+  const orgClean = updates.organizedBy ? updates.organizedBy.trim() : (updates.organized_by ? updates.organized_by.trim() : null)
+  if (orgClean !== null) {
+    payload.organized_by = orgClean
+    payload.logo_url = `org:${orgClean}`
+  }
+
+  let { data, error } = await supabase.from("auctions").update(payload).eq("id", id).select().single()
+  if (error && error.message?.includes("organized_by")) {
+    delete payload.organized_by
+    const retry = await supabase.from("auctions").update(payload).eq("id", id).select().single()
+    if (retry.error) throw retry.error
+    data = retry.data
+  } else if (error) {
+    throw error
+  }
+
+  if (orgClean && id) {
+    upsertSetting(`auction_org_${id}`, orgClean).catch(() => {})
+    if (data?.auction_code) upsertSetting(`auction_org_${data.auction_code}`, orgClean).catch(() => {})
+  }
+
+  return normalizeAuctionOrganizedBy(data)
+}
+
 export async function fetchMyAuctions(organizerId) {
   const { data, error } = await supabase.from("auctions").select("*").eq("organizer_id", organizerId).order("created_at", { ascending: false })
   if (error) throw error

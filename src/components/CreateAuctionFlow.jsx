@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI } from "../constants.js"
+import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI, searchMapGrounds } from "../constants.js"
 import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction, fetchGrounds, addGround } from "../db.js"
 import { Av } from "./ui.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
@@ -45,6 +45,9 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [mapGrounds, setMapGrounds] = useState([])
   const [loadingMapGrounds, setLoadingMapGrounds] = useState(false)
   const [mapSearched, setMapSearched] = useState(false)
+  const [typedMapResults, setTypedMapResults] = useState([])
+  const [searchingTypedGround, setSearchingTypedGround] = useState(false)
+  const [groundAddedToast, setGroundAddedToast] = useState("")
   const [auctionDate, setAuctionDate] = useState("")
   const [timeHour, setTimeHour] = useState("7")
   const [timeMinute, setTimeMinute] = useState("00")
@@ -111,6 +114,49 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
       console.warn("Free map search failed:", err)
     } finally {
       setLoadingMapGrounds(false)
+    }
+  }
+
+  // Debounced search on typing ground name
+  useEffect(() => {
+    const q = groundName.trim()
+    if (!q || q.length < 2) {
+      setTypedMapResults([])
+      return
+    }
+    setSearchingTypedGround(true)
+    const t = setTimeout(async () => {
+      try {
+        const results = await searchMapGrounds(q, city || "Pune", selectedState || "Maharashtra")
+        setTypedMapResults(results)
+      } catch (err) {
+        console.warn("Typed ground map search:", err)
+      } finally {
+        setSearchingTypedGround(false)
+      }
+    }, 350)
+    return () => clearTimeout(t)
+  }, [groundName, city, selectedState])
+
+  const handleSelectAndAddGround = async (item) => {
+    setGroundName(item.name)
+    if (item.maps_link) setGroundMapsLink(item.maps_link)
+    try {
+      const loc = item.location || (city ? `${city}, ${selectedState}` : "Pune, Maharashtra")
+      const saved = await addGround(item.name, loc, item.maps_link || null)
+      if (saved?.data) {
+        setSavedGrounds(prev => {
+          const list = prev || []
+          if (!list.some(g => (g.name || "").toLowerCase() === item.name.toLowerCase())) {
+            return [...list, saved.data]
+          }
+          return list
+        })
+      }
+      setGroundAddedToast(item.name)
+      setTimeout(() => setGroundAddedToast(""), 3000)
+    } catch (e) {
+      console.warn("Auto-saving ground:", e)
     }
   }
 
@@ -284,6 +330,74 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
                 placeholder="e.g. Shinde High School Cricket Ground, Sahakar Nagar"
                 style={{ ...iS, marginBottom:8 }}
               />
+
+              {/* Toast Feedback */}
+              {groundAddedToast && (
+                <div style={{ padding:"8px 12px", background:"#DCFCE7", border:"1px solid #86EFAC", borderRadius:8, fontSize:12, color:"#166534", fontWeight:700, marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+                  <span>✓</span> Ground "{groundAddedToast}" selected & added to platform grounds!
+                </div>
+              )}
+
+              {/* Loading Indicator */}
+              {searchingTypedGround && (
+                <div style={{ fontSize:11, color:"#166534", fontWeight:600, padding:"4px 0", marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+                  <span>🔄</span> Fetching map grounds for "{groundName}"...
+                </div>
+              )}
+
+              {/* Live Fetched Ground Suggestions on Map */}
+              {typedMapResults.length > 0 && (
+                <div style={{ marginTop:4, marginBottom:12, padding:"10px", background:"#F0FDF4", border:"1.5px solid #86EFAC", borderRadius:10 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#166534", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span>📍 Grounds Found on Map for "{groundName}"</span>
+                    <span style={{ fontSize:10, color:"#15803D" }}>Click to Select & Add</span>
+                  </div>
+                  <div style={{ display:"grid", gap:6, maxHeight:180, overflowY:"auto" }}>
+                    {typedMapResults.map((item, idx) => {
+                      const isSelected = groundName.toLowerCase() === item.name.toLowerCase()
+                      return (
+                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", background:"#FFFFFF", borderRadius:8, border:`1px solid ${isSelected ? "#166534" : "#BBF7D0"}` }}>
+                          <div style={{ minWidth:0, flex:1 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.name}</div>
+                            <div style={{ fontSize:10.5, color:"#64748B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{item.location}</div>
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0, marginLeft:8 }}>
+                            {item.maps_link && (
+                              <a href={item.maps_link} target="_blank" rel="noreferrer" style={{ fontSize:11, color:"#0284C7", textDecoration:"none", fontWeight:600 }}>Map ↗</a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleSelectAndAddGround(item)}
+                              style={{
+                                padding:"5px 10px", borderRadius:7,
+                                background: isSelected ? "#166534" : "#DCFCE7",
+                                color: isSelected ? "#FFFFFF" : "#166534",
+                                border: "1px solid #166534",
+                                fontSize: 11, fontWeight: 700, cursor: "pointer"
+                              }}
+                            >
+                              {isSelected ? "✓ Selected" : "+ Select & Add"}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Save Custom Ground Option */}
+              {groundName.trim() && !typedMapResults.some(r => r.name.toLowerCase() === groundName.trim().toLowerCase()) && !savedGrounds.some(g => (g.name||"").toLowerCase() === groundName.trim().toLowerCase()) && (
+                <div style={{ marginBottom:10 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectAndAddGround({ name: groundName.trim(), location: city ? `${city}, ${selectedState}` : "Pune, Maharashtra", maps_link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(groundName.trim() + " " + (city || "Pune"))}` })}
+                    style={{ background:"none", border:"1px dashed #166534", borderRadius:7, padding:"5px 10px", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}
+                  >
+                    + Add "{groundName.trim()}" as a new saved ground
+                  </button>
+                </div>
+              )}
 
               {/* Quick Pick Chips */}
               {city.trim() && (() => {

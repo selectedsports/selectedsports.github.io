@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -634,6 +634,10 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
   const [groundList, setGroundList] = useState(grounds)
   const [mapGrounds, setMapGrounds] = useState([])
   const [loadingMap, setLoadingMap] = useState(false)
+  const [typedGroundQuery, setTypedGroundQuery] = useState("")
+  const [typedGroundResults, setTypedGroundResults] = useState([])
+  const [searchingTypedGround, setSearchingTypedGround] = useState(false)
+  const [groundFeedback, setGroundFeedback] = useState("")
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState("")
   const [addingTeam, setAddingTeam] = useState(false)
@@ -646,22 +650,49 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
     }).catch(() => {})
   }, [])
 
+  useEffect(() => {
+    const q = typedGroundQuery.trim()
+    if (!q || q.length < 2) {
+      setTypedGroundResults([])
+      return
+    }
+    setSearchingTypedGround(true)
+    const t = setTimeout(async () => {
+      try {
+        const results = await searchMapGrounds(q, "Pune", "Maharashtra")
+        setTypedGroundResults(results)
+      } catch (err) {
+        console.warn("Typed ground search error:", err)
+      } finally {
+        setSearchingTypedGround(false)
+      }
+    }, 350)
+    return () => clearTimeout(t)
+  }, [typedGroundQuery])
+
   const handleSelectGround = async (g) => {
     if (g.id) {
       setForm(f => ({ ...f, groundId: g.id }))
+      setGroundFeedback(g.name)
+      setTimeout(() => setGroundFeedback(""), 2500)
       return
     }
     const existing = groundList.find(x => x.name.toLowerCase() === g.name.toLowerCase())
     if (existing) {
       setForm(f => ({ ...f, groundId: existing.id }))
+      setGroundFeedback(existing.name)
+      setTimeout(() => setGroundFeedback(""), 2500)
       return
     }
     setBusy(true)
     try {
       const created = await addGround(g.name, g.location || "Pune, Maharashtra", g.maps_link || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(g.name + " Pune")}`, "Added via match scheduling")
       if (created) {
-        setGroundList(prev => [...prev, created])
-        setForm(f => ({ ...f, groundId: created.id }))
+        const createdObj = created.data || created
+        setGroundList(prev => [...prev, createdObj])
+        setForm(f => ({ ...f, groundId: createdObj.id }))
+        setGroundFeedback(createdObj.name)
+        setTimeout(() => setGroundFeedback(""), 2500)
       }
     } catch (e) {
       alert("Ground select: " + e.message)
@@ -754,6 +785,74 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
             </div>
             <div style={{ fontSize:11, color:"#64748B", marginBottom:10 }}>
               Search or pick an available cricket ground from all over Pune.
+            </div>
+
+            {/* Live Typing Map Search */}
+            <div style={{ marginBottom:10 }}>
+              <div style={{ position:"relative" }}>
+                <input
+                  value={typedGroundQuery}
+                  onChange={e => setTypedGroundQuery(e.target.value)}
+                  placeholder="Type ground name to fetch on Google Map & add..."
+                  style={{ width:"100%", padding:"10px 12px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", boxSizing:"border-box", background:"#F8FAF8", fontFamily:"var(--font-body)" }}
+                />
+                {typedGroundQuery && (
+                  <button type="button" onClick={() => { setTypedGroundQuery(""); setTypedGroundResults([]) }} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#94A3B8", fontSize:14, cursor:"pointer" }}>×</button>
+                )}
+              </div>
+
+              {searchingTypedGround && (
+                <div style={{ fontSize:11, color:"#166534", fontWeight:600, padding:"4px 0", display:"flex", alignItems:"center", gap:6 }}>
+                  <span>🔄</span> Fetching map grounds for "{typedGroundQuery}"...
+                </div>
+              )}
+
+              {/* Fetched Ground Matches */}
+              {typedGroundResults.length > 0 && (
+                <div style={{ marginTop:6, padding:"8px", background:"#F0FDF4", border:"1.5px solid #86EFAC", borderRadius:8 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#166534", marginBottom:6, display:"flex", justifyContent:"space-between" }}>
+                    <span>📍 Map Matches for "{typedGroundQuery}"</span>
+                    <span style={{ fontSize:10, color:"#15803D" }}>Click to Select & Add</span>
+                  </div>
+                  <div style={{ display:"grid", gap:5, maxHeight:140, overflowY:"auto" }}>
+                    {typedGroundResults.map((m, idx) => {
+                      const isSel = selGround?.name?.toLowerCase() === m.name.toLowerCase()
+                      return (
+                        <div key={idx} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 8px", background:"#FFFFFF", borderRadius:6, border:`1px solid ${isSel ? "#166534" : "#BBF7D0"}` }}>
+                          <div style={{ minWidth:0, flex:1 }}>
+                            <div style={{ fontSize:12, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.name}</div>
+                            <div style={{ fontSize:10, color:"#64748B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.location}</div>
+                          </div>
+                          <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0, marginLeft:6 }}>
+                            {m.maps_link && (
+                              <a href={m.maps_link} target="_blank" rel="noreferrer" style={{ fontSize:10.5, color:"#0284C7", textDecoration:"none", fontWeight:600 }}>Map ↗</a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleSelectGround(m)}
+                              style={{
+                                padding:"4px 8px", borderRadius:6,
+                                background: isSel ? "#166534" : "#DCFCE7",
+                                color: isSel ? "#FFFFFF" : "#166534",
+                                border: "1px solid #166534",
+                                fontSize:10.5, fontWeight:700, cursor:"pointer"
+                              }}
+                            >
+                              {isSel ? "✓ Selected" : "+ Select & Add"}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {groundFeedback && (
+                <div style={{ fontSize:11.5, color:"#166534", fontWeight:700, marginTop:6, display:"flex", alignItems:"center", gap:5 }}>
+                  <span>✓</span> Selected venue: {groundFeedback}
+                </div>
+              )}
             </div>
 
             <SearchDropdown
@@ -1830,9 +1929,137 @@ function GForm({ f, setF }) {
   )
 }
 
+function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
+  const [date, setDate] = useState(auction.auction_date || "")
+  const [hour, setHour] = useState("7")
+  const [minute, setMinute] = useState("00")
+  const [period, setPeriod] = useState("AM")
+  const [location, setLocation] = useState(auction.location || "")
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    if (auction.auction_time) {
+      const match = auction.auction_time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i)
+      if (match) {
+        setHour(match[1])
+        setMinute(match[2])
+        if (match[3]) setPeriod(match[3].toUpperCase())
+      }
+    }
+  }, [auction])
+
+  const handleSave = async () => {
+    if (!date) {
+      setError("Please select a date for the auction.")
+      return
+    }
+    const timeStr = `${hour}:${minute} ${period}`
+    setBusy(true)
+    setError("")
+    try {
+      const updated = await updateAuction(auction.id, {
+        auctionDate: date,
+        auctionTime: timeStr,
+        location: location.trim() || null
+      })
+      if (onUpdated) onUpdated(updated)
+      onClose()
+    } catch (e) {
+      setError(e.message || "Failed to update auction date & time")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const iS = { width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:14, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
+  const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", display:"flex", alignItems:isMobile?"flex-end":"center", justifyContent:"center", zIndex:350 }}>
+      <div style={{ background:"#FFFFFF", borderRadius:isMobile?"20px 20px 0 0":18, padding:isMobile?"22px 18px":26, width:"100%", maxWidth:isMobile?"100%":440, maxHeight:isMobile?"92vh":"auto", overflowY:"auto", boxSizing:"border-box", boxShadow:"0 20px 40px rgba(0,0,0,0.2)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+          <div>
+            <h3 style={{ margin:0, fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>Edit Auction Date & Time</h3>
+            <div style={{ fontSize:12, color:"#64748B", marginTop:2 }}>{auction.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#94A3B8" }}>×</button>
+        </div>
+
+        {error && (
+          <div style={{ padding:"10px 12px", background:"#FEE2E2", border:"1px solid #FCA5A5", borderRadius:9, fontSize:12, color:"#DC2626", fontWeight:600, marginBottom:14 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ display:"grid", gap:14 }}>
+          <div>
+            <label style={lS}>Auction Date *</label>
+            <input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              style={iS}
+            />
+          </div>
+
+          <div>
+            <label style={lS}>Auction Time *</label>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+              <select value={hour} onChange={e => setHour(e.target.value)} style={iS}>
+                {["1","2","3","4","5","6","7","8","9","10","11","12"].map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <select value={minute} onChange={e => setMinute(e.target.value)} style={iS}>
+                {["00","15","30","45"].map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select value={period} onChange={e => setPeriod(e.target.value)} style={iS}>
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
+            </div>
+            <div style={{ fontSize:11, color:"#166534", marginTop:4, fontWeight:600 }}>
+              ⏰ Scheduled for {hour}:{minute} {period}
+            </div>
+          </div>
+
+          <div>
+            <label style={lS}>Location / Ground Venue (Optional)</label>
+            <input
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              placeholder="e.g. Shinde High School Ground, Pune"
+              style={iS}
+            />
+          </div>
+
+          <div style={{ display:"flex", gap:10, marginTop:10 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={busy}
+              style={{ flex:1, padding:"11px 16px", borderRadius:9, border:"1px solid #E2E8F0", background:"#FFFFFF", color:"#475569", fontSize:13, fontWeight:700, cursor:"pointer" }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={busy}
+              style={{ flex:1.5, padding:"11px 16px", borderRadius:9, border:"none", background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:busy?"not-allowed":"pointer" }}
+            >
+              {busy ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AuctionPage({ isMobile, isFounder }) {
   const [subTab, setSubTab] = useState("today")
   const [managingAuction, setManagingAuction] = useState(null)
+  const [editingAuctionDateTime, setEditingAuctionDateTime] = useState(null)
   const [auctionPlayers, setAuctionPlayers] = useState([])
   const [auctionTeams, setAuctionTeams] = useState([])
   const [loading, setLoading] = useState(true)
@@ -2312,6 +2539,22 @@ function AuctionPage({ isMobile, isFounder }) {
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(regLink)}`
         return (
           <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 16px", background:"#F0FDF4", borderRadius:12, border:"1.5px solid #BBF7D0", marginBottom:16, flexWrap:"wrap", gap:10 }}>
+              <div>
+                <div style={{ fontSize:11, color:"#166534", fontWeight:700, textTransform:"uppercase" }}>Scheduled Date & Time</div>
+                <div style={{ fontSize:15, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:3 }}>
+                  {managingAuction.auction_date ? fmtDate(managingAuction.auction_date) : "Date TBD"}{managingAuction.auction_time ? ` · ${managingAuction.auction_time}` : ""}
+                </div>
+                {managingAuction.location && <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:4 }}><MapPin size={12}/> {managingAuction.location}</div>}
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingAuctionDateTime(managingAuction)}
+                style={{ padding:"8px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}
+              >
+                ✏️ Edit Date & Time
+              </button>
+            </div>
             <Card style={{ padding:"18px", marginBottom:16 }}>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -2449,8 +2692,17 @@ function AuctionPage({ isMobile, isFounder }) {
                   </div>
                   <span style={{ background:statusBg(a), color:statusFg(a), borderRadius:999, padding:"4px 11px", fontSize:11, fontWeight:700, flexShrink:0 }}>{statusLabel(a)}</span>
                 </div>
-                <div style={{ fontSize:12, color:"#64748B", marginBottom:2, display:"flex", alignItems:"center", gap:4 }}>
-                  {a.auction_date ? <><Calendar size={11}/> {fmtDate(a.auction_date)}</> : "Date TBD"}{a.auction_time ? <> · <Clock size={11}/> {a.auction_time}</> : ""}
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4, flexWrap:"wrap", gap:6 }}>
+                  <div style={{ fontSize:12, color:"#64748B", display:"flex", alignItems:"center", gap:4 }}>
+                    {a.auction_date ? <><Calendar size={11}/> {fmtDate(a.auction_date)}</> : "Date TBD"}{a.auction_time ? <> · <Clock size={11}/> {a.auction_time}</> : ""}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setEditingAuctionDateTime(a) }}
+                    style={{ background:"none", border:"1px solid #CBD5E1", borderRadius:6, padding:"2px 8px", fontSize:11, color:"#166534", fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:3 }}
+                  >
+                    ✏️ Edit Date & Time
+                  </button>
                 </div>
                 {a.location && <div style={{ fontSize:12, color:"#64748B", marginBottom:10, display:"flex", alignItems:"center", gap:4 }}><MapPin size={11}/> {a.location}</div>}
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", paddingTop:10, borderTop:"1px solid #F1F5F9", gap:10, flexWrap:"wrap" }}>
@@ -3156,6 +3408,20 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
           </div>
         </div>
+      )}
+
+      {editingAuctionDateTime && (
+        <EditAuctionDateTimeModal
+          auction={editingAuctionDateTime}
+          onClose={() => setEditingAuctionDateTime(null)}
+          onUpdated={(updated) => {
+            setAllAuctions(prev => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x))
+            if (managingAuction?.id === updated.id) {
+              setManagingAuction(prev => ({ ...prev, ...updated }))
+            }
+          }}
+          isMobile={isMobile}
+        />
       )}
     </div>
   )
