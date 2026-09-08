@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
-import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound } from "lucide-react"
+import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
 import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, shareTeamOnWhatsApp } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -213,6 +213,12 @@ export default function ProPortal({ player, onLogout }) {
   const [auctionBusy, setAuctionBusy] = useState(false)
   const [receiptModalImg, setReceiptModalImg] = useState(null)
   const [pendingPayAuction, setPendingPayAuction] = useState(null)
+  const [copiedLink, setCopiedLink] = useState("")
+  const copyLink = (text, key) => {
+    navigator.clipboard?.writeText(text)
+    setCopiedLink(key)
+    setTimeout(() => setCopiedLink(""), 2000)
+  }
 
   const loadMyAuctions = async () => {
     setLoadingAuctions(true)
@@ -922,23 +928,57 @@ export default function ProPortal({ player, onLogout }) {
                   </Card>
                 ) : (
                   <div style={{ display: "grid", gap: 10 }}>
-                    {auctionTeams.map(t => (
+                    {auctionTeams.map(t => {
+                      const teamSquad = auctionPlayers.filter(p => p.sold_team_id === t.id)
+                      return (
                       <Card key={t.id} style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <TeamAv name={t.name} logo={null} size={38}/>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)" }}>{t.name}</div>
-                            {t.owner_name && <div style={{ fontSize: 12, color: "#94A3B8" }}>{t.owner_name}</div>}
+                            <div style={{ fontSize: 12, color: "#64748B", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
+                              {t.captain_name && <span>👑 Captain: <strong style={{ color: "#0F172A" }}>{t.captain_name}</strong></span>}
+                              {t.owner_name && t.owner_name !== t.captain_name && <span>· Owner: {t.owner_name}</span>}
+                              <span style={{ color: "#94A3B8" }}>({teamSquad.length}/9 squad)</span>
+                            </div>
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <div style={{ fontWeight: 800, fontSize: 15, color: "#166534", fontFamily: "var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
                             <div style={{ fontSize: 10, color: "#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                           </div>
-                          <button onClick={() => openEditAuctionTeam(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", padding: 4 }}>Edit</button>
-                          <button onClick={() => setDelAuctionTeam(t)} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 10, paddingTop: 10, borderTop: "1px solid #F1F5F9", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <button
+                              onClick={() => copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`)}
+                              style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #E2E8F0", background: "#FFFFFF", cursor: "pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#475569", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}
+                              title="Copy private squad link for captain/owner"
+                            >
+                              <LinkIcon size={12}/> {copiedLink===`team-${t.id}` ? "Copied Link!" : "Team Link"}
+                            </button>
+                            <button
+                              onClick={() => shareTeamOnWhatsApp(t, managingAuction)}
+                              style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #22C55E", background: "#F0FDF4", cursor: "pointer", color: "#166534", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}
+                              title="Share squad link directly via WhatsApp to captain/owner"
+                            >
+                              <span>📱</span> WhatsApp
+                            </button>
+                            <button
+                              onClick={() => exportTeamRosterCsv(t, auctionPlayers, managingAuction.name)}
+                              style={{ padding: "5px 10px", borderRadius: 7, border: "1.5px solid #166534", background: "#FFFFFF", cursor: "pointer", color: "#166534", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}
+                              title="Export team roster CSV with full player details"
+                            >
+                              <span>📥</span> Export Roster
+                            </button>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <button onClick={() => openEditAuctionTeam(t)} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #E2E8F0", background: "#FFFFFF", cursor: "pointer", color: "#64748B", fontSize: 11, fontWeight: 700 }}>Edit</button>
+                            <button onClick={() => setDelAuctionTeam(t)} style={{ padding: "5px 8px", borderRadius: 7, border: "1px solid #FEE2E2", background: "#FEF2F2", cursor: "pointer", color: "#EF4444", fontSize: 11, fontWeight: 700 }} title="Delete team"><Trash2 size={13}/></button>
+                          </div>
                         </div>
                       </Card>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>

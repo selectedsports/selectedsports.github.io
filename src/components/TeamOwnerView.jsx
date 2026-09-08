@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { fetchAuctionByCode, fetchAuctionTeams, fetchAuctionPlayers } from "../db.js"
 import { Av } from "./ui.jsx"
+import { exportTeamRosterCsv } from "../constants.js"
 
 const POLL_MS = 5000
 
@@ -99,7 +100,17 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
           </div>
         </div>
 
-        <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Squad Members ({players.length}/9)</div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Squad Members ({players.length}/9)</div>
+          {players.length > 0 && (
+            <button
+              onClick={() => exportTeamRosterCsv(team, players, auctionMeta?.name)}
+              style={{ padding:"6px 12px", borderRadius:8, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}
+            >
+              <span>📥</span> Export Roster (CSV)
+            </button>
+          )}
+        </div>
         {players.length === 0 ? (
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"24px 18px", textAlign:"center", border:"1px solid #E2E8F0" }}>
             <div style={{ fontSize:13, color:"#64748B" }}>No players in squad yet — check back as the auction continues.</div>

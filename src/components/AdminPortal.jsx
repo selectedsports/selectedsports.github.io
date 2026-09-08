@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, shareTeamOnWhatsApp } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -2497,25 +2497,58 @@ function AuctionPage({ isMobile, isFounder }) {
             </Card>
           ) : (
             <div style={{ display:"grid", gap:10 }}>
-              {filteredTeams.map(t => (
+              {filteredTeams.map(t => {
+                const teamSquad = auctionPlayers.filter(p => p.sold_team_id === t.id)
+                return (
                 <Card key={t.id} style={{ padding:"14px 16px" }}>
                   <div onClick={()=>setViewingTeam(t)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
                     <TeamAv name={t.name} logo={null} size={38}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
-                      {t.owner_name && <div style={{ fontSize:12, color:"#94A3B8" }}>{t.owner_name}</div>}
+                      <div style={{ fontSize:12, color:"#64748B", display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginTop:2 }}>
+                        {t.captain_name && <span>👑 Captain: <strong style={{ color:"#0F172A" }}>{t.captain_name}</strong></span>}
+                        {t.owner_name && t.owner_name !== t.captain_name && <span>· Owner: {t.owner_name}</span>}
+                        <span style={{ color:"#94A3B8" }}>({teamSquad.length}/9 squad)</span>
+                      </div>
                     </div>
                     <div style={{ textAlign:"right" }}>
                       <div style={{ fontWeight:800, fontSize:15, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
                       <div style={{ fontSize:10, color:"#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8"/>
-                    <button onClick={(e)=>{ e.stopPropagation(); copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`) }} style={{ background:"none", border:"none", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#64748B", padding:4, fontSize:12, fontWeight:700, whiteSpace:"nowrap" }}>{copiedLink===`team-${t.id}` ? "Copied!" : "Team Link"}</button>
-                    <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#64748B", padding:4 }}>Edit</button>
-                    <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+                  </div>
+
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:10, paddingTop:10, borderTop:"1px solid #F1F5F9", flexWrap:"wrap" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                      <button
+                        onClick={(e)=>{ e.stopPropagation(); copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`) }}
+                        style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#475569", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        title="Copy private squad link for captain/owner"
+                      >
+                        <LinkIcon size={12}/> {copiedLink===`team-${t.id}` ? "Copied Link!" : "Team Link"}
+                      </button>
+                      <button
+                        onClick={(e)=>{ e.stopPropagation(); shareTeamOnWhatsApp(t, managingAuction) }}
+                        style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #22C55E", background:"#F0FDF4", cursor:"pointer", color:"#166534", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        title="Share squad link directly via WhatsApp to captain/owner"
+                      >
+                        <span>📱</span> WhatsApp
+                      </button>
+                      <button
+                        onClick={(e)=>{ e.stopPropagation(); exportTeamRosterCsv(t, auctionPlayers, managingAuction?.name) }}
+                        style={{ padding:"5px 10px", borderRadius:7, border:"1.5px solid #166534", background:"#FFFFFF", cursor:"pointer", color:"#166534", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        title="Export team roster CSV with full player details"
+                      >
+                        <span>📥</span> Export Roster
+                      </button>
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color:"#64748B", fontSize:11, fontWeight:700 }}>Edit</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ padding:"5px 8px", borderRadius:7, border:"1px solid #FEE2E2", background:"#FEF2F2", cursor:"pointer", color:"#EF4444", fontSize:11, fontWeight:700 }} title="Delete team"><Trash2 size={13}/></button>
+                    </div>
                   </div>
                 </Card>
-              ))}
+              )})}
             </div>
           )}
         </div>
@@ -2755,7 +2788,38 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
             </div>
 
-            <div style={{ fontSize:12, color:"#94A3B8", fontWeight:700, marginBottom:8, textTransform:"uppercase" }}>Squad ({squad.length}/9)</div>
+            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
+              <button
+                onClick={()=>copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${viewingTeam.id}`, `modal-team-${viewingTeam.id}`)}
+                style={{ flex:1, minWidth:120, padding:"8px 12px", borderRadius:8, border:"1px solid #E2E8F0", background:"#FFFFFF", color: copiedLink===`modal-team-${viewingTeam.id}` ? "#166534" : "#475569", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
+              >
+                <LinkIcon size={13}/> {copiedLink===`modal-team-${viewingTeam.id}` ? "Copied!" : "Team Link"}
+              </button>
+              <button
+                onClick={()=>shareTeamOnWhatsApp(viewingTeam, managingAuction)}
+                style={{ flex:1, minWidth:120, padding:"8px 12px", borderRadius:8, border:"1px solid #22C55E", background:"#F0FDF4", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
+              >
+                <span>📱</span> WhatsApp
+              </button>
+              <button
+                onClick={()=>exportTeamRosterCsv(viewingTeam, auctionPlayers, managingAuction?.name)}
+                style={{ flex:1, minWidth:130, padding:"8px 12px", borderRadius:8, border:"1px solid #166534", background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
+              >
+                <span>📥</span> Export Roster
+              </button>
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <div style={{ fontSize:12, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Squad ({squad.length}/9)</div>
+              {squad.length > 0 && (
+                <button
+                  onClick={()=>exportTeamRosterCsv(viewingTeam, auctionPlayers, managingAuction?.name)}
+                  style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, textDecoration:"underline" }}
+                >
+                  Download CSV
+                </button>
+              )}
+            </div>
             {squad.length === 0 ? (
               <div style={{ fontSize:13, color:"#94A3B8", textAlign:"center", padding:"16px 0" }}>No players in squad yet.</div>
             ) : (

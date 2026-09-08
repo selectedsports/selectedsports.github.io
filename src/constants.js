@@ -70,3 +70,96 @@ export function birthDateError(birthDate) {
   if (age < MIN_REGISTRATION_AGE) return `Players must be at least ${MIN_REGISTRATION_AGE} years old to register.`
   return null
 }
+
+export function exportTeamRosterCsv(team, auctionPlayers, auctionName = "Cricket Tournament") {
+  if (!team) return
+  const squad = (auctionPlayers || [])
+    .filter(p => p.sold_team_id === team.id)
+    .sort((a,b) => {
+      const aCap = a.is_captain || a.status === "captain" || (team.captain_player_id && a.id === team.captain_player_id) ? 1 : 0
+      const bCap = b.is_captain || b.status === "captain" || (team.captain_player_id && b.id === team.captain_player_id) ? 1 : 0
+      return bCap - aCap
+    })
+
+  if (squad.length === 0) {
+    alert(`No players found in ${team.name}'s squad yet. Players will appear here once acquired in the auction.`)
+    return
+  }
+
+  const clean = val => {
+    if (val === null || val === undefined) return '""'
+    return `"${String(val).replace(/"/g, '""')}"`
+  }
+
+  const headers = [
+    "S.No",
+    "Player Name",
+    "Team Role",
+    "Playing Role",
+    "Jersey Number",
+    "Jersey Size",
+    "City",
+    "Date of Birth",
+    "Mobile Number",
+    "Price Paid (Coins)",
+    "Status"
+  ]
+
+  const rows = squad.map((p, idx) => {
+    const isCap = p.is_captain || p.status === "captain" || (team.captain_player_id && p.id === team.captain_player_id)
+    const teamRole = isCap ? "Captain" : "Squad Member"
+    const priceStr = isCap ? "0 (Captain)" : `🪙 ${Number(p.sold_price || 0).toLocaleString("en-IN")}`
+    return [
+      idx + 1,
+      clean(p.name || ""),
+      clean(teamRole),
+      clean(p.playing_role || "—"),
+      clean(p.jersey_number || "—"),
+      clean(p.jersey_size || "—"),
+      clean(p.city || "—"),
+      clean(p.birth_date || "—"),
+      clean(p.phone || "—"),
+      clean(priceStr),
+      clean(isCap ? "Captain" : (p.status || "Sold"))
+    ].join(",")
+  })
+
+  const titleLine = clean(`Tournament: ${auctionName} — Team Roster: ${team.name}`)
+  const metaLine = clean(`Captain: ${team.captain_name || "—"}${team.captain_phone ? ` (${team.captain_phone})` : ""} | Owner: ${team.owner_name || "—"}${team.owner_phone ? ` (${team.owner_phone})` : ""} | Starting Purse: 🪙 ${Number(team.purse_total || 0).toLocaleString("en-IN")} | Remaining Purse: 🪙 ${Number(team.purse_remaining || 0).toLocaleString("en-IN")} | Squad: ${squad.length}/9`)
+
+  const csvContent = [
+    titleLine,
+    metaLine,
+    "",
+    headers.join(","),
+    ...rows
+  ].join("\r\n")
+
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  const fileName = `${(team.name || "Team").replace(/[^a-zA-Z0-9_-]/g, "_")}_Roster.csv`
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+export function shareTeamOnWhatsApp(team, auction) {
+  if (!team) return
+  const origin = window.location.origin
+  const code = auction?.auction_code || ""
+  const teamLink = `${origin}/team-view/${code}/${team.id}`
+  const targetPhone = (team.captain_phone || team.owner_phone || "").replace(/[^0-9]/g, "").slice(-10)
+  const targetName = team.captain_name || team.owner_name || team.name
+  const auctionName = auction?.name || "Selected Sports Cricket Tournament"
+
+  const text = `🏏 *${auctionName}*\n\nHi ${targetName},\nHere is your private team link to view *${team.name}* squad, purse wallet, and live auction roster:\n👉 ${teamLink}\n\nGood luck for the auction!`
+
+  const waUrl = targetPhone
+    ? `https://wa.me/91${targetPhone}?text=${encodeURIComponent(text)}`
+    : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+  window.open(waUrl, "_blank")
+}
