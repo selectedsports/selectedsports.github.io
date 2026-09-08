@@ -107,8 +107,9 @@ export async function fetchGrounds() {
   return data
 }
 export async function addGround(name, location, maps_link, notes) {
-  const { error } = await supabase.from("grounds").insert({ name, location, maps_link, notes })
+  const { data, error } = await supabase.from("grounds").insert({ name, location, maps_link, notes }).select().single()
   if (error) throw error
+  return data
 }
 export async function updateGround(id, fields) {
   const { error } = await supabase.from("grounds").update(fields).eq("id", id)
@@ -1175,8 +1176,21 @@ export async function setPlatformUpi(upiId) {
   await upsertSetting("platform_upi_id", upiId)
 }
 
-export async function createAuction({ name, organizerId, location, auctionDate, auctionTime, planTier, maxTeams, pointsPurse, amountDue, playerEntryFee = 0, organizerUpiId = null, organizerPaymentPhone = null }) {
+export function normalizeAuctionOrganizedBy(a) {
+  if (!a) return a
+  if (!a.organized_by) {
+    if (a.logo_url && a.logo_url.startsWith("org:")) {
+      a.organized_by = a.logo_url.replace(/^org:/, "").trim()
+    } else if (a.players?.name) {
+      a.organized_by = a.players.name
+    }
+  }
+  return a
+}
+
+export async function createAuction({ name, organizerId, location, auctionDate, auctionTime, planTier, maxTeams, pointsPurse, amountDue, playerEntryFee = 0, organizerUpiId = null, organizerPaymentPhone = null, organizedBy = null }) {
   const paymentStatus = amountDue > 0 ? "pending" : "free"
+  const orgClean = organizedBy ? organizedBy.trim() : null
   const payload = {
     name, organizer_id: organizerId || null, location: location || null,
     auction_date: auctionDate || null, auction_time: auctionTime || null,
@@ -1186,15 +1200,20 @@ export async function createAuction({ name, organizerId, location, auctionDate, 
   if (playerEntryFee !== undefined) payload.player_entry_fee = playerEntryFee ? Number(playerEntryFee) : 0
   if (organizerUpiId) payload.organizer_upi_id = organizerUpiId.trim()
   if (organizerPaymentPhone) payload.organizer_payment_phone = organizerPaymentPhone.trim()
+  if (orgClean) {
+    payload.organized_by = orgClean
+    payload.logo_url = `org:${orgClean}`
+  }
 
   let { data, error } = await supabase.from("auctions").insert(payload).select().single()
-  if (error && (error.message?.includes("player_entry_fee") || error.message?.includes("organizer_upi_id") || error.message?.includes("organizer_payment_phone"))) {
-    console.warn("Retrying createAuction without new payment columns:", error.message)
+  if (error && (error.message?.includes("player_entry_fee") || error.message?.includes("organizer_upi_id") || error.message?.includes("organizer_payment_phone") || error.message?.includes("organized_by"))) {
+    console.warn("Retrying createAuction without unrecognized columns:", error.message)
     const fallbackPayload = {
       name, organizer_id: organizerId || null, location: location || null,
       auction_date: auctionDate || null, auction_time: auctionTime || null,
       plan_tier: planTier, max_teams: maxTeams, points_purse: pointsPurse || null,
-      amount_due: amountDue || 0, payment_status: paymentStatus
+      amount_due: amountDue || 0, payment_status: paymentStatus,
+      logo_url: orgClean ? `org:${orgClean}` : null
     }
     const res = await supabase.from("auctions").insert(fallbackPayload).select().single()
     if (res.error) throw res.error
@@ -1202,8 +1221,12 @@ export async function createAuction({ name, organizerId, location, auctionDate, 
   } else if (error) {
     throw error
   }
+  if (orgClean && data?.id) {
+    upsertSetting(`auction_org_${data.id}`, orgClean).catch(() => {})
+    if (data.auction_code) upsertSetting(`auction_org_${data.auction_code}`, orgClean).catch(() => {})
+  }
   if (amountDue > 0) await createNotification("auction_payment_pending", `New auction "${name}" awaiting payment confirmation (₹${amountDue})`)
-  return data
+  return normalizeAuctionOrganizedBy(data)
 }
 
 export async function fetchMyAuctions(organizerId) {
@@ -1289,18 +1312,38 @@ export async function uploadSponsorLogo(file, sponsorName) {
 export async function fetchAllAuctions() {
   const { data, error } = await supabase.from("auctions").select("*, players(name)").order("created_at", { ascending: false })
   if (error) throw error
-  return data
+  return (data || []).map(normalizeAuctionOrganizedBy)
 }
 
 export async function fetchAuctionByCode(code) {
   const { data, error } = await supabase.from("auctions").select("*").eq("auction_code", code).maybeSingle()
   if (error) throw error
+  if (!data) return null
+  normalizeAuctionOrganizedBy(data)
+  if (!data.organized_by) {
+    try {
+      const { data: s } = await supabase.from("settings").select("value").eq("key", `auction_org_${data.id}`).maybeSingle()
+      if (s?.value) data.organized_by = s.value
+      else {
+        const { data: sc } = await supabase.from("settings").select("value").eq("key", `auction_org_${code}`).maybeSingle()
+        if (sc?.value) data.organized_by = sc.value
+      }
+    } catch {}
+  }
   return data
 }
 
 export async function fetchAuctionById(id) {
   const { data, error } = await supabase.from("auctions").select("*").eq("id", id).single()
   if (error) throw error
+  if (!data) return null
+  normalizeAuctionOrganizedBy(data)
+  if (!data.organized_by) {
+    try {
+      const { data: s } = await supabase.from("settings").select("value").eq("key", `auction_org_${id}`).maybeSingle()
+      if (s?.value) data.organized_by = s.value
+    } catch {}
+  }
   return data
 }
 

@@ -38,6 +38,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [selectedState, setSelectedState] = useState("")
   const [city, setCity] = useState("")
   const [cityMode, setCityMode] = useState("select") // "select" | "other"
+  const [organizedBy, setOrganizedBy] = useState("")
   const [groundName, setGroundName] = useState("")
   const [groundMapsLink, setGroundMapsLink] = useState("")
   const [savedGrounds, setSavedGrounds] = useState([])
@@ -151,7 +152,8 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
         amountDue: plan.price,
         playerEntryFee: feeNum,
         organizerUpiId: feeNum > 0 ? organizerUpiId.trim() : null,
-        organizerPaymentPhone: feeNum > 0 ? cleanPhone : null
+        organizerPaymentPhone: feeNum > 0 ? cleanPhone : null,
+        organizedBy: organizedBy.trim() || null
       })
       setCreatedAuction(auction)
       setStep("roster")
@@ -229,6 +231,9 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
             </div>
             <label style={lS}>Auction Name *</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sunday Premier League Auction" style={{ ...iS, marginBottom:14 }}/>
+
+            <label style={lS}>Organized By (Club / Academy / Organizer Name)</label>
+            <input value={organizedBy} onChange={e => setOrganizedBy(e.target.value)} placeholder="e.g. Selected Sports Club / Md Zeeshan" style={{ ...iS, marginBottom:14 }}/>
 
             <label style={lS}>State *</label>
             <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select"); setGroundName(""); setMapGrounds([]); setMapSearched(false) }} style={{ ...iS, marginBottom:14 }}>

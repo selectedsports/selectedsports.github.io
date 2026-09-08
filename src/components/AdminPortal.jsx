@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -628,9 +628,12 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
 
 function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
   const today = new Date().toISOString().split("T")[0]
-  const [form, setForm] = useState({ date:today, startH:7, startM:"00", endH:9, endM:"00", groundId:"", teamId:teams[0]?.id||"", type:"external", ourTeamId:"", maxPlayers:18, visibility:"private" })
+  const [form, setForm] = useState({ date:today, startH:7, startM:"00", endH:9, endM:"00", groundId:grounds[0]?.id||"", teamId:teams[0]?.id||"", type:"external", ourTeamId:"", maxPlayers:9, visibility:"private" })
   const [busy, setBusy] = useState(false)
   const [teamList, setTeamList] = useState(teams)
+  const [groundList, setGroundList] = useState(grounds)
+  const [mapGrounds, setMapGrounds] = useState([])
+  const [loadingMap, setLoadingMap] = useState(false)
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState("")
   const [addingTeam, setAddingTeam] = useState(false)
@@ -642,6 +645,41 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
       setTeamList(list => [...list.filter(t => !t.isAuction), ...mapped])
     }).catch(() => {})
   }, [])
+
+  const handleSelectGround = async (g) => {
+    if (g.id) {
+      setForm(f => ({ ...f, groundId: g.id }))
+      return
+    }
+    const existing = groundList.find(x => x.name.toLowerCase() === g.name.toLowerCase())
+    if (existing) {
+      setForm(f => ({ ...f, groundId: existing.id }))
+      return
+    }
+    setBusy(true)
+    try {
+      const created = await addGround(g.name, g.location || "Pune, Maharashtra", g.maps_link || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(g.name + " Pune")}`, "Added via match scheduling")
+      if (created) {
+        setGroundList(prev => [...prev, created])
+        setForm(f => ({ ...f, groundId: created.id }))
+      }
+    } catch (e) {
+      alert("Ground select: " + e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const scanPuneMap = async () => {
+    setLoadingMap(true)
+    try {
+      const results = await searchPuneMapGrounds()
+      setMapGrounds(results)
+    } finally {
+      setLoadingMap(false)
+    }
+  }
+
   const handleAddTeam = async () => {
     if (!newTeamName.trim()) { alert("Team name required"); return }
     if (teamList.find(t => t.name.toLowerCase() === newTeamName.trim().toLowerCase())) { alert("Team already exists"); return }
@@ -655,9 +693,11 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
     } catch(e) { alert(e.message) }
     setAddingTeam(false)
   }
+
   const selTeam   = teamList.find(t=>String(t.id)===String(form.teamId))
   const selOurTeam = teamList.find(t=>String(t.id)===String(form.ourTeamId))
-  const selGround = grounds.find(g=>String(g.id)===String(form.groundId))
+  const selGround = groundList.find(g=>String(g.id)===String(form.groundId))
+
   const submit = async () => {
     if(form.type==="external"&&!selTeam){alert("Please select the opponent team");return}
     if(form.type==="external"&&!selOurTeam){alert("Please select which team we're playing as");return}
@@ -680,7 +720,7 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
           <h3 style={{ margin:0,fontSize:17,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)" }}>Schedule New Match</h3>
           <button onClick={onClose} style={{ background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af" }}>×</button>
         </div>
-        <p style={{ margin:"0 0 18px",fontSize:12,color:"#6b7280" }}>No one is notified until you invite them.</p>
+        <p style={{ margin:"0 0 18px",fontSize:12,color:"#6b7280" }}>Schedule match, select venue, and take player availability count.</p>
         <div style={{ display:"grid",gap:16 }}>
           <div>
             <label style={lS}>Date</label>
@@ -696,10 +736,105 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
             </div>
             <div style={{ fontSize:11,color:"#166534",marginTop:6,fontWeight:600 }}>⏰ {timeSlotStr(form.startH,form.startM,form.endH,form.endM)}</div>
           </div>
-          <div>
-            <label style={lS}>Ground</label>
-            <SearchDropdown options={grounds.map(g=>({...g,label:`${g.name} — ${g.location}`}))} value={form.groundId} onChange={v=>setForm({...form,groundId:v})} placeholder="Select ground..." renderOption={o=><div><div style={{ fontWeight:600,fontSize:13 }}>{o.name}</div><div style={{ fontSize:11,color:"#9ca3af" }}>{o.location}</div></div>} renderSelected={o=><span style={{ fontSize:13,fontWeight:600 }}>{o.name} — {o.location}</span>}/>
+
+          {/* Ground Selection with Google Maps for Pune */}
+          <div style={{ padding:"14px", background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:4 }}>
+              <label style={{ ...lS, marginBottom:0, fontWeight:700, color:"#0F172A", display:"flex", alignItems:"center", gap:6 }}>
+                <MapPin size={14} color="#166534"/> Ground (Pune) *
+              </label>
+              <a
+                href="https://www.google.com/maps/search/cricket+grounds+in+pune"
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize:11, color:"#166534", fontWeight:700, textDecoration:"none", display:"flex", alignItems:"center", gap:3 }}
+              >
+                Google Maps ↗
+              </a>
+            </div>
+            <div style={{ fontSize:11, color:"#64748B", marginBottom:10 }}>
+              Search or pick an available cricket ground from all over Pune.
+            </div>
+
+            <SearchDropdown
+              options={groundList.map(g => ({ ...g, label: `${g.name} — ${g.location || "Pune"}` }))}
+              value={form.groundId}
+              onChange={v => setForm({ ...form, groundId: v })}
+              placeholder="Select or search ground..."
+              renderOption={o => (
+                <div>
+                  <div style={{ fontWeight:600, fontSize:13 }}>{o.name}</div>
+                  <div style={{ fontSize:11, color:"#9ca3af" }}>{o.location || "Pune"}</div>
+                </div>
+              )}
+              renderSelected={o => <span style={{ fontSize:13, fontWeight:600 }}>{o.name} — {o.location || "Pune"}</span>}
+            />
+
+            {/* Quick Pune Grounds Chips */}
+            <div style={{ marginTop:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                <div style={{ fontSize:10.5, fontWeight:700, color:"#64748B", textTransform:"uppercase", letterSpacing:"0.5px" }}>
+                  Available Grounds in Pune
+                </div>
+                <button
+                  type="button"
+                  onClick={scanPuneMap}
+                  disabled={loadingMap}
+                  style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0 }}
+                >
+                  {loadingMap ? "Scanning Map..." : "🔄 Scan Pune Map"}
+                </button>
+              </div>
+
+              {/* Map Discovered Chips */}
+              {mapGrounds.length > 0 && (
+                <div style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:10, color:"#0369A1", fontWeight:600, marginBottom:4 }}>Found on Map:</div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5, maxHeight:100, overflowY:"auto" }}>
+                    {mapGrounds.map((m, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectGround(m)}
+                        style={{
+                          padding:"4px 8px", borderRadius:6,
+                          border: selGround?.name === m.name ? "1.5px solid #0284C7" : "1px solid #BAE6FD",
+                          background: selGround?.name === m.name ? "#E0F2FE" : "#F0F9FF",
+                          color:"#0369A1", fontSize:11, fontWeight:600, cursor:"pointer"
+                        }}
+                      >
+                        📍 {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Presets / Platform Grounds Chips */}
+              <div style={{ display:"flex", flexWrap:"wrap", gap:5, maxHeight:120, overflowY:"auto" }}>
+                {PUNE_CRICKET_GROUNDS.slice(0, 14).map((p, idx) => {
+                  const isSel = selGround?.name?.toLowerCase() === p.name.toLowerCase()
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectGround(p)}
+                      style={{
+                        padding:"4px 8px", borderRadius:6,
+                        border: isSel ? "1.5px solid #166534" : "1px solid #E2E8F0",
+                        background: isSel ? "#DCFCE7" : "#F8FAF8",
+                        color: isSel ? "#166534" : "#475569",
+                        fontSize:11, fontWeight:600, cursor:"pointer"
+                      }}
+                    >
+                      🏟️ {p.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
+
           <div>
             <label style={lS}>Match Type</label>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
@@ -711,6 +846,65 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
               ))}
             </div>
           </div>
+
+          {/* Squad Size & Player Availability Count Target */}
+          <div>
+            <label style={lS}>
+              {form.type === "external" ? "Our Squad Size (Player Availability Target)" : "Total Players (Two Equal Sides)"}
+            </label>
+            {form.type === "external" ? (
+              <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+                {[6, 7, 8, 9, 10, 11, 12].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm({ ...form, maxPlayers: n })}
+                    style={{
+                      flex: "1 1 calc(14% - 6px)",
+                      minWidth: 40,
+                      padding: "10px 4px",
+                      borderRadius: 8,
+                      border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`,
+                      background: form.maxPlayers === n ? "#F0FDF4" : "#FFFFFF",
+                      color: form.maxPlayers === n ? "#166534" : "#475569",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: form.maxPlayers === n ? 800 : 600
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+                {[10, 12, 14, 16, 18, 20, 22].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm({ ...form, maxPlayers: n })}
+                    style={{
+                      flex: "1 1 calc(25% - 6px)",
+                      padding: "10px 4px",
+                      borderRadius: 8,
+                      border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`,
+                      background: form.maxPlayers === n ? "#F0FDF4" : "#FFFFFF",
+                      color: form.maxPlayers === n ? "#166534" : "#475569",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: form.maxPlayers === n ? 800 : 600
+                    }}
+                  >
+                    {n} ({n/2}v{n/2})
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ padding:"9px 12px", background:"#F0FDF4", borderRadius:8, border:"1px solid #BBF7D0", fontSize:12, color:"#166534", fontWeight:600, display:"flex", alignItems:"center", gap:6 }}>
+              <Users size={14}/> Taking player availability count: up to <strong>{form.maxPlayers} players</strong> squad capacity.
+            </div>
+          </div>
+
           <div>
             <label style={lS}>Visibility</label>
             <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
@@ -724,13 +918,6 @@ function NewMatchModal({ grounds, teams, onClose, onCreated, isMobile }) {
           </div>
           {form.type==="external" && (
             <div>
-              <label style={lS}>Our Squad Size</label>
-              <div style={{ display:"flex",gap:8,marginBottom:14 }}>
-                {[6,7,8,9,10].map(n=>(
-                  <button key={n} onClick={()=>setForm({...form,maxPlayers:n})} style={{ flex:1,padding:"11px 4px",borderRadius:9,border:`2px solid ${form.maxPlayers===n?"#166534":"#e5e7eb"}`,background:form.maxPlayers===n?"#f0fdf4":"#fafafa",color:form.maxPlayers===n?"#065f46":"#6b7280",fontSize:14,cursor:"pointer",fontWeight:form.maxPlayers===n?800:600,fontFamily:"var(--font-body)" }}>{n}</button>
-                ))}
-              </div>
-              <div style={{ padding:"8px 12px",background:"#F5E6C8",borderRadius:9,border:"1px solid #E3C888",marginBottom:14,fontSize:12,color:"#7A4F13",fontWeight:600 }}>👥 Our squad: {form.maxPlayers} players</div>
               <label style={lS}>Our Team (who we're playing as today)</label>
               <div style={{ marginBottom: 14 }}>
                 <SearchDropdown options={teamList} value={form.ourTeamId} onChange={v=>setForm({...form,ourTeamId:v})} placeholder="Select our team..." onAddNew={()=>{setAddTeamTarget("our");setNewTeamName('');setShowAddTeam(true)}} addNewLabel="Add new team" renderOption={o=><div style={{ display:"flex",alignItems:"center",gap:10 }}><TeamAv name={o.name} logo={o.logo_url} size={28}/><span style={{ fontSize:13,fontWeight:600 }}>{o.name}</span>{o.isAuction && <span style={{ fontSize:10,color:"#B8860B",fontWeight:700,marginLeft:6 }}>(Auction Team)</span>}</div>} renderSelected={o=><div style={{ display:"flex",alignItems:"center",gap:8 }}><TeamAv name={o.name} logo={o.logo_url} size={22}/><span style={{ fontSize:13,fontWeight:600 }}>{o.name}</span></div>}/>

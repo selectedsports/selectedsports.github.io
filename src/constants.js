@@ -452,3 +452,60 @@ export function exportTeamRosterPdf(team, auctionPlayers, auctionName = "Cricket
     }, 250)
   }
 }
+
+export const PUNE_CRICKET_GROUNDS = [
+  { name: "Shinde High School Cricket Ground", location: "Sahakar Nagar, Pune" },
+  { name: "Poona Club Cricket Ground", location: "Camp, Pune" },
+  { name: "PYC Hindu Gymkhana", location: "Deccan Gymkhana, Pune" },
+  { name: "Law College Cricket Ground", location: "Erandwane, Pune" },
+  { name: "Deccan Gymkhana Cricket Ground", location: "Deccan, Pune" },
+  { name: "Nehru Stadium", location: "Swargate, Pune" },
+  { name: "Fergusson College Ground", location: "FC Road, Pune" },
+  { name: "SP College Ground", location: "Sadashiv Peth, Pune" },
+  { name: "Eagle Turf", location: "Khadi Machine Chowk, Pune" },
+  { name: "MM Turf Play Ground", location: "Parge Nagar, Pune" },
+  { name: "Parge Play On", location: "Parge Nagar, Pune" },
+  { name: "Anfield Turf", location: "Mohammadwadi, Pune" },
+  { name: "Kanade Sports Club - Full Ground", location: "Pisoli, Pune" },
+  { name: "Kanade Sports Club - Single", location: "Undri, Pune" },
+  { name: "Kanade Sports Club - Indoor", location: "Pisoli, Pune" },
+  { name: "Blades Cricket Ground", location: "Bavdhan, Pune" },
+  { name: "Legends Cricket Ground", location: "Hadapsar, Pune" },
+  { name: "Champions Turf & Cricket Ground", location: "Viman Nagar, Pune" },
+  { name: "The Turf", location: "Baner, Pune" },
+  { name: "Oxford Cricket Resort Ground", location: "Bavdhan, Pune" },
+  { name: "Kharadi Sports Complex Cricket Ground", location: "Kharadi, Pune" },
+  { name: "Wakad Cricket Ground", location: "Wakad, Pune" },
+  { name: "DY Patil Cricket Stadium", location: "Akurdi, Pune" },
+  { name: "Telco Cricket Ground", location: "Pimpri-Chinchwad, Pune" }
+]
+
+export async function searchPuneMapGrounds(query = "") {
+  let mapResults = []
+  try {
+    const searchQuery = encodeURIComponent(query ? `${query} cricket ground Pune` : "cricket ground Pune Maharashtra")
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${searchQuery}&limit=12&addressdetails=1`, {
+      headers: { "Accept": "application/json" }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      const seen = new Set()
+      for (const item of (data || [])) {
+        const rawName = item.name || (item.display_name ? item.display_name.split(",")[0] : "")
+        const cleanName = rawName.replace(/,\s*India$/i, "").trim()
+        if (cleanName && !seen.has(cleanName.toLowerCase())) {
+          seen.add(cleanName.toLowerCase())
+          mapResults.push({
+            name: cleanName,
+            location: "Pune, Maharashtra",
+            maps_link: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanName + " Pune")}`,
+            isMap: true
+          })
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Pune map grounds search failed:", err)
+  }
+  return mapResults
+}

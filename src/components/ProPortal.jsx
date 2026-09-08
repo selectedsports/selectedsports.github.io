@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react"
 import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
-import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
+import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -17,8 +17,11 @@ function timeSlotStr(sh, sm, eh, em) {
 
 function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile, defaultGroundId }) {
   const today = new Date().toISOString().split("T")[0]
-  const [form, setForm] = useState({ date: today, startH: 7, startM: "00", endH: 9, endM: "00", groundId: defaultGroundId || "", teamId: teams[0]?.id || "", ourTeamId: "", type: "external", maxPlayers: 9, visibility: "private" })
+  const [form, setForm] = useState({ date: today, startH: 7, startM: "00", endH: 9, endM: "00", groundId: defaultGroundId || grounds[0]?.id || "", teamId: teams[0]?.id || "", ourTeamId: "", type: "external", maxPlayers: 9, visibility: "private" })
   const [teamList, setTeamList] = useState(teams)
+  const [groundList, setGroundList] = useState(grounds)
+  const [mapGrounds, setMapGrounds] = useState([])
+  const [loadingMap, setLoadingMap] = useState(false)
   const [busy, setBusy] = useState(false)
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [newTeamName, setNewTeamName] = useState("")
@@ -31,9 +34,43 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
     }).catch(() => {})
   }, [])
 
-  const selGround = grounds.find(g => String(g.id) === String(form.groundId))
+  const selGround = groundList.find(g => String(g.id) === String(form.groundId))
   const selTeam = teamList.find(t => String(t.id) === String(form.teamId))
   const selOurTeam = teamList.find(t => String(t.id) === String(form.ourTeamId))
+
+  const handleSelectGround = async (g) => {
+    if (g.id) {
+      setForm(f => ({ ...f, groundId: g.id }))
+      return
+    }
+    const existing = groundList.find(x => x.name.toLowerCase() === g.name.toLowerCase())
+    if (existing) {
+      setForm(f => ({ ...f, groundId: existing.id }))
+      return
+    }
+    setBusy(true)
+    try {
+      const created = await addGround(g.name, g.location || "Pune, Maharashtra", g.maps_link || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(g.name + " Pune")}`, "Added via match scheduling")
+      if (created) {
+        setGroundList(prev => [...prev, created])
+        setForm(f => ({ ...f, groundId: created.id }))
+      }
+    } catch (e) {
+      alert("Ground select error: " + e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const scanPuneMap = async () => {
+    setLoadingMap(true)
+    try {
+      const results = await searchPuneMapGrounds()
+      setMapGrounds(results)
+    } finally {
+      setLoadingMap(false)
+    }
+  }
 
   const addNewTeam = async () => {
     if (!newTeamName.trim()) { alert("Team name required"); return }
@@ -95,13 +132,96 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
               </div>
             </div>
           </div>
-          <div>
-            <label style={lS}>Ground</label>
-            <select value={form.groundId} onChange={e => setForm({ ...form, groundId: e.target.value })} style={iS}>
+
+          {/* Ground Selection with Google Maps for Pune */}
+          <div style={{ padding: "14px", background: "#FFFFFF", border: "1.5px solid #E2E8F0", borderRadius: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <label style={{ ...lS, marginBottom: 0, fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: 6 }}>
+                <MapPin size={14} color="#166534"/> Ground (Pune) *
+              </label>
+              <a
+                href="https://www.google.com/maps/search/cricket+grounds+in+pune"
+                target="_blank"
+                rel="noreferrer"
+                style={{ fontSize: 11, color: "#166534", fontWeight: 700, textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}
+              >
+                Google Maps ↗
+              </a>
+            </div>
+            <div style={{ fontSize: 11, color: "#64748B", marginBottom: 10 }}>
+              Search or pick an available cricket ground from all over Pune.
+            </div>
+
+            <select value={form.groundId} onChange={e => setForm({ ...form, groundId: e.target.value })} style={{ ...iS, marginBottom: 10 }}>
               <option value="">Select ground...</option>
-              {grounds.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              {groundList.map(g => <option key={g.id} value={g.id}>{g.name} — {g.location || "Pune"}</option>)}
             </select>
+
+            {/* Quick Pune Grounds Chips */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Available Grounds in Pune
+                </div>
+                <button
+                  type="button"
+                  onClick={scanPuneMap}
+                  disabled={loadingMap}
+                  style={{ background: "none", border: "none", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                >
+                  {loadingMap ? "Scanning Map..." : "🔄 Scan Pune Map"}
+                </button>
+              </div>
+
+              {/* Map Discovered Chips */}
+              {mapGrounds.length > 0 && (
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, color: "#0369A1", fontWeight: 600, marginBottom: 4 }}>Found on Map:</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, maxHeight: 100, overflowY: "auto" }}>
+                    {mapGrounds.map((m, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleSelectGround(m)}
+                        style={{
+                          padding: "4px 8px", borderRadius: 6,
+                          border: selGround?.name === m.name ? "1.5px solid #0284C7" : "1px solid #BAE6FD",
+                          background: selGround?.name === m.name ? "#E0F2FE" : "#F0F9FF",
+                          color: "#0369A1", fontSize: 11, fontWeight: 600, cursor: "pointer"
+                        }}
+                      >
+                        📍 {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Presets / Platform Grounds Chips */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, maxHeight: 120, overflowY: "auto" }}>
+                {PUNE_CRICKET_GROUNDS.slice(0, 14).map((p, idx) => {
+                  const isSel = selGround?.name?.toLowerCase() === p.name.toLowerCase()
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleSelectGround(p)}
+                      style={{
+                        padding: "4px 8px", borderRadius: 6,
+                        border: isSel ? "1.5px solid #166534" : "1px solid #E2E8F0",
+                        background: isSel ? "#DCFCE7" : "#F8FAF8",
+                        color: isSel ? "#166534" : "#475569",
+                        fontSize: 11, fontWeight: 600, cursor: "pointer"
+                      }}
+                    >
+                      🏟️ {p.name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
+
           <div>
             <label style={lS}>Match Type</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -113,6 +233,65 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
               ))}
             </div>
           </div>
+
+          {/* Squad Size & Player Availability Count Target */}
+          <div>
+            <label style={lS}>
+              {form.type === "external" ? "Our Squad Size (Player Availability Target)" : "Total Players (Two Equal Sides)"}
+            </label>
+            {form.type === "external" ? (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                {[6, 7, 8, 9, 10, 11, 12].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm({ ...form, maxPlayers: n })}
+                    style={{
+                      flex: "1 1 calc(14% - 6px)",
+                      minWidth: 40,
+                      padding: "10px 4px",
+                      borderRadius: 8,
+                      border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`,
+                      background: form.maxPlayers === n ? "rgba(34,197,94,0.08)" : "#F8FAF8",
+                      color: form.maxPlayers === n ? "#166534" : "#64748B",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: form.maxPlayers === n ? 800 : 600
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                {[10, 12, 14, 16, 18, 20, 22].map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setForm({ ...form, maxPlayers: n })}
+                    style={{
+                      flex: "1 1 calc(25% - 6px)",
+                      padding: "10px 4px",
+                      borderRadius: 8,
+                      border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`,
+                      background: form.maxPlayers === n ? "rgba(34,197,94,0.08)" : "#F8FAF8",
+                      color: form.maxPlayers === n ? "#166534" : "#64748B",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: form.maxPlayers === n ? 800 : 600
+                    }}
+                  >
+                    {n} ({n/2}v{n/2})
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{ padding: "9px 12px", background: "rgba(34,197,94,0.08)", borderRadius: 8, border: "1px solid rgba(34,197,94,0.2)", fontSize: 12, color: "#166534", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              <Users size={14}/> Taking player availability count: up to <strong>{form.maxPlayers} players</strong> squad capacity.
+            </div>
+          </div>
+
           <div>
             <label style={lS}>Visibility</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -126,13 +305,6 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
           </div>
           {form.type === "external" && (
             <div>
-              <label style={lS}>Our Squad Size</label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                {[6,7,8,9,10].map(n => (
-                  <button key={n} onClick={() => setForm({ ...form, maxPlayers: n })} style={{ flex: 1, padding: "11px 4px", borderRadius: 9, border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`, background: form.maxPlayers === n ? "rgba(34,197,94,0.08)" : "#F8FAF8", color: form.maxPlayers === n ? "#166534" : "#64748B", fontSize: 14, cursor: "pointer", fontWeight: form.maxPlayers === n ? 800 : 600 }}>{n}</button>
-                ))}
-              </div>
-              <div style={{ padding: "8px 12px", background: "rgba(246,196,83,0.12)", borderRadius: 9, border: "1px solid rgba(246,196,83,0.3)", marginBottom: 14, fontSize: 12, color: "#B8860B", fontWeight: 600, display:"flex", alignItems:"center", gap:6 }}><Users size={13}/> Our squad: {form.maxPlayers} players</div>
               <label style={lS}>Our Team (who we're playing as today)</label>
               <select value={form.ourTeamId} onChange={e => { if (e.target.value === "__add") { setAddTeamTarget("our"); setShowAddTeam(true); setNewTeamName("") } else setForm({ ...form, ourTeamId: e.target.value }) }} style={{ ...iS, marginBottom: 14 }}>
                 <option value="">Select our team...</option>
@@ -145,17 +317,6 @@ function ProScheduleModal({ grounds, teams, player, onClose, onCreated, isMobile
                 {teamList.map(t => <option key={t.id} value={t.id}>{t.name}{t.isAuction ? " (Auction Team)" : ""}</option>)}
                 <option value="__add">+ Add new team</option>
               </select>
-            </div>
-          )}
-          {form.type === "internal" && (
-            <div>
-              <label style={lS}>Total Players</label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {[10,12,14,16,18,20,22].map(n => (
-                  <button key={n} onClick={() => setForm({ ...form, maxPlayers: n })} style={{ flex: "1 1 calc(25% - 6px)", padding: "11px 4px", borderRadius: 9, border: `2px solid ${form.maxPlayers === n ? "#166534" : "#E2E8F0"}`, background: form.maxPlayers === n ? "rgba(34,197,94,0.08)" : "#F8FAF8", color: form.maxPlayers === n ? "#166534" : "#64748B", fontSize: 14, cursor: "pointer", fontWeight: form.maxPlayers === n ? 800 : 600 }}>{n}</button>
-                ))}
-              </div>
-              <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(34,197,94,0.08)", borderRadius: 10, border: "1px solid rgba(34,197,94,0.15)", fontSize: 13, color: "#166534", fontWeight: 700 }}>{form.maxPlayers/2}v{form.maxPlayers/2} · {form.maxPlayers} players · Two equal sides</div>
             </div>
           )}
         </div>

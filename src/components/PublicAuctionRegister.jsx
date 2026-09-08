@@ -11,7 +11,7 @@ const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "6XL"]
 const iS = { width:"100%", padding:"12px 13px", borderRadius:9, border:"1.5px solid #E2E8F0", fontSize:15, outline:"none", background:"#F8FAF8", color:"#0F172A", boxSizing:"border-box", fontFamily:"var(--font-body)" }
 const lS = { fontSize:12, color:"#64748B", display:"block", marginBottom:6, fontWeight:600 }
 
-function Header({ auctionName }) {
+function Header({ auctionName, organizedBy }) {
   return (
     <div style={{ background:"linear-gradient(135deg,#166534,#0F172A)", padding:"24px 24px 20px" }}>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
@@ -19,6 +19,11 @@ function Header({ auctionName }) {
         <div style={{ color:"#B8860B", fontSize:10, fontWeight:600, letterSpacing:"2px", textTransform:"uppercase" }}>Auction Registration</div>
       </div>
       <h1 style={{ color:"#FFFFFF", fontFamily:"var(--font-head)", fontSize:20, fontWeight:800, margin:"0 0 6px" }}>{auctionName || "Register for the Auction"}</h1>
+      {organizedBy && (
+        <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.12)", color:"#86EFAC", padding:"3px 10px", borderRadius:999, fontSize:11.5, fontWeight:700, marginBottom:8 }}>
+          🛡️ Organized by {organizedBy}
+        </div>
+      )}
       <div style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>Fill in your details below — the organizer sets your base price separately.</div>
     </div>
   )
@@ -27,6 +32,7 @@ function Header({ auctionName }) {
 function AuctionDetailsCard({ auction }) {
   if (!auction) return null
   const rows = [
+    ...(auction.organized_by ? [["Organized By", auction.organized_by]] : []),
     ["Auction Date", auction.auction_date ? new Date(auction.auction_date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"}) : "Date TBD"],
     ["Time", auction.auction_time || "TBD"],
     ["Venue", auction.location || "TBD"],
@@ -481,7 +487,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   if (!isOpen) return (
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
-      <Header auctionName={auction?.name}/>
+      <Header auctionName={auction?.name} organizedBy={auction?.organized_by}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
         <div style={{ background:"#FFFFFF", borderRadius:16, padding:"24px 20px", textAlign:"center", border:"1px solid #E2E8F0", marginBottom:20 }}>
           <div style={{ fontSize:36, marginBottom:8 }}>🔒</div>
@@ -528,7 +534,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   if (done) return (
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
-      <Header auctionName={auction?.name}/>
+      <Header auctionName={auction?.name} organizedBy={auction?.organized_by}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
           <div style={{ fontSize:36, marginBottom:10 }}>{isWaitlist ? "⏳" : "✅"}</div>
@@ -587,7 +593,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   return (
     <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)" }}>
-      <Header auctionName={auction?.name}/>
+      <Header auctionName={auction?.name} organizedBy={auction?.organized_by}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
 
         <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>

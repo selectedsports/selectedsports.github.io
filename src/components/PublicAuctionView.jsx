@@ -7,66 +7,82 @@ const POLL_MS = 4000
 function ContactBanner() {
   return (
     <div style={{
-      background: "linear-gradient(90deg, #78350F 0%, #B45309 30%, #D97706 60%, #92400E 100%)",
+      background: "linear-gradient(135deg, #064E3B 0%, #0F172A 100%)",
+      borderBottom: "2.5px solid #F59E0B",
       color: "#FFFFFF",
-      padding: "9px 16px",
-      fontSize: 12,
-      fontWeight: 800,
+      padding: "12px 18px",
+      fontSize: 14,
+      fontWeight: 700,
       textAlign: "center",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      gap: 10,
+      gap: 12,
       flexWrap: "wrap",
-      letterSpacing: "0.3px",
-      boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-      fontFamily: "var(--font-head)"
+      boxShadow: "0 4px 16px rgba(0,0,0,0.35)",
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
     }}>
-      <span style={{ fontSize: 15, filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}>📢</span>
-      <span style={{ color: "#FEF08A", textTransform: "uppercase", letterSpacing: "0.8px" }}>
-        Want to organize an auction for your tournament?
-      </span>
-      <span style={{ color: "#FFFFFF" }}>
-        Please contact <strong>Md Zeeshan</strong>:
-      </span>
-      <a
-        href="tel:9897439743"
-        style={{
-          color: "#FFFFFF",
-          background: "rgba(0,0,0,0.3)",
-          padding: "3px 10px",
-          borderRadius: 6,
-          textDecoration: "none",
-          fontWeight: 900,
-          border: "1px solid rgba(255,255,255,0.25)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4
-        }}
-      >
-        📞 9897439743
-      </a>
-      <a
-        href="https://wa.me/919897439743?text=Hi%20Md%20Zeeshan,%20I%20want%20to%20organize%20a%20cricket%20auction%20with%20Selected%20Sports"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          background: "#166534",
-          color: "#FFFFFF",
-          padding: "3px 12px",
-          borderRadius: 999,
-          textDecoration: "none",
-          fontWeight: 900,
-          fontSize: 11,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-          border: "1px solid #22C55E",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
-        }}
-      >
-        WhatsApp ↗
-      </a>
+      <div style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        background: "rgba(245,158,11,0.18)",
+        border: "1px solid #F59E0B",
+        color: "#FDE047",
+        padding: "4px 12px",
+        borderRadius: 999,
+        fontSize: 12.5,
+        fontWeight: 800,
+        letterSpacing: "0.5px",
+        textTransform: "uppercase"
+      }}>
+        <span>📢</span> Want to organize an auction for your tournament?
+      </div>
+      <div style={{ color: "#F8FAFC", fontSize: 13.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 5 }}>
+        Please contact <strong style={{ color: "#FFFFFF", fontWeight: 900, fontSize: 14 }}>Md Zeeshan</strong>:
+      </div>
+      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <a
+          href="tel:9897439743"
+          style={{
+            color: "#0F172A",
+            background: "#FFFFFF",
+            padding: "5px 14px",
+            borderRadius: 999,
+            textDecoration: "none",
+            fontWeight: 900,
+            fontSize: 13.5,
+            border: "2px solid #FCD34D",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6
+          }}
+        >
+          <span>📞</span> 9897439743
+        </a>
+        <a
+          href="https://wa.me/919897439743?text=Hi%20Md%20Zeeshan,%20I%20want%20to%20organize%20a%20cricket%20auction%20with%20Selected%20Sports"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            background: "#22C55E",
+            color: "#FFFFFF",
+            padding: "6px 16px",
+            borderRadius: 999,
+            textDecoration: "none",
+            fontWeight: 900,
+            fontSize: 13,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            border: "1.5px solid #86EFAC",
+            boxShadow: "0 2px 10px rgba(34,197,94,0.4)"
+          }}
+        >
+          <span>💬</span> WhatsApp ↗
+        </a>
+      </div>
     </div>
   )
 }
@@ -90,11 +106,18 @@ function Header({ auctionMeta }) {
             <div style={{ color: "#FEF08A", fontSize: 16, fontWeight: 900, fontFamily: "var(--font-head)", letterSpacing: "0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {auctionMeta?.name || "Cricket Auction"}
             </div>
-            {auctionMeta?.location && (
-              <div style={{ color: "#CBD5E1", fontSize: 12, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                📍 {auctionMeta.location}
-              </div>
-            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
+              {auctionMeta?.organized_by && (
+                <div style={{ color: "#86EFAC", fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                  🛡️ Org by {auctionMeta.organized_by}
+                </div>
+              )}
+              {auctionMeta?.location && (
+                <div style={{ color: "#CBD5E1", fontSize: 11.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  📍 {auctionMeta.location}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
