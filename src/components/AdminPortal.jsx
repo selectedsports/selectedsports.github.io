@@ -2188,7 +2188,7 @@ function AuctionPage({ isMobile, isFounder }) {
 
       <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
         {(managingAuction
-          ? [["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["sponsors", "Sponsors"], ["links", "Links"], ["details", "Details"]]
+          ? [["players", `Player Pool (${auctionPlayers.filter(p => !p.is_captain && p.status !== "captain").length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["sponsors", "Sponsors"], ["links", "Links"], ["details", "Details"]]
           : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["completed", "Completed"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
         ).map(([v, label]) => (
           <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
@@ -2311,12 +2311,13 @@ function AuctionPage({ isMobile, isFounder }) {
       )}
 
       {subTab === "players" && (() => {
-        const soldCount = auctionPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
-        const totalBase = auctionPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
-        const inPoolPhones = new Set(auctionPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
+        const auctionPoolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+        const soldCount = auctionPoolPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
+        const totalBase = auctionPoolPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
+        const inPoolPhones = new Set(auctionPoolPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
         const notAddedCount = allPlatformPlayers.filter(p => !inPoolPhones.has((p.phone||"").replace(/[^0-9]/g,"").slice(-10))).length
         const q = poolSearch.trim().toLowerCase()
-        const filteredPool = auctionPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+        const filteredPool = auctionPoolPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
 
         const pq = platformSearch.trim().toLowerCase()
         const filteredPlatform = allPlatformPlayers.filter(p => {
@@ -2338,13 +2339,13 @@ function AuctionPage({ isMobile, isFounder }) {
           <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
             {(isFounder ? [
               { icon:Users, v:allPlatformPlayers.length, label:"Total Players" },
-              { icon:Gavel, v:auctionPlayers.length, label:"In Auction Pool" },
+              { icon:Gavel, v:auctionPoolPlayers.length, label:"In Auction Pool" },
               { icon:UserPlus, v:notAddedCount, label:"Not Added to Auction" },
-              { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
+              { icon:Wallet, v:`🪙 ${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
             ] : [
-              { icon:Gavel, v:auctionPlayers.length, label:"In Auction Pool" },
+              { icon:Gavel, v:auctionPoolPlayers.length, label:"In Auction Pool" },
               { icon:CheckCircle2, v:soldCount, label:"Sold" },
-              { icon:Wallet, v:`₹${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
+              { icon:Wallet, v:`🪙 ${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
             ]).map((c,i,arr)=>(
               <div key={i} style={{ flex:`1 1 ${100/arr.length}%`, minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<arr.length-1?"1px solid #F1F5F9":"none" }}>
                 <c.icon size={17} color="#166534"/>
@@ -2358,7 +2359,7 @@ function AuctionPage({ isMobile, isFounder }) {
 
           {isFounder && (
           <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-            {[["registered",`Registered Players`],["pool",`Auction Pool (${auctionPlayers.length})`]].map(([k,label])=>(
+            {[["registered",`Registered Players`],["pool",`Auction Pool (${auctionPoolPlayers.length})`]].map(([k,label])=>(
               <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:poolView===k?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:poolView===k?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer" }}>{label}</button>
             ))}
           </div>
@@ -2414,8 +2415,8 @@ function AuctionPage({ isMobile, isFounder }) {
           </div>
           {filteredPool.length === 0 ? (
             <Card style={{ padding:"32px 16px", textAlign:"center" }}>
-              <div style={{ fontSize:14, color:"#64748B" }}>{auctionPlayers.length === 0 ? "No players have registered for the auction yet." : "No players match your search."}</div>
-              {auctionPlayers.length === 0 && <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Share the public auction registration link to start collecting entries.</div>}
+              <div style={{ fontSize:14, color:"#64748B" }}>{auctionPoolPlayers.length === 0 ? "No players have registered for the auction yet." : "No players match your search."}</div>
+              {auctionPoolPlayers.length === 0 && <div style={{ fontSize:12, color:"#94A3B8", marginTop:6 }}>Share the public auction registration link to start collecting entries.</div>}
             </Card>
           ) : (
             <div style={{ display:"grid", gap:10 }}>
@@ -2463,8 +2464,8 @@ function AuctionPage({ isMobile, isFounder }) {
           <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
             {[
               { icon:UsersRound, v:auctionTeams.length, label:"Total Teams" },
-              { icon:Wallet, v:`₹${totalPurse.toLocaleString("en-IN")}`, label:"Total Purse Pool" },
-              { icon:CheckCircle2, v:`₹${totalRemaining.toLocaleString("en-IN")}`, label:"Remaining" },
+              { icon:Wallet, v:`🪙 ${totalPurse.toLocaleString("en-IN")}`, label:"Total Purse Pool" },
+              { icon:CheckCircle2, v:`🪙 ${totalRemaining.toLocaleString("en-IN")}`, label:"Remaining" },
             ].map((c,i)=>(
               <div key={i} style={{ flex:"1 1 33%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<2?"1px solid #F1F5F9":"none" }}>
                 <c.icon size={17} color="#166534"/>

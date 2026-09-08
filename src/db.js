@@ -1072,7 +1072,10 @@ export async function fetchAuctionState(auctionId = null) {
 }
 
 function nextUnsoldPlayer(players, excludeId) {
-  return players.find(p => p.id !== excludeId && p.status === "registered" && !p.is_captain && p.status !== "captain") || null
+  const eligible = players.filter(p => p.id !== excludeId && p.status === "registered" && !p.is_captain && p.status !== "captain")
+  if (eligible.length === 0) return null
+  const randomIndex = Math.floor(Math.random() * eligible.length)
+  return eligible[randomIndex]
 }
 
 export async function startAuction(bidIncrement, auctionId = null) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, Spinner, Av } from "./ui.jsx"
-import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer } from "../db.js"
+import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionSponsors } from "../db.js"
 import { Trophy, Users, Wallet, RotateCcw, XCircle, CheckCircle2, ChevronRight, Zap, Gavel } from "lucide-react"
 import { DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE, calculateMaxBid, formatCoins } from "../constants.js"
 
@@ -10,6 +10,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const [busy, setBusy] = useState(false)
   const [increment, setIncrement] = useState("100")
   const [bidHistory, setBidHistory] = useState([])
+  const [sponsors, setSponsors] = useState([])
   const [jumpTo, setJumpTo] = useState("")
   const [bidStep, setBidStep] = useState(1000)
   const [manualTeamId, setManualTeamId] = useState("")
@@ -22,6 +23,9 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
       setState(s)
       if (s.current_player_id) setBidHistory(await fetchAuctionBidHistory(s.current_player_id, auctionId))
       else setBidHistory([])
+      if (auctionId) {
+        fetchAuctionSponsors(auctionId).then(setSponsors).catch(()=>{})
+      }
     } catch(e) { alert(e.message) }
     setLoading(false)
   }
@@ -190,6 +194,79 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   // status === "live"
   return (
     <div>
+      {/* Official Tournament Sponsors */}
+      {sponsors.length > 0 && (
+        <div style={{
+          background: "#FFFFFF",
+          borderRadius: 14,
+          border: "1.5px solid #E2E8F0",
+          padding: "12px 14px",
+          marginBottom: 16,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
+        }}>
+          <div style={{
+            fontSize: 10,
+            fontWeight: 800,
+            color: "#B8860B",
+            letterSpacing: "1.2px",
+            textTransform: "uppercase",
+            marginBottom: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 5
+          }}>
+            <span>⭐</span> OFFICIAL TOURNAMENT SPONSORS
+          </div>
+          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+            {sponsors.map(s => (
+              <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 95 }}>
+                {s.logo_url ? (
+                  <img
+                    src={s.logo_url}
+                    alt={s.name}
+                    style={{
+                      width: 90,
+                      height: 65,
+                      borderRadius: 10,
+                      objectFit: "contain",
+                      border: "1px solid #E2E8F0",
+                      background: "#FFFFFF",
+                      padding: 4
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 90,
+                    height: 65,
+                    borderRadius: 10,
+                    background: "rgba(184,134,11,0.1)",
+                    border: "1px solid rgba(184,134,11,0.25)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <span style={{ fontSize: 24 }}>🏆</span>
+                  </div>
+                )}
+                <div style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#0F172A",
+                  marginTop: 6,
+                  textAlign: "center",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  width: "100%"
+                }}>
+                  {s.name}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Sold / Unsold Hammer Notification Banner */}
       {banner && (
         <div style={{
@@ -337,7 +414,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         <div style={{ display:"flex", gap:8, marginBottom:18 }}>
           <select value={jumpTo} onChange={e=>setJumpTo(e.target.value)} style={{ flex:1, padding:"11px 12px", borderRadius:10, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", color:"#0F172A" }}>
             <option value="">Jump to player...</option>
-            {auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.id !== currentPlayer?.id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.id !== currentPlayer?.id).sort((a,b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button onClick={doJump} disabled={!jumpTo || busy} style={{ padding:"10px 18px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, fontWeight:700, cursor:(!jumpTo||busy)?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:4 }}>Go <ChevronRight size={14}/></button>
         </div>

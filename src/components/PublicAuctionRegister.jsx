@@ -53,7 +53,7 @@ function RegisteredPlayersList({ auctionId }) {
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     if (!auctionId) { setLoading(false); return }
-    fetchAuctionPlayers(auctionId).then(setPlayers).catch(()=>{}).finally(()=>setLoading(false))
+    fetchAuctionPlayers(auctionId).then(list => setPlayers((list || []).filter(p => !p.is_captain && p.status !== "captain"))).catch(()=>{}).finally(()=>setLoading(false))
   }, [auctionId])
   return (
     <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>

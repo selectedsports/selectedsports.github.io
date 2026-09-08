@@ -71,10 +71,11 @@ export default function PublicAuctionView({ auctionCode }) {
 
   const load = async (resolvedAuctionId) => {
     try {
-      const [s, p, t] = await Promise.all([
+      const [s, p, t, sp] = await Promise.all([
         fetchAuctionState(resolvedAuctionId),
         fetchAuctionPlayers(resolvedAuctionId),
-        fetchAuctionTeams(resolvedAuctionId)
+        fetchAuctionTeams(resolvedAuctionId),
+        resolvedAuctionId ? fetchAuctionSponsors(resolvedAuctionId).catch(() => []) : Promise.resolve([])
       ])
 
       const curSold = p.filter(x => x.status === "sold").length
@@ -108,6 +109,7 @@ export default function PublicAuctionView({ auctionCode }) {
       setState(s)
       setPlayers(p)
       setTeams(t)
+      if (sp && Array.isArray(sp)) setSponsors(sp)
       setError("")
     } catch(e) {
       setError("Couldn't load the auction right now.")
@@ -163,7 +165,7 @@ export default function PublicAuctionView({ auctionCode }) {
   const leadingTeam = state?.current_team_id ? teams.find(t => t.id === state.current_team_id) : null
   const soldCount = players.filter(p => p.status === "sold").length
   const unsoldCount = players.filter(p => p.status === "unsold").length
-  const registeredCount = players.filter(p => p.status === "registered").length
+  const registeredCount = players.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
 
   return (
     <div style={{ minHeight:"100vh", background:"#0B1320", color:"#0F172A", fontFamily:"var(--font-body)" }}>
@@ -176,60 +178,62 @@ export default function PublicAuctionView({ auctionCode }) {
           <div style={{
             background:"linear-gradient(180deg, #131E30 0%, #0F172A 100%)",
             borderRadius:14,
-            border:"1px solid rgba(184,134,11,0.3)",
-            padding:"12px 14px",
+            border:"1px solid rgba(184,134,11,0.35)",
+            padding:"14px 16px",
             marginBottom:16,
-            boxShadow:"0 4px 14px rgba(0,0,0,0.3)"
+            boxShadow:"0 4px 16px rgba(0,0,0,0.35)"
           }}>
             <div style={{
-              fontSize:10,
+              fontSize:11,
               fontWeight:900,
               color:"#F59E0B",
               letterSpacing:"1.5px",
               textTransform:"uppercase",
-              marginBottom:10,
+              marginBottom:12,
               display:"flex",
               alignItems:"center",
               gap:6
             }}>
               <span>⭐</span> OFFICIAL TOURNAMENT SPONSORS
             </div>
-            <div style={{ display:"flex", gap:12, overflowX:"auto", paddingBottom:4 }}>
+            <div style={{ display:"flex", gap:14, overflowX:"auto", paddingBottom:6, scrollbarWidth:"none" }}>
               {sponsors.map(s => (
-                <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:90 }}>
+                <div key={s.id} style={{ display:"flex", flexDirection:"column", alignItems:"center", flexShrink:0, width:110 }}>
                   {s.logo_url ? (
                     <img
                       src={s.logo_url}
                       alt={s.name}
                       style={{
-                        width:86,
-                        height:64,
-                        borderRadius:10,
+                        width:110,
+                        height:78,
+                        borderRadius:12,
                         objectFit:"contain",
-                        border:"1px solid rgba(255,255,255,0.1)",
+                        border:"1.5px solid rgba(245,158,11,0.4)",
                         background:"#FFFFFF",
-                        padding:4
+                        padding:6,
+                        boxShadow:"0 4px 12px rgba(0,0,0,0.25)"
                       }}
                     />
                   ) : (
                     <div style={{
-                      width:86,
-                      height:64,
-                      borderRadius:10,
+                      width:110,
+                      height:78,
+                      borderRadius:12,
                       background:"rgba(184,134,11,0.15)",
-                      border:"1px solid rgba(184,134,11,0.3)",
+                      border:"1.5px solid rgba(184,134,11,0.3)",
                       display:"flex",
+                      flexDirection:"column",
                       alignItems:"center",
                       justifyContent:"center"
                     }}>
-                      <span style={{ fontSize:22 }}>🏆</span>
+                      <span style={{ fontSize:28 }}>🏆</span>
                     </div>
                   )}
                   <div style={{
-                    fontSize:11,
-                    fontWeight:700,
-                    color:"#E2E8F0",
-                    marginTop:6,
+                    fontSize:12,
+                    fontWeight:800,
+                    color:"#F8FAFC",
+                    marginTop:8,
                     textAlign:"center",
                     overflow:"hidden",
                     textOverflow:"ellipsis",

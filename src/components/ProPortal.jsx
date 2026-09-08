@@ -867,20 +867,21 @@ export default function ProPortal({ player, onLogout }) {
             </div>
 
             <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: "1.5px solid #E2E8F0" }}>
-              {[["players", `Player Pool (${auctionPlayers.length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"]].map(([v, label]) => (
+              {[["players", `Player Pool (${auctionPlayers.filter(p => !p.is_captain && p.status !== "captain").length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"]].map(([v, label]) => (
                 <button key={v} onClick={() => setAuctionSubTab(v)} style={{ padding: "10px 4px", background: "none", border: "none", borderBottom: auctionSubTab===v?"2.5px solid #166534":"2.5px solid transparent", color: auctionSubTab===v?"#166534":"#94A3B8", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)" }}>{label}</button>
               ))}
             </div>
 
-            {auctionSubTab === "players" && (
-              auctionPlayers.length === 0 ? (
+            {auctionSubTab === "players" && (() => {
+              const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+              return poolPlayers.length === 0 ? (
                 <Card style={{ padding: "32px 16px", textAlign: "center" }}>
                   <div style={{ fontSize: 14, color: "#64748B" }}>No players have registered yet.</div>
                   <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 6 }}>Share the registration link to start collecting entries.</div>
                 </Card>
               ) : (
                 <div style={{ display: "grid", gap: 10 }}>
-                  {auctionPlayers.map(p => (
+                  {poolPlayers.map(p => (
                     <Card key={p.id} style={{ padding: "14px 16px" }}>
                       <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, cursor: "pointer" }}>
                         {p.profile_image_url ? (
@@ -907,7 +908,7 @@ export default function ProPortal({ player, onLogout }) {
                   ))}
                 </div>
               )
-            )}
+            })()}
 
             {auctionSubTab === "teams" && (
               <div>
