@@ -217,40 +217,41 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           }}>
             <span>⭐</span> OFFICIAL TOURNAMENT SPONSORS
           </div>
-          <div style={{ display: "flex", gap: 12, overflowX: "auto", paddingBottom: 4 }}>
+          <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 6 }}>
             {sponsors.map(s => (
-              <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 95 }}>
+              <div key={s.id} style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0, width: 170, background: "#F8FAF8", borderRadius: 12, padding: 8, border: "1px solid #E2E8F0" }}>
                 {s.logo_url ? (
-                  <img
-                    src={s.logo_url}
-                    alt={s.name}
-                    style={{
-                      width: 90,
-                      height: 65,
-                      borderRadius: 10,
-                      objectFit: "contain",
-                      border: "1px solid #E2E8F0",
-                      background: "#FFFFFF",
-                      padding: 4
-                    }}
-                  />
+                  <div style={{ width: "100%", height: 95, borderRadius: 8, background: "#FFFFFF", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", padding: 6 }}>
+                    <img
+                      src={s.logo_url}
+                      alt={s.name}
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: "100%",
+                        objectFit: "contain"
+                      }}
+                    />
+                  </div>
                 ) : (
                   <div style={{
-                    width: 90,
-                    height: 65,
-                    borderRadius: 10,
+                    width: "100%",
+                    height: 95,
+                    borderRadius: 8,
                     background: "rgba(184,134,11,0.1)",
                     border: "1px solid rgba(184,134,11,0.25)",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
-                    justifyContent: "center"
+                    justifyContent: "center",
+                    gap: 4
                   }}>
-                    <span style={{ fontSize: 24 }}>🏆</span>
+                    <span style={{ fontSize: 30 }}>🏆</span>
+                    <span style={{ fontSize: 9, color: "#B8860B", fontWeight: 800, textTransform: "uppercase" }}>Sponsor</span>
                   </div>
                 )}
                 <div style={{
-                  fontSize: 11,
-                  fontWeight: 700,
+                  fontSize: 12,
+                  fontWeight: 800,
                   color: "#0F172A",
                   marginTop: 6,
                   textAlign: "center",
@@ -324,9 +325,10 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             {currentPlayer.profile_image_url ? (
               <img src={currentPlayer.profile_image_url} alt={currentPlayer.name} style={{ width:220, height:250, borderRadius:16, objectFit:"cover", border:"3px solid #166534", marginBottom:10, boxShadow:"0 6px 20px rgba(0,0,0,0.08)" }}/>
             ) : (
-              <div style={{ width:220, height:250, borderRadius:16, background:"#F1F5F9", border:"3px solid #166534", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
-                <div style={{ fontSize:52, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>{(currentPlayer.name||"?")[0]}</div>
-                {currentPlayer.jersey_number && <div style={{ fontSize:15, fontWeight:700, color:"#64748B", marginTop:6 }}>#{currentPlayer.jersey_number}</div>}
+              <div style={{ width:220, height:250, borderRadius:16, background:"linear-gradient(135deg, #14532D 0%, #064E3B 50%, #0F172A 100%)", border:"3px solid #166534", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", marginBottom:10, position:"relative", overflow:"hidden", boxShadow:"0 6px 20px rgba(0,0,0,0.12)" }}>
+                <div style={{ position:"absolute", fontSize:90, opacity:0.08, pointerEvents:"none" }}>🏏</div>
+                <div style={{ width:76, height:76, borderRadius:"50%", background:"linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(34,197,94,0.3) 100%)", border:"2px solid #FEF08A", display:"flex", alignItems:"center", justifyContent:"center", fontSize:40, fontWeight:900, color:"#FEF08A", fontFamily:"var(--font-head)" }}>{(currentPlayer.name||"?")[0].toUpperCase()}</div>
+                {currentPlayer.jersey_number && <div style={{ fontSize:12, fontWeight:800, color:"#86EFAC", marginTop:8, letterSpacing:"1px" }}>#{currentPlayer.jersey_number}</div>}
               </div>
             )}
             <div style={{ fontWeight:900, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)", marginTop:8 }}>{currentPlayer.name}</div>

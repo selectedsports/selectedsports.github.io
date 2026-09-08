@@ -2031,9 +2031,14 @@ function AuctionPage({ isMobile, isFounder }) {
                 <Card key={s.id} style={{ padding:"16px", textAlign:"center", position:"relative" }}>
                   <button onClick={()=>setDelSponsor(s)} style={{ position:"absolute", top:8, right:8, background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={14}/></button>
                   {s.logo_url ? (
-                    <img src={s.logo_url} alt={s.name} style={{ width:80, height:80, borderRadius:14, objectFit:"cover", margin:"0 auto 10px", border:"1px solid #E2E8F0" }}/>
+                    <div style={{ width:"100%", height:100, borderRadius:10, background:"#FFFFFF", border:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", padding:6, margin:"0 auto 10px" }}>
+                      <img src={s.logo_url} alt={s.name} style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }}/>
+                    </div>
                   ) : (
-                    <div style={{ width:80, height:80, borderRadius:14, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 10px" }}><Star size={32} color="#B8860B"/></div>
+                    <div style={{ width:"100%", height:100, borderRadius:10, background:"rgba(184,134,11,0.1)", border:"1px solid rgba(184,134,11,0.2)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", margin:"0 auto 10px", gap:4 }}>
+                      <Star size={28} color="#B8860B"/>
+                      <span style={{ fontSize:10, color:"#B8860B", fontWeight:700 }}>Sponsor</span>
+                    </div>
                   )}
                   <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{s.name}</div>
                 </Card>
@@ -2051,17 +2056,18 @@ function AuctionPage({ isMobile, isFounder }) {
               <button onClick={()=>setShowAddSponsor(false)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af" }}>×</button>
             </div>
             <div style={{ textAlign:"center", marginBottom:16 }}>
-              <div style={{ width:72, height:72, borderRadius:16, background:"#F8FAF8", border: sponsorLogoPreview ? "2px solid #166534" : "2px dashed #E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", margin:"0 auto 8px" }}>
-                {sponsorLogoPreview ? <img src={sponsorLogoPreview} alt="Logo" style={{ width:"100%", height:"100%", objectFit:"cover" }}/> : <span style={{ fontSize:11, color:"#94A3B8" }}>Logo</span>}
+              <div style={{ width:200, height:110, borderRadius:12, background:"#FFFFFF", border: sponsorLogoPreview ? "2px solid #166534" : "2px dashed #CBD5E1", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", margin:"0 auto 8px", padding:4 }}>
+                {sponsorLogoPreview ? <img src={sponsorLogoPreview} alt="Logo" style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }}/> : <div style={{ fontSize:12, color:"#94A3B8" }}>Logo / Banner Preview</div>}
               </div>
               <label style={{ cursor:"pointer" }}>
-                <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>{sponsorLogoPreview ? "Change Logo" : "Upload Logo (optional)"}</span>
+                <span style={{ fontSize:12, color:"#166534", fontWeight:700 }}>{sponsorLogoPreview ? "Change Photo / Banner" : "Upload Photo / Banner"}</span>
                 <input type="file" accept="image/*" style={{ display:"none" }} onChange={e=>{
                   const file = e.target.files?.[0]; if (!file) return
                   setSponsorLogoFile(file)
                   const reader = new FileReader(); reader.onload = () => setSponsorLogoPreview(reader.result); reader.readAsDataURL(file)
                 }}/>
               </label>
+              <div style={{ fontSize:11, color:"#64748B", marginTop:6 }}>Recommended: Upload large high-resolution logo or banner (600×350px or larger). Displayed large on live broadcast and big screens.</div>
             </div>
             <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Sponsor Name *</div>
             <input value={sponsorName} onChange={e=>setSponsorName(e.target.value)} placeholder="e.g. Acme Sports Gear" style={{ ...iS, marginBottom:16 }}/>
