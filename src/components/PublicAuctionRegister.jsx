@@ -110,6 +110,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
   const [infoTab, setInfoTab] = useState("register") // "register" | "details" | "players"
+  const [registeredCount, setRegisteredCount] = useState(0)
 
   useEffect(() => {
     if (!auctionCode) { setChecking(false); return } // legacy/unscoped fallback
@@ -122,6 +123,13 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   const auctionId = auction?.id || null
   const isOpen = auction ? auction.registration_open !== false : true
+
+  useEffect(() => {
+    if (!auctionId) return
+    fetchAuctionPlayers(auctionId).then(plist => setRegisteredCount((plist || []).length)).catch(() => {})
+  }, [auctionId])
+
+  const isWaitlist = registeredCount >= 45
 
   useEffect(() => {
     const cleaned = phone.replace(/[^0-9]/g, "")
@@ -173,7 +181,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
     const fee = Number(auction?.player_entry_fee) || 0
-    if (fee > 0 && !receiptFile && !receiptPreview) {
+    if (!isWaitlist && fee > 0 && !receiptFile && !receiptPreview) {
       setError("Please transfer the registration fee and upload your payment screenshot."); return
     }
     setBusy(true)
@@ -182,12 +190,13 @@ export default function PublicAuctionRegister({ auctionCode }) {
       if (exists) { setError("This phone number is already registered for this auction."); setBusy(false); return }
       let photoUrl = photoPreview
       if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
-      let receiptUrl = receiptPreview || null
-      if (receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
+      let receiptUrl = (!isWaitlist && receiptPreview) ? receiptPreview : null
+      if (!isWaitlist && receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
+      const payStatus = isWaitlist ? "waitlist" : (fee > 0 ? "pending" : "free")
       await registerAuctionPlayer(`${firstName.trim()} ${lastName.trim()}`, cleaned, role, birthDate, photoUrl, auctionId, {
         city: city.trim(), jerseyNumber: jerseyNumber.trim(), jerseySize,
         paymentScreenshotUrl: receiptUrl,
-        paymentStatus: fee > 0 ? "pending" : "free"
+        paymentStatus: payStatus
       })
       setDone(true)
     } catch(e) { setError(e.message) }
@@ -227,9 +236,21 @@ export default function PublicAuctionRegister({ auctionCode }) {
       <Header auctionName={auction?.name}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"32px 20px 40px" }}>
         <div style={{ textAlign:"center", marginBottom:28 }}>
-          <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
-          <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>You're registered!</div>
-          <div style={{ fontSize:13, color:"#64748B", marginTop:6 }}>{firstName}, you've been added to the auction pool. The organizer will set your base price before the auction starts.</div>
+          <div style={{ fontSize:36, marginBottom:10 }}>{isWaitlist ? "⏳" : "✅"}</div>
+          <div style={{ fontWeight:800, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)" }}>
+            {isWaitlist ? "You're on the Standby Waitlist!" : "You're registered!"}
+          </div>
+          <div style={{ fontSize:13, color:"#64748B", marginTop:8, lineHeight:1.5 }}>
+            {isWaitlist ? (
+              <span>
+                {firstName}, all 45 tournament squad spots are currently filled. No payment was taken — your details have been saved to the standby waitlist. If an opening becomes available in a squad, the organizer will contact you directly to confirm your spot and collect the registration fee.
+              </span>
+            ) : (
+              <span>
+                {firstName}, you've been added to the auction pool. The organizer will set your base price before the auction starts.
+              </span>
+            )}
+          </div>
         </div>
         <AuctionDetailsCard auction={auction}/>
         <div style={{ height:20 }}/>
@@ -272,7 +293,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
                 These are your saved details. <button type="button" onClick={()=>setEditingExisting(true)} style={{ background:"none", border:"none", color:"#166534", fontWeight:700, cursor:"pointer", padding:0, fontSize:12, textDecoration:"underline" }}>Edit before submitting</button>
               </div>
               {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
-              <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : "Confirm & Register for Auction"}</button>
+              <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : (isWaitlist ? "Confirm & Join Standby Waitlist" : "Confirm & Register for Auction")}</button>
             </>
           ) : (
             <>
@@ -339,15 +360,30 @@ export default function PublicAuctionRegister({ auctionCode }) {
             ))}
           </div>
 
-          {/* Mandatory Payment Section if auction has entry fee */}
-          {Number(auction?.player_entry_fee) > 0 && (
+          {/* Waitlist Banner OR Mandatory Payment Section */}
+          {isWaitlist ? (
+            <div style={{ padding:"16px 18px", background:"rgba(184,134,11,0.08)", border:"1.5px solid #B8860B", borderRadius:14, marginBottom:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                <span style={{ fontSize:24 }}>⏳</span>
+                <div style={{ fontWeight:800, fontSize:15, color:"#92400E", fontFamily:"var(--font-head)" }}>Squad Cap Reached (45 Players Registered)</div>
+              </div>
+              <div style={{ fontSize:13, color:"#78350F", lineHeight:1.5 }}>
+                All 45 spots in the 5 teams are currently filled! <strong>No payment or screenshot is required right now.</strong> Submit your registration to join the official Standby Waitlist. If an opening becomes available in any squad, the organizer will contact you directly to confirm your spot and collect the registration fee.
+              </div>
+            </div>
+          ) : (Number(auction?.player_entry_fee) > 0 && (
             <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
                 <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Registration Fee Required</div>
                 <span style={{ background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, padding:"4px 10px", borderRadius:8 }}>₹{Number(auction.player_entry_fee).toLocaleString("en-IN")}</span>
               </div>
-              <div style={{ fontSize:12, color:"#64748B", marginBottom:14, lineHeight:1.5 }}>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:12, lineHeight:1.5 }}>
                 Please transfer ₹{Number(auction.player_entry_fee).toLocaleString("en-IN")} to the organizer's details below and upload your payment screenshot. Form cannot be submitted without payment proof.
+              </div>
+
+              {/* Notice explaining Google Pay opens while page stays in background */}
+              <div style={{ fontSize:11, color:"#1E40AF", background:"rgba(37,99,235,0.08)", padding:"9px 12px", borderRadius:8, border:"1px solid rgba(37,99,235,0.2)", marginBottom:14, lineHeight:1.4 }}>
+                💡 <strong>Notice:</strong> When you tap <em>Pay with Google Pay</em>, your GPay app will open while this registration page remains open in the background. Complete payment in GPay, take a screenshot, and switch back here to upload it below.
               </div>
 
               {/* Organizer Payment Info */}
@@ -436,11 +472,13 @@ export default function PublicAuctionRegister({ auctionCode }) {
                 )}
               </div>
             </div>
-          )}
+          ))}
 
           {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
 
-          <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : "Register for Auction"}</button>
+          <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>
+            {busy ? "Registering..." : (isWaitlist ? "Join Standby Waitlist (No Payment Needed)" : "Register for Auction")}
+          </button>
             </>
           )}
         </div>

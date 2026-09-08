@@ -865,20 +865,200 @@ export async function fetchAuctionTeams(auctionId = null) {
   if (error) throw error
   return data
 }
-export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null, captainName = null) {
-  const { data, error } = await supabase.from("auction_teams").insert({
+export async function assignCaptainToTeam(teamId, auctionId, { captainPlayerId, captainPhone, captainName }) {
+  const cleanedPhone = (captainPhone || "").replace(/[^0-9]/g, "").slice(-10)
+
+  // 1. If explicit player ID provided from registered pool
+  if (captainPlayerId) {
+    const updatePayload = {
+      sold_team_id: teamId,
+      status: "captain",
+      is_captain: true,
+      sold_price: 0,
+      sold_at: new Date().toISOString()
+    }
+    if (captainName) updatePayload.name = captainName.trim()
+    let res = await supabase.from("auction_players").update(updatePayload).eq("id", captainPlayerId)
+    if (res.error && res.error.message?.includes("is_captain")) {
+      delete updatePayload.is_captain
+      await supabase.from("auction_players").update(updatePayload).eq("id", captainPlayerId)
+    }
+    return
+  }
+
+  // 2. If phone number provided, look in auction_players for this auction
+  if (cleanedPhone && cleanedPhone.length === 10) {
+    let q = supabase.from("auction_players").select("id, name, phone")
+    q = auctionId ? q.eq("auction_id", auctionId) : q.is("auction_id", null)
+    const { data: existingPlayers } = await q
+    const matched = (existingPlayers || []).find(p => (p.phone || "").replace(/[^0-9]/g, "").slice(-10) === cleanedPhone)
+
+    if (matched) {
+      const updatePayload = {
+        sold_team_id: teamId,
+        status: "captain",
+        is_captain: true,
+        sold_price: 0,
+        sold_at: new Date().toISOString()
+      }
+      if (captainName) updatePayload.name = captainName.trim()
+      let res = await supabase.from("auction_players").update(updatePayload).eq("id", matched.id)
+      if (res.error && res.error.message?.includes("is_captain")) {
+        delete updatePayload.is_captain
+        await supabase.from("auction_players").update(updatePayload).eq("id", matched.id)
+      }
+      return
+    }
+
+    // Not in auction_players yet: check main players table or create fresh
+    let photoUrl = null
+    let role = null
+    let city = null
+    let birthDate = null
+    let jerseyNumber = null
+    let jerseySize = null
+    let playerName = captainName ? captainName.trim() : "Captain"
+    try {
+      const pInfo = await findPlayerByPhone(cleanedPhone)
+      if (pInfo) {
+        if (!captainName && pInfo.name) playerName = pInfo.name
+        photoUrl = pInfo.profile_image_url || null
+        role = pInfo.playing_role || null
+        city = pInfo.city || null
+        birthDate = pInfo.birth_date || null
+        jerseyNumber = pInfo.jersey_number || null
+        jerseySize = pInfo.jersey_size || null
+      }
+    } catch {}
+
+    const basePrice = await computeAuctionBasePrice(auctionId)
+    const newCapPayload = {
+      name: playerName,
+      phone: cleanedPhone,
+      playing_role: role || "All-rounder",
+      status: "captain",
+      is_captain: true,
+      sold_team_id: teamId,
+      sold_price: 0,
+      sold_at: new Date().toISOString(),
+      auction_id: auctionId || null,
+      profile_image_url: photoUrl,
+      city,
+      birth_date: birthDate,
+      jersey_number: jerseyNumber,
+      jersey_size: jerseySize,
+      base_price: basePrice || 0
+    }
+    let insRes = await supabase.from("auction_players").insert(newCapPayload)
+    if (insRes.error && insRes.error.message?.includes("is_captain")) {
+      delete newCapPayload.is_captain
+      await supabase.from("auction_players").insert(newCapPayload)
+    }
+    return
+  }
+
+  // 3. Fallback: if only captainName is given
+  if (captainName && captainName.trim()) {
+    let q = supabase.from("auction_players").select("id, name")
+    q = auctionId ? q.eq("auction_id", auctionId) : q.is("auction_id", null)
+    const { data: existingPlayers } = await q
+    const matched = (existingPlayers || []).find(p => (p.name || "").trim().toLowerCase() === captainName.trim().toLowerCase())
+    if (matched) {
+      const updatePayload = {
+        sold_team_id: teamId,
+        status: "captain",
+        is_captain: true,
+        sold_price: 0,
+        sold_at: new Date().toISOString()
+      }
+      let res = await supabase.from("auction_players").update(updatePayload).eq("id", matched.id)
+      if (res.error && res.error.message?.includes("is_captain")) {
+        delete updatePayload.is_captain
+        await supabase.from("auction_players").update(updatePayload).eq("id", matched.id)
+      }
+    } else {
+      const basePrice = await computeAuctionBasePrice(auctionId)
+      const newCapPayload = {
+        name: captainName.trim(),
+        status: "captain",
+        is_captain: true,
+        sold_team_id: teamId,
+        sold_price: 0,
+        sold_at: new Date().toISOString(),
+        auction_id: auctionId || null,
+        base_price: basePrice || 0
+      }
+      let insRes = await supabase.from("auction_players").insert(newCapPayload)
+      if (insRes.error && insRes.error.message?.includes("is_captain")) {
+        delete newCapPayload.is_captain
+        await supabase.from("auction_players").insert(newCapPayload)
+      }
+    }
+  }
+}
+
+export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null, captainName = null, captainPhone = null, ownerPhone = null, captainPlayerId = null) {
+  const payload = {
     name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal, auction_id: auctionId || null
-  }).select().single()
-  if (error) throw error
-  return data
+  }
+  if (captainPhone) payload.captain_phone = captainPhone
+  if (ownerPhone) payload.owner_phone = ownerPhone
+
+  let teamData
+  let { data, error } = await supabase.from("auction_teams").insert(payload).select().single()
+  if (error && (error.message?.includes("captain_phone") || error.message?.includes("owner_phone"))) {
+    delete payload.captain_phone
+    delete payload.owner_phone
+    const retry = await supabase.from("auction_teams").insert(payload).select().single()
+    if (retry.error) throw retry.error
+    teamData = retry.data
+  } else if (error) {
+    throw error
+  } else {
+    teamData = data
+  }
+
+  if (teamData?.id && (captainPlayerId || captainPhone || captainName)) {
+    try {
+      await assignCaptainToTeam(teamData.id, auctionId, { captainPlayerId, captainPhone, captainName })
+    } catch (err) {
+      console.warn("Could not pre-assign captain:", err)
+    }
+  }
+
+  return teamData
 }
-export async function updateAuctionTeam(id, { name, ownerName, purseTotal, captainName }) {
-  const { error } = await supabase.from("auction_teams").update({
+
+export async function updateAuctionTeam(id, { name, ownerName, purseTotal, captainName, captainPhone, ownerPhone, captainPlayerId, auctionId }) {
+  const payload = {
     name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal
-  }).eq("id", id)
-  if (error) throw error
+  }
+  if (captainPhone) payload.captain_phone = captainPhone
+  if (ownerPhone) payload.owner_phone = ownerPhone
+
+  let { error } = await supabase.from("auction_teams").update(payload).eq("id", id)
+  if (error && (error.message?.includes("captain_phone") || error.message?.includes("owner_phone"))) {
+    delete payload.captain_phone
+    delete payload.owner_phone
+    const retry = await supabase.from("auction_teams").update(payload).eq("id", id)
+    if (retry.error) throw retry.error
+  } else if (error) {
+    throw error
+  }
+
+  if (id && (captainPlayerId || captainPhone || captainName)) {
+    try {
+      await assignCaptainToTeam(id, auctionId, { captainPlayerId, captainPhone, captainName })
+    } catch (err) {
+      console.warn("Could not update pre-assigned captain:", err)
+    }
+  }
 }
+
 export async function deleteAuctionTeam(id) {
+  try {
+    await supabase.from("auction_players").update({ status: "registered", sold_team_id: null, sold_price: null, is_captain: false }).eq("sold_team_id", id)
+  } catch {}
   const { error } = await supabase.from("auction_teams").delete().eq("id", id)
   if (error) throw error
 }
@@ -892,7 +1072,7 @@ export async function fetchAuctionState(auctionId = null) {
 }
 
 function nextUnsoldPlayer(players, excludeId) {
-  return players.find(p => p.id !== excludeId && p.status === "registered") || null
+  return players.find(p => p.id !== excludeId && p.status === "registered" && !p.is_captain && p.status !== "captain") || null
 }
 
 export async function startAuction(bidIncrement, auctionId = null) {

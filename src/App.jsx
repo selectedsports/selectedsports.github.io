@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, lazy, Suspense } from "react"
 import HomeScreen from "./components/HomeScreen.jsx"
 import { UnifiedLoginScreen, RegisterScreen, RegistrationSubmittedScreen } from "./components/LoginScreens.jsx"
-import AdminPortal from "./components/AdminPortal.jsx"
-import PlayerPortal from "./components/PlayerPortal.jsx"
-import ProPortal from "./components/ProPortal.jsx"
-import PublicInvitePage from "./components/PublicInvitePage.jsx"
-import PublicAuctionView from "./components/PublicAuctionView.jsx"
-import PublicAuctionRegister from "./components/PublicAuctionRegister.jsx"
-import TeamOwnerView from "./components/TeamOwnerView.jsx"
 import { fetchMatches } from "./db.js"
 import { ADMIN_PHONE } from "./constants.js"
 import { Spinner } from "./components/ui.jsx"
+
+const AdminPortal = lazy(() => import("./components/AdminPortal.jsx"))
+const PlayerPortal = lazy(() => import("./components/PlayerPortal.jsx"))
+const ProPortal = lazy(() => import("./components/ProPortal.jsx"))
+const PublicInvitePage = lazy(() => import("./components/PublicInvitePage.jsx"))
+const PublicAuctionView = lazy(() => import("./components/PublicAuctionView.jsx"))
+const PublicAuctionRegister = lazy(() => import("./components/PublicAuctionRegister.jsx"))
+const TeamOwnerView = lazy(() => import("./components/TeamOwnerView.jsx"))
 
 function restoreGitHubPagesPath() {
   const params = new URLSearchParams(window.location.search)
@@ -110,7 +111,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <Suspense fallback={<div style={{ minHeight:"100vh",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>}>
       {screen==="publicInvite" && <PublicInvitePage token={joinToken}/>}
       {screen==="liveAuction"  && <PublicAuctionView auctionCode={liveAuctionCode}/>}
       {screen==="teamView"     && <TeamOwnerView auctionCode={teamViewParams?.auctionCode} teamId={teamViewParams?.teamId}/>}
@@ -126,6 +127,6 @@ export default function App() {
           ? <div style={{ minHeight:"100vh",background:"#FBF3E7",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>
           : <PlayerPortal player={loggedPlayer} matches={matches} onLogout={handleLogout}/>
       )}
-    </>
+    </Suspense>
   )
 }

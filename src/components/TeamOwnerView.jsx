@@ -33,7 +33,10 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
       const t = teams.find(x => x.id === teamId)
       if (!t) { setNotFound(true); setLoading(false); return }
       setTeam(t)
-      setPlayers(p.filter(pl => pl.sold_team_id === teamId))
+      setPlayers(
+        p.filter(pl => pl.sold_team_id === teamId)
+         .sort((a,b) => (b.is_captain || b.status === "captain" ? 1 : 0) - (a.is_captain || a.status === "captain" ? 1 : 0))
+      )
       setError("")
     } catch { setError("Couldn't load your team right now.") }
     setLoading(false)
@@ -96,27 +99,35 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
           </div>
         </div>
 
-        <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Players Purchased ({players.length})</div>
+        <div style={{ fontWeight:800, fontSize:13, color:"#0F172A", marginBottom:10, fontFamily:"var(--font-head)" }}>Squad Members ({players.length}/9)</div>
         {players.length === 0 ? (
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"24px 18px", textAlign:"center", border:"1px solid #E2E8F0" }}>
-            <div style={{ fontSize:13, color:"#64748B" }}>No players purchased yet — check back as the auction continues.</div>
+            <div style={{ fontSize:13, color:"#64748B" }}>No players in squad yet — check back as the auction continues.</div>
           </div>
         ) : (
           <div style={{ display:"grid", gap:8 }}>
-            {players.map(p => (
-              <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10 }}>
-                {p.profile_image_url ? (
-                  <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
-                ) : (
-                  <Av name={p.name} id={p.id} sz={40}/>
-                )}
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
-                  <div style={{ fontSize:11, color:"#94A3B8" }}>{p.city ? `${p.city} · ` : ""}{p.playing_role || "—"}</div>
+            {players.map(p => {
+              const isCap = p.is_captain || p.status === "captain"
+              return (
+                <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:isCap?"rgba(184,134,11,0.06)":"#FFFFFF", border:isCap?"1.5px solid rgba(184,134,11,0.3)":"1px solid #E2E8F0", borderRadius:10 }}>
+                  {p.profile_image_url ? (
+                    <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
+                  ) : (
+                    <Av name={p.name} id={p.id} sz={40}/>
+                  )}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{p.name}</span>
+                      {isCap && <span style={{ fontSize:9, fontWeight:800, background:"#B8860B", color:"#FFFFFF", padding:"1px 6px", borderRadius:4 }}>👑 CAPTAIN</span>}
+                    </div>
+                    <div style={{ fontSize:11, color:"#94A3B8" }}>{p.city ? `${p.city} · ` : ""}{p.playing_role || "—"}</div>
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:800, color:isCap?"#B8860B":"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>
+                    {isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price||0).toLocaleString("en-IN")}`}
+                  </div>
                 </div>
-                <div style={{ fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}</div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

@@ -414,7 +414,7 @@ export default function PublicAuctionView({ auctionCode }) {
                         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                           <span style={{ fontSize:13, fontWeight:800, color:"#FFFFFF" }}>{t.name}</span>
                           <span style={{ fontSize:10, color:"#94A3B8", background:"rgba(255,255,255,0.06)", padding:"2px 6px", borderRadius:4 }}>
-                            {squadCount} / 10 Squad
+                            {squadCount} / 9 Squad
                           </span>
                         </div>
                         <span style={{ fontSize:14, fontWeight:900, color:"#FEF08A", fontFamily:"var(--font-head)" }}>
@@ -486,13 +486,15 @@ export default function PublicAuctionView({ auctionCode }) {
             <div style={{ fontWeight:800, fontSize:15, color:"#FFFFFF", marginBottom:12, fontFamily:"var(--font-head)" }}>Team Squads</div>
 
             {teams.map(t => {
-              const squad = players.filter(p => p.sold_team_id === t.id)
+              const squad = players
+                .filter(p => p.sold_team_id === t.id)
+                .sort((a,b) => (b.is_captain || b.status === "captain" ? 1 : 0) - (a.is_captain || a.status === "captain" ? 1 : 0))
               return (
                 <div key={t.id} style={{ background:"#131E30", borderRadius:14, padding:"14px 16px", marginBottom:12, border:"1px solid rgba(255,255,255,0.08)", color:"#FFFFFF" }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                     <div>
                       <div style={{ fontWeight:800, fontSize:14, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>{t.name}</div>
-                      <div style={{ fontSize:11, color:"#94A3B8" }}>{squad.length} players acquired</div>
+                      <div style={{ fontSize:11, color:"#94A3B8" }}>{squad.length}/9 squad members</div>
                     </div>
                     <div style={{ fontSize:12, color:"#FEF08A", fontWeight:700 }}>
                       🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")} left
@@ -500,22 +502,30 @@ export default function PublicAuctionView({ auctionCode }) {
                   </div>
 
                   {squad.length === 0 ? (
-                    <div style={{ fontSize:12, color:"#64748B" }}>No players won.</div>
+                    <div style={{ fontSize:12, color:"#64748B" }}>No players won yet.</div>
                   ) : (
                     <div style={{ display:"grid", gap:6 }}>
-                      {squad.map(p => (
-                        <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 8px", background:"rgba(255,255,255,0.03)", borderRadius:8, color:"#FFFFFF" }}>
-                          <span style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
-                            {p.profile_image_url ? (
-                              <img src={p.profile_image_url} alt={p.name} style={{ width:28, height:28, borderRadius:6, objectFit:"cover" }}/>
-                            ) : (
-                              <div style={{ width:28, height:28, borderRadius:6, background:"#1E293B", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#94A3B8" }}>{(p.name||"?")[0]}</div>
-                            )}
-                            <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</span>
-                          </span>
-                          <span style={{ fontWeight:800, color:"#86EFAC", flexShrink:0 }}>🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}</span>
-                        </div>
-                      ))}
+                      {squad.map(p => {
+                        const isCap = p.is_captain || p.status === "captain"
+                        return (
+                          <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 8px", background:isCap?"rgba(184,134,11,0.12)":"rgba(255,255,255,0.03)", border:isCap?"1px solid rgba(184,134,11,0.3)":"none", borderRadius:8, color:"#FFFFFF" }}>
+                            <span style={{ display:"flex", alignItems:"center", gap:8, minWidth:0 }}>
+                              {p.profile_image_url ? (
+                                <img src={p.profile_image_url} alt={p.name} style={{ width:28, height:28, borderRadius:6, objectFit:"cover" }}/>
+                              ) : (
+                                <div style={{ width:28, height:28, borderRadius:6, background:"#1E293B", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#94A3B8" }}>{(p.name||"?")[0]}</div>
+                              )}
+                              <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+                                <span>{p.name}</span>
+                                {isCap && <span style={{ fontSize:9, fontWeight:800, background:"#B8860B", color:"#FFFFFF", padding:"1px 5px", borderRadius:4 }}>👑 CAPTAIN</span>}
+                              </span>
+                            </span>
+                            <span style={{ fontWeight:800, color:isCap?"#FEF08A":"#86EFAC", flexShrink:0 }}>
+                              {isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price||0).toLocaleString("en-IN")}`}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
                 </div>

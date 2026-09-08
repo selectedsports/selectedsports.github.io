@@ -27,7 +27,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   }
   useEffect(() => { load() }, [auctionId])
 
-  const registeredCount = auctionPlayers.filter(p => p.status === "registered").length
+  const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
   const soldCount = auctionPlayers.filter(p => p.status === "sold").length
   const unsoldCount = auctionPlayers.filter(p => p.status === "unsold").length
   const currentPlayer = state?.current_player_id ? auctionPlayers.find(p => p.id === state.current_player_id) : null
@@ -138,7 +138,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         <div style={{ width:44, height:44, borderRadius:12, background:"rgba(34,197,94,0.1)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:14 }}><Gavel size={22} color="#166534"/></div>
         <div style={{ fontWeight:800, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)", marginBottom:6 }}>Start the Live Auction</div>
         <div style={{ fontSize:13, color:"#64748B", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
-          <span style={{ display:"flex", alignItems:"center", gap:4 }}><Users size={13}/> {auctionPlayers.filter(p=>p.status==="registered").length} players in the pool</span>
+          <span style={{ display:"flex", alignItems:"center", gap:4 }}><Users size={13}/> {registeredCount} auction players ready</span>
           <span>·</span>
           <span style={{ display:"flex", alignItems:"center", gap:4 }}><Trophy size={13}/> {auctionTeams.length} teams ready</span>
         </div>
@@ -160,18 +160,26 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>{soldCount} sold · {unsoldCount} unsold</div>
         </Card>
         {auctionTeams.map(t => {
-          const squad = auctionPlayers.filter(p => p.sold_team_id === t.id)
+          const squad = auctionPlayers
+            .filter(p => p.sold_team_id === t.id)
+            .sort((a,b) => (b.is_captain || b.status === "captain" ? 1 : 0) - (a.is_captain || a.status === "captain" ? 1 : 0))
           return (
             <Card key={t.id} style={{ padding:"14px 16px", marginBottom:10 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
+                <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name} ({squad.length}/9)</div>
                 <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Wallet size={11}/> 🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")} left of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
               </div>
-              {squad.length === 0 ? <div style={{ fontSize:12, color:"#94A3B8" }}>No players won.</div> : squad.map(p => (
-                <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 0", color:"#0F172A" }}>
-                  <span style={{ display:"flex", alignItems:"center", gap:8 }}><Av name={p.name} id={p.id} sz={22}/> {p.name}</span><span style={{ fontWeight:700, color:"#166534" }}>🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}</span>
-                </div>
-              ))}
+              {squad.length === 0 ? <div style={{ fontSize:12, color:"#94A3B8" }}>No players in squad.</div> : squad.map(p => {
+                const isCap = p.is_captain || p.status === "captain"
+                return (
+                  <div key={p.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, padding:"6px 0", color:"#0F172A" }}>
+                    <span style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <Av name={p.name} id={p.id} sz={22}/> {p.name} {isCap && <span style={{ fontSize:9, fontWeight:800, background:"#B8860B", color:"#FFFFFF", padding:"1px 6px", borderRadius:4 }}>👑 CAPTAIN</span>}
+                    </span>
+                    <span style={{ fontWeight:700, color:isCap?"#B8860B":"#166534" }}>{isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price||0).toLocaleString("en-IN")}`}</span>
+                  </div>
+                )
+              })}
             </Card>
           )
         })}
@@ -329,7 +337,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         <div style={{ display:"flex", gap:8, marginBottom:18 }}>
           <select value={jumpTo} onChange={e=>setJumpTo(e.target.value)} style={{ flex:1, padding:"11px 12px", borderRadius:10, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", color:"#0F172A" }}>
             <option value="">Jump to player...</option>
-            {auctionPlayers.filter(p => p.status === "registered" && p.id !== currentPlayer?.id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.id !== currentPlayer?.id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <button onClick={doJump} disabled={!jumpTo || busy} style={{ padding:"10px 18px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, fontWeight:700, cursor:(!jumpTo||busy)?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:4 }}>Go <ChevronRight size={14}/></button>
         </div>

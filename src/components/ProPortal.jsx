@@ -203,7 +203,12 @@ export default function ProPortal({ player, onLogout }) {
   const [editAuctionTeam, setEditAuctionTeam] = useState(null)
   const [delAuctionTeam, setDelAuctionTeam] = useState(null)
   const [auctionTeamName, setAuctionTeamName] = useState("")
+  const [auctionCaptainPhone, setAuctionCaptainPhone] = useState("")
+  const [auctionCaptainName, setAuctionCaptainName] = useState("")
+  const [auctionCaptainPlayerId, setAuctionCaptainPlayerId] = useState(null)
+  const [auctionOwnerSameAsCaptain, setAuctionOwnerSameAsCaptain] = useState(true)
   const [auctionTeamOwner, setAuctionTeamOwner] = useState("")
+  const [auctionOwnerPhone, setAuctionOwnerPhone] = useState("")
   const [auctionTeamPurse, setAuctionTeamPurse] = useState("")
   const [auctionBusy, setAuctionBusy] = useState(false)
   const [receiptModalImg, setReceiptModalImg] = useState(null)
@@ -242,17 +247,82 @@ export default function ProPortal({ player, onLogout }) {
     try { await deleteAuctionPlayer(p.id); await loadAuctionPool() } catch(e) { alert(e.message) }
   }
 
-  const openAddAuctionTeam = () => { setEditAuctionTeam(null); setAuctionTeamName(""); setAuctionTeamOwner(""); setAuctionTeamPurse(""); setShowAddAuctionTeam(true) }
-  const openEditAuctionTeam = (t) => { setEditAuctionTeam(t); setAuctionTeamName(t.name); setAuctionTeamOwner(t.owner_name || ""); setAuctionTeamPurse(String(t.purse_total)); setShowAddAuctionTeam(true) }
+  const openAddAuctionTeam = () => {
+    setEditAuctionTeam(null)
+    setAuctionCaptainPhone("")
+    setAuctionCaptainName("")
+    setAuctionCaptainPlayerId(null)
+    setAuctionTeamName("")
+    setAuctionOwnerSameAsCaptain(true)
+    setAuctionTeamOwner("")
+    setAuctionOwnerPhone("")
+    setAuctionTeamPurse(managingAuction?.points_purse ? String(managingAuction.points_purse) : "")
+    setShowAddAuctionTeam(true)
+  }
+  const openEditAuctionTeam = (t) => {
+    setEditAuctionTeam(t)
+    const capPlayer = auctionPlayers.find(p => p.sold_team_id === t.id && (p.is_captain || p.status === "captain"))
+    setAuctionCaptainPhone(t.captain_phone || capPlayer?.phone || "")
+    setAuctionCaptainName(t.captain_name || capPlayer?.name || "")
+    setAuctionCaptainPlayerId(capPlayer?.id || null)
+    setAuctionTeamName(t.name)
+    const isSame = !t.owner_name || t.owner_name === (t.captain_name || capPlayer?.name)
+    setAuctionOwnerSameAsCaptain(isSame)
+    setAuctionTeamOwner(t.owner_name || "")
+    setAuctionOwnerPhone(t.owner_phone || "")
+    setAuctionTeamPurse(String(t.purse_total))
+    setShowAddAuctionTeam(true)
+  }
+
+  const handleAuctionCaptainPhoneChange = (val) => {
+    const digits = val.replace(/[^0-9]/g, "").slice(0, 10)
+    setAuctionCaptainPhone(digits)
+    if (digits.length === 10) {
+      const matched = auctionPlayers.find(p => (p.phone || "").replace(/[^0-9]/g, "").slice(-10) === digits)
+      if (matched) {
+        setAuctionCaptainName(matched.name)
+        setAuctionCaptainPlayerId(matched.id)
+      }
+    }
+  }
 
   const saveAuctionTeam = async () => {
+    if (!auctionCaptainPhone.trim()) { alert("Captain mobile number required"); return }
+    const cleanCapPhone = auctionCaptainPhone.replace(/[^0-9]/g, "").slice(-10)
+    if (cleanCapPhone.length !== 10) { alert("Please enter a valid 10-digit captain mobile number"); return }
+    if (!auctionCaptainName.trim()) { alert("Captain name required"); return }
     if (!auctionTeamName.trim()) { alert("Team name required"); return }
+
+    const finalOwnerName = auctionOwnerSameAsCaptain ? auctionCaptainName.trim() : auctionTeamOwner.trim()
+    const finalOwnerPhone = auctionOwnerSameAsCaptain ? cleanCapPhone : auctionOwnerPhone.replace(/[^0-9]/g, "").slice(-10)
+
     const purse = Number(auctionTeamPurse)
     if (!auctionTeamPurse || isNaN(purse) || purse <= 0) { alert("Enter a valid starting purse"); return }
     setAuctionBusy(true)
     try {
-      if (editAuctionTeam) await updateAuctionTeam(editAuctionTeam.id, { name: auctionTeamName.trim(), ownerName: auctionTeamOwner.trim(), purseTotal: purse })
-      else await createAuctionTeam(auctionTeamName.trim(), auctionTeamOwner.trim(), purse, managingAuction.id)
+      if (editAuctionTeam) {
+        await updateAuctionTeam(editAuctionTeam.id, {
+          name: auctionTeamName.trim(),
+          ownerName: finalOwnerName,
+          purseTotal: purse,
+          captainName: auctionCaptainName.trim(),
+          captainPhone: cleanCapPhone,
+          ownerPhone: finalOwnerPhone,
+          captainPlayerId: auctionCaptainPlayerId,
+          auctionId: managingAuction.id
+        })
+      } else {
+        await createAuctionTeam(
+          auctionTeamName.trim(),
+          finalOwnerName,
+          purse,
+          managingAuction.id,
+          auctionCaptainName.trim(),
+          cleanCapPhone,
+          finalOwnerPhone,
+          auctionCaptainPlayerId
+        )
+      }
       setShowAddAuctionTeam(false)
       await loadAuctionPool()
     } catch(e) { alert(e.message) }
@@ -882,15 +952,86 @@ export default function ProPortal({ player, onLogout }) {
                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>{editAuctionTeam ? "Edit Team" : "Add Auction Team"}</h3>
                     <button onClick={() => setShowAddAuctionTeam(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#9ca3af" }}>×</button>
                   </div>
+                  {/* Field 1: Captain Mobile Number */}
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Captain Mobile Number *</div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={auctionCaptainPhone}
+                    onChange={e => handleAuctionCaptainPhoneChange(e.target.value)}
+                    placeholder="10-digit mobile number"
+                    autoFocus
+                    style={{ ...aiS, marginBottom: auctionCaptainPlayerId ? 4 : 8 }}
+                  />
+                  {auctionCaptainPlayerId ? (
+                    <div style={{ fontSize: 12, color: "#166534", marginBottom: 12, fontWeight: 700 }}>✓ Auto-fetched from registration: {auctionCaptainName}</div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "#94A3B8", marginBottom: 12 }}>Enter phone to auto-fetch registered player.</div>
+                  )}
+
+                  {/* Field 2: Captain Name */}
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Captain Name *</div>
+                  <input
+                    value={auctionCaptainName}
+                    onChange={e => setAuctionCaptainName(e.target.value)}
+                    placeholder="Captain full name"
+                    style={{ ...aiS, marginBottom: 12 }}
+                  />
+
+                  {/* Field 3: Team Name */}
                   <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Team Name *</div>
-                  <input value={auctionTeamName} onChange={e => setAuctionTeamName(e.target.value)} placeholder="e.g. Mumbai Warriors" autoFocus style={{ ...aiS, marginBottom: 12 }}/>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Owner / Captain</div>
-                  <input value={auctionTeamOwner} onChange={e => setAuctionTeamOwner(e.target.value)} placeholder="e.g. Sahir Attar" style={{ ...aiS, marginBottom: 12 }}/>
-                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Starting Purse (₹) *</div>
-                  <input type="number" min="0" value={auctionTeamPurse} onChange={e => setAuctionTeamPurse(e.target.value)} placeholder="e.g. 10000" style={{ ...aiS, marginBottom: 16 }}/>
+                  <input
+                    value={auctionTeamName}
+                    onChange={e => setAuctionTeamName(e.target.value)}
+                    placeholder="e.g. Mumbai Warriors"
+                    style={{ ...aiS, marginBottom: 12 }}
+                  />
+
+                  {/* Field 4: Checkbox Same as Captain */}
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: auctionOwnerSameAsCaptain ? 14 : 10, cursor: "pointer", padding: "8px 10px", background: "#F8FAF8", borderRadius: 8, border: "1px solid #E2E8F0" }}>
+                    <input
+                      type="checkbox"
+                      checked={auctionOwnerSameAsCaptain}
+                      onChange={e => setAuctionOwnerSameAsCaptain(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: "#166534" }}
+                    />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#0F172A" }}>Owner is same as Captain</span>
+                  </label>
+
+                  {!auctionOwnerSameAsCaptain && (
+                    <div style={{ padding: "12px", background: "#F8FAF8", borderRadius: 10, border: "1px solid #E2E8F0", marginBottom: 14 }}>
+                      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Owner Name</div>
+                      <input
+                        value={auctionTeamOwner}
+                        onChange={e => setAuctionTeamOwner(e.target.value)}
+                        placeholder="e.g. Sahir Attar"
+                        style={{ ...aiS, marginBottom: 10 }}
+                      />
+                      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Owner Mobile Number</div>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        value={auctionOwnerPhone}
+                        onChange={e => setAuctionOwnerPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
+                        placeholder="10-digit mobile number"
+                        style={{ ...aiS, marginBottom: 4 }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Field 5: Starting Purse */}
+                  <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 5, fontWeight: 600 }}>Starting Purse (🪙 Coins) *</div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={auctionTeamPurse}
+                    onChange={e => setAuctionTeamPurse(e.target.value)}
+                    placeholder="e.g. 100000"
+                    style={{ ...aiS, marginBottom: 16 }}
+                  />
                   <div style={{ display: "flex", gap: 10 }}>
                     <button onClick={() => setShowAddAuctionTeam(false)} style={{ flex: 1, padding: "12px", borderRadius: 9, border: "1.5px solid #e5e7eb", background: "#F8FAF8", fontSize: 14, cursor: "pointer" }}>Cancel</button>
-                    <button onClick={saveAuctionTeam} disabled={auctionBusy} style={{ flex: 2, padding: "12px", borderRadius: 9, background: "#FFFFFF", border: "none", color: "#0F172A", fontSize: 14, cursor: "pointer", fontWeight: 800, fontFamily: "var(--font-head)" }}>{auctionBusy ? "Saving..." : (editAuctionTeam ? "Save Changes" : "Add Team")}</button>
+                    <button onClick={saveAuctionTeam} disabled={auctionBusy} style={{ flex: 2, padding: "12px", borderRadius: 9, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 14, cursor: "pointer", fontWeight: 800, fontFamily: "var(--font-head)" }}>{auctionBusy ? "Saving..." : (editAuctionTeam ? "Save Changes" : "Add Team")}</button>
                   </div>
                 </div>
               </div>

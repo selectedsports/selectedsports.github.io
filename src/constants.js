@@ -28,7 +28,7 @@ export const auctionPlanById = id => AUCTION_PLANS.find(p => p.id === id) || AUC
 
 export const MIN_REGISTRATION_AGE = 15
 
-export const DEFAULT_SQUAD_TARGET = 10
+export const DEFAULT_SQUAD_TARGET = 9
 export const MIN_PLAYER_RESERVE = 1000
 
 export function calculateMaxBid(purseRemaining, currentSquadCount, squadTarget = DEFAULT_SQUAD_TARGET, minReserve = MIN_PLAYER_RESERVE) {
