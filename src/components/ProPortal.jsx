@@ -3,7 +3,7 @@ import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, 
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
 import { fetchMatches, fetchGrounds, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam} from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
-import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
+import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
@@ -207,6 +207,7 @@ export default function ProPortal({ player, onLogout }) {
   const [auctionTeamPurse, setAuctionTeamPurse] = useState("")
   const [auctionBusy, setAuctionBusy] = useState(false)
   const [receiptModalImg, setReceiptModalImg] = useState(null)
+  const [pendingPayAuction, setPendingPayAuction] = useState(null)
 
   const loadMyAuctions = async () => {
     setLoadingAuctions(true)
@@ -756,7 +757,7 @@ export default function ProPortal({ player, onLogout }) {
                   {myAuctions.map(a => {
                     const canManage = a.payment_status === "paid" || a.payment_status === "free"
                     return (
-                      <Card key={a.id} onClick={() => canManage && (setManagingAuction(a), setAuctionSubTab("players"))} style={{ padding: "16px", cursor: canManage ? "pointer" : "default" }}>
+                      <Card key={a.id} onClick={() => canManage ? (setManagingAuction(a), setAuctionSubTab("players")) : setPendingPayAuction(a)} style={{ padding: "16px", cursor: "pointer" }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                           <div style={{ fontWeight: 800, fontSize: 15, color: "#0F172A", fontFamily: "var(--font-head)" }}>{a.name}</div>
                           <span style={{ background: a.status==="completed"?"#0F172A":a.status==="live"?"#22C55E":"#94A3B8", color: "#FFFFFF", borderRadius: 999, padding: "3px 10px", fontSize: 10, fontWeight: 700, textTransform: "capitalize", flexShrink: 0 }}>{a.status}</span>
@@ -767,7 +768,12 @@ export default function ProPortal({ player, onLogout }) {
                           <span style={{ fontSize: 11, color: "#7A4F13", fontWeight: 700, background: "rgba(246,196,83,0.15)", padding: "3px 8px", borderRadius: 7 }}>{a.plan_tier} · up to {a.max_teams} teams</span>
                           <span style={{ fontSize: 11, fontWeight: 700, color: a.payment_status==="pending"?"#B8860B":"#166534", textTransform: "capitalize" }}>{a.payment_status}</span>
                         </div>
-                        {!canManage && <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 8, fontStyle: "italic" }}>Awaiting payment confirmation before this can be managed.</div>}
+                        {!canManage && (
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop: 10, paddingTop:8, borderTop:"1px solid #F1F5F9" }}>
+                            <div style={{ fontSize: 11, color: "#B8860B", fontStyle: "italic", fontWeight: 600 }}>Awaiting admin confirmation</div>
+                            <button onClick={(e) => { e.stopPropagation(); setPendingPayAuction(a) }} style={{ padding:"5px 12px", borderRadius:7, background:"rgba(34,197,94,0.1)", border:"1px solid #166534", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}>View Payment / WhatsApp</button>
+                          </div>
+                        )}
                       </Card>
                     )
                   })}
@@ -1188,7 +1194,13 @@ export default function ProPortal({ player, onLogout }) {
       {showCreateAuction && (
         <CreateAuctionFlow organizerId={player.id} isMobile={isMobile}
           onClose={() => setShowCreateAuction(false)}
-          onCreated={() => setShowCreateAuction(false)} />
+          onCreated={() => { setShowCreateAuction(false); loadMyAuctions() }} />
+      )}
+
+      {pendingPayAuction && (
+        <AuctionPaymentModal auction={pendingPayAuction} isMobile={isMobile}
+          onClose={() => setPendingPayAuction(null)}
+          onPaid={loadMyAuctions} />
       )}
 
       {showBenefits && (

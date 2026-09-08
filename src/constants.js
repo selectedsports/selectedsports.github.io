@@ -6,6 +6,7 @@ export const TIME_SLOTS = [
 ]
 export const ADMIN_PASSWORD = "Cricket2026"
 export const ADMIN_PHONE = "9897439743"
+export const ADMIN_UPI = "9897439743@okbizaxis"
 export const PAL = ["#1D9E75","#8B1E2E","#BA7517","#0F6E56","#7A4F13","#3B6D11","#A6192E","#5B7C4A"]
 export const aColor = id => PAL[id % PAL.length]
 export const initials = name => name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()

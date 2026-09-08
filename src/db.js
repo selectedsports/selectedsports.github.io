@@ -986,7 +986,7 @@ export async function fetchAuctionBidHistory(playerId, auctionId = null) {
 // ── Auction Tournament — multi-tenant auction events ──────────────────────────
 export async function fetchPlatformUpi() {
   const settings = await fetchSettings()
-  return settings?.platform_upi_id || ""
+  return settings?.platform_upi_id || "9897439743@okbizaxis"
 }
 export async function setPlatformUpi(upiId) {
   await upsertSetting("platform_upi_id", upiId)

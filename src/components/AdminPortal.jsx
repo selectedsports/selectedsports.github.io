@@ -3,7 +3,7 @@ import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer } from "../db.js"
-import CreateAuctionFlow from "./CreateAuctionFlow.jsx"
+import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
@@ -1812,6 +1812,7 @@ function AuctionPage({ isMobile, isFounder }) {
   }
 
   const [receiptModalImg, setReceiptModalImg] = useState(null)
+  const [pendingPayAuction, setPendingPayAuction] = useState(null)
 
   const doApprovePayment = async (auctionId) => {
     try { await approveAuctionPayment(auctionId); await Promise.all([loadPayments(), loadAuctions()]) } catch(e) { alert(e.message) }
@@ -2199,6 +2200,7 @@ function AuctionPage({ isMobile, isFounder }) {
                   ) : (
                     <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                       <span style={{ fontSize:11, color:statusColor[a.payment_status]||"#94A3B8", fontWeight:700, fontStyle:"italic" }}>{a.payment_status === "pending" ? "Awaiting payment confirmation" : a.payment_status}</span>
+                      <button onClick={(e)=>{ e.stopPropagation(); setPendingPayAuction(a) }} style={{ padding:"6px 10px", borderRadius:7, background:"rgba(34,197,94,0.08)", border:"1px solid #166534", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}>Payment Details</button>
                       {isFounder && a.payment_status === "pending" && (
                         <button onClick={async (e)=>{ e.stopPropagation(); await doApprovePayment(a.id) }} style={{ padding:"6px 12px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:11, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>✓ Approve</button>
                       )}
@@ -2465,6 +2467,14 @@ function AuctionPage({ isMobile, isFounder }) {
       )}
 
       {showCreateAuction && <CreateAuctionFlow organizerId={null} isMobile={isMobile} onClose={()=>setShowCreateAuction(false)} onCreated={()=>loadPayments()}/>}
+      {pendingPayAuction && (
+        <AuctionPaymentModal
+          auction={pendingPayAuction}
+          isMobile={isMobile}
+          onClose={()=>setPendingPayAuction(null)}
+          onPaid={()=>{ loadAuctions(); loadPayments() }}
+        />
+      )}
 
       {showAddTeam && (
         <div style={mStyle} onClick={()=>setShowAddTeam(false)}>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { AUCTION_PLANS } from "../constants.js"
+import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI } from "../constants.js"
 import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction } from "../db.js"
 import { Av } from "./ui.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
@@ -50,6 +50,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [platformUpi, setPlatformUpi] = useState("")
   const [createdAuction, setCreatedAuction] = useState(null)
   const [paidClicked, setPaidClicked] = useState(false)
+  const [copiedField, setCopiedField] = useState("")
   const [rosterTeams, setRosterTeams] = useState([])
   const [rosterPlayers, setRosterPlayers] = useState([])
   const [selectedTeamIds, setSelectedTeamIds] = useState(new Set())
@@ -58,6 +59,12 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [loadingRoster, setLoadingRoster] = useState(false)
 
   const plan = AUCTION_PLANS.find(p => p.id === planId) || AUCTION_PLANS[0]
+  const adminUpi = platformUpi || ADMIN_UPI || "9897439743@okbizaxis"
+  const copyText = (txt, field) => {
+    navigator.clipboard?.writeText(txt)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(""), 2000)
+  }
 
   useEffect(() => { fetchPlatformUpi().then(setPlatformUpi).catch(() => {}) }, [])
 
@@ -323,26 +330,98 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
 
         {step === "payment" && createdAuction && (
           <>
-            <div style={{ textAlign:"center", padding:"18px", background:"rgba(246,196,83,0.12)", borderRadius:12, marginBottom:18 }}>
-              <div style={{ fontSize:12, color:"#7A4F13", fontWeight:600 }}>Amount Due</div>
-              <div style={{ fontSize:28, fontWeight:900, color:"#B8860B", fontFamily:"var(--font-head)" }}>₹{plan.price.toLocaleString("en-IN")}</div>
+            <div style={{ textAlign:"center", padding:"14px 16px", background:"rgba(246,196,83,0.12)", borderRadius:12, marginBottom:16, border:"1px solid rgba(246,196,83,0.3)" }}>
+              <div style={{ fontSize:11, color:"#7A4F13", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.6px" }}>Amount Due</div>
+              <div style={{ fontSize:30, fontWeight:900, color:"#B8860B", fontFamily:"var(--font-head)", margin:"3px 0" }}>₹{plan.price.toLocaleString("en-IN")}</div>
+              <div style={{ fontSize:11, color:"#7A4F13", fontWeight:600 }}>{createdAuction.name} · {plan.label} (up to {plan.maxTeams} teams)</div>
             </div>
-            {platformUpi ? (
-              <a href={`upi://pay?pa=${encodeURIComponent(platformUpi)}&pn=${encodeURIComponent("Selected Sports")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + name)}`} style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"14px", borderRadius:10, background:"#166534", color:"#FFFFFF", fontSize:14, fontWeight:800, fontFamily:"var(--font-head)", textDecoration:"none", marginBottom:14 }}>
-                Pay ₹{plan.price.toLocaleString("en-IN")} via UPI
+
+            <div style={{ background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:"#0F172A", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+                <span>💳</span> Admin Payment Details
+              </div>
+
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:8 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+                  <div style={{ fontSize:14, fontWeight:800, color:"#0F172A", letterSpacing:"0.5px" }}>{ADMIN_PHONE}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyText(ADMIN_PHONE, "phone")}
+                  style={{ padding:"5px 12px", borderRadius:7, border:"1px solid #166534", background: copiedField==="phone" ? "#166534" : "rgba(34,197,94,0.08)", color: copiedField==="phone" ? "#FFFFFF" : "#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}
+                >
+                  {copiedField === "phone" ? "✓ Copied" : "Copy"}
+                </button>
+              </div>
+
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:10 }}>
+                <div style={{ minWidth:0, flex:1, marginRight:8 }}>
+                  <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Admin UPI ID</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{adminUpi}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyText(adminUpi, "upi")}
+                  style={{ padding:"5px 12px", borderRadius:7, border:"1px solid #166534", background: copiedField==="upi" ? "#166534" : "rgba(34,197,94,0.08)", color: copiedField==="upi" ? "#FFFFFF" : "#166534", fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}
+                >
+                  {copiedField === "upi" ? "✓ Copied" : "Copy"}
+                </button>
+              </div>
+
+              <a
+                href={`upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
+                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box" }}
+              >
+                <span>⚡</span> Pay ₹{plan.price.toLocaleString("en-IN")} via UPI App
               </a>
-            ) : (
-              <div style={{ fontSize:13, color:"#94A3B8", marginBottom:14, textAlign:"center" }}>Payment link not set up yet — contact the platform admin directly to pay.</div>
-            )}
+            </div>
+
+            <div style={{ background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:"#166534", marginBottom:6 }}>
+                📋 Next Steps to Activate:
+              </div>
+              <div style={{ fontSize:12, color:"#334155", lineHeight:1.5, display:"flex", flexDirection:"column", gap:6 }}>
+                <div><strong>1.</strong> Make payment of <strong>₹{plan.price.toLocaleString("en-IN")}</strong> via Google Pay / PhonePe / UPI above.</div>
+                <div><strong>2.</strong> Send your payment screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong>.</div>
+                <div><strong>3.</strong> Once confirmed by the admin, you will be able to access the auction platform.</div>
+              </div>
+
+              <a
+                href={`https://wa.me/91${ADMIN_PHONE}?text=${encodeURIComponent(`Hi Admin, I have made the payment of ₹${plan.price.toLocaleString("en-IN")} for my auction "${createdAuction?.name || name}". Please find my payment screenshot attached. Kindly confirm and activate my auction access.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#25D366", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", marginTop:10, boxSizing:"border-box", boxShadow:"0 2px 8px rgba(37,211,102,0.25)" }}
+              >
+                <span>💬</span> Send Screenshot on WhatsApp ({ADMIN_PHONE})
+              </a>
+            </div>
+
             {!paidClicked ? (
-              <button onClick={markPaid} disabled={busy} style={{ width:"100%", padding:"13px", borderRadius:10, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:busy?"not-allowed":"pointer" }}>{busy ? "..." : "I've Paid — Notify Admin"}</button>
+              <button
+                onClick={markPaid}
+                disabled={busy}
+                style={{ width:"100%", padding:"13px", borderRadius:10, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:800, cursor:busy?"not-allowed":"pointer", fontFamily:"var(--font-head)" }}
+              >
+                {busy ? "Notifying..." : "I've Paid — Notify Admin"}
+              </button>
             ) : (
-              <div style={{ textAlign:"center" }}>
-                <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
-                <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>Payment noted!</div>
-                <div style={{ fontSize:12, color:"#64748B", marginTop:6 }}>The admin will verify and activate your auction shortly. You'll be able to set up teams and players once it's confirmed.</div>
+              <div style={{ textAlign:"center", padding:"14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0" }}>
+                <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
+                <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>Payment Notified!</div>
+                <div style={{ fontSize:12, color:"#64748B", marginTop:4, marginBottom:10 }}>
+                  Admin has been alerted. Please also send your screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong> for fast confirmation.
+                </div>
+                <a
+                  href={`https://wa.me/91${ADMIN_PHONE}?text=${encodeURIComponent(`Hi Admin, I have made the payment of ₹${plan.price.toLocaleString("en-IN")} for my auction "${createdAuction?.name || name}". Please find my payment screenshot attached. Kindly confirm and activate my auction access.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px 16px", borderRadius:8, background:"#25D366", color:"#FFFFFF", fontSize:12, fontWeight:700, textDecoration:"none", marginBottom:12 }}
+                >
+                  <span>💬</span> Open WhatsApp ({ADMIN_PHONE})
+                </a>
                 <AuctionLinks auction={createdAuction}/>
-                <button onClick={() => { onCreated?.(createdAuction); onClose() }} style={{ marginTop:16, width:"100%", padding:"12px", borderRadius:9, background:"#F8FAF8", border:"1px solid #E2E8F0", color:"#0F172A", fontSize:13, fontWeight:700, cursor:"pointer" }}>Done</button>
+                <button onClick={() => { onCreated?.(createdAuction); onClose() }} style={{ marginTop:12, width:"100%", padding:"12px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer" }}>Done</button>
               </div>
             )}
           </>
@@ -355,6 +434,155 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
             <div style={{ fontSize:13, color:"#64748B", marginTop:6, marginBottom:18 }}>Add teams and players to get started.</div>
             <AuctionLinks auction={createdAuction}/>
             <button onClick={() => { onCreated?.(createdAuction); onClose() }} style={{ marginTop:16, width:"100%", padding:"13px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}>Go to Auction</button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
+  const [platformUpi, setPlatformUpi] = useState("")
+  const [copiedField, setCopiedField] = useState("")
+  const [paidClicked, setPaidClicked] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    fetchPlatformUpi().then(setPlatformUpi).catch(() => {})
+  }, [])
+
+  const plan = AUCTION_PLANS.find(p => p.id === auction?.plan_tier) || {
+    price: auction?.amount_due || 0,
+    label: auction?.plan_tier || "Auction Plan",
+    maxTeams: auction?.max_teams || 6
+  }
+  const amount = auction?.amount_due !== undefined ? Number(auction.amount_due) : plan.price
+  const adminUpi = platformUpi || ADMIN_UPI || "9897439743@okbizaxis"
+
+  const copyText = (txt, field) => {
+    navigator.clipboard?.writeText(txt)
+    setCopiedField(field)
+    setTimeout(() => setCopiedField(""), 2000)
+  }
+
+  const handleMarkPaid = async () => {
+    setBusy(true)
+    try {
+      if (auction?.id) {
+        await markAuctionPaidByOrganizer(auction.id)
+      }
+      setPaidClicked(true)
+      onPaid?.()
+    } catch (e) {
+      alert(e.message)
+    }
+    setBusy(false)
+  }
+
+  const whatsappMsg = `Hi Admin, I have made the payment of ₹${amount.toLocaleString("en-IN")} for my auction "${auction?.name || "Cricket Auction"}". Please find my payment screenshot attached. Kindly confirm and activate my auction access.`
+  const whatsappUrl = `https://wa.me/91${ADMIN_PHONE}?text=${encodeURIComponent(whatsappMsg)}`
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${amount}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (auction?.name || "Cricket Auction"))}`
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.65)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, padding:16 }}>
+      <div style={{ background:"#FFFFFF", borderRadius:18, padding: isMobile ? "20px 16px" : "24px 22px", width:440, maxWidth:"100%", maxHeight:"92vh", overflowY:"auto", boxSizing:"border-box", boxShadow:"0 12px 40px rgba(0,0,0,0.18)" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+          <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>Complete Payment</div>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:24, cursor:"pointer", color:"#94A3B8", lineHeight:1, padding:4 }}>×</button>
+        </div>
+
+        <div style={{ textAlign:"center", padding:"14px 16px", background:"rgba(246,196,83,0.12)", borderRadius:12, marginBottom:16, border:"1px solid rgba(246,196,83,0.3)" }}>
+          <div style={{ fontSize:11, color:"#7A4F13", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.6px" }}>Amount Due</div>
+          <div style={{ fontSize:32, fontWeight:900, color:"#B8860B", fontFamily:"var(--font-head)", margin:"3px 0" }}>₹{amount.toLocaleString("en-IN")}</div>
+          <div style={{ fontSize:12, color:"#7A4F13", fontWeight:600 }}>{auction?.name} {plan.label ? `· ${plan.label}` : ""}</div>
+        </div>
+
+        <div style={{ background:"#FFFFFF", border:"1.5px solid #E2E8F0", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:800, color:"#0F172A", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
+            <span>💳</span> Admin Payment Details
+          </div>
+
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:8 }}>
+            <div>
+              <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+              <div style={{ fontSize:14, fontWeight:800, color:"#0F172A", letterSpacing:"0.5px" }}>{ADMIN_PHONE}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => copyText(ADMIN_PHONE, "phone")}
+              style={{ padding:"5px 12px", borderRadius:7, border:"1px solid #166534", background: copiedField==="phone" ? "#166534" : "rgba(34,197,94,0.08)", color: copiedField==="phone" ? "#FFFFFF" : "#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}
+            >
+              {copiedField === "phone" ? "✓ Copied" : "Copy"}
+            </button>
+          </div>
+
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0", marginBottom:10 }}>
+            <div style={{ minWidth:0, flex:1, marginRight:8 }}>
+              <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Admin UPI ID</div>
+              <div style={{ fontSize:13, fontWeight:800, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{adminUpi}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => copyText(adminUpi, "upi")}
+              style={{ padding:"5px 12px", borderRadius:7, border:"1px solid #166534", background: copiedField==="upi" ? "#166534" : "rgba(34,197,94,0.08)", color: copiedField==="upi" ? "#FFFFFF" : "#166534", fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}
+            >
+              {copiedField === "upi" ? "✓ Copied" : "Copy"}
+            </button>
+          </div>
+
+          <a
+            href={upiDeepLink}
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box" }}
+          >
+            <span>⚡</span> Pay ₹{amount.toLocaleString("en-IN")} via UPI App
+          </a>
+        </div>
+
+        <div style={{ background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.3)", borderRadius:12, padding:"12px 14px", marginBottom:14 }}>
+          <div style={{ fontSize:12, fontWeight:800, color:"#166534", marginBottom:6 }}>
+            📋 Next Steps to Activate:
+          </div>
+          <div style={{ fontSize:12, color:"#334155", lineHeight:1.5, display:"flex", flexDirection:"column", gap:6 }}>
+            <div><strong>1.</strong> Make payment of <strong>₹{amount.toLocaleString("en-IN")}</strong> via Google Pay / PhonePe / UPI above.</div>
+            <div><strong>2.</strong> Send your payment screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong>.</div>
+            <div><strong>3.</strong> Once confirmed by the admin, you will be able to access the auction platform.</div>
+          </div>
+
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#25D366", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", marginTop:10, boxSizing:"border-box", boxShadow:"0 2px 8px rgba(37,211,102,0.25)" }}
+          >
+            <span>💬</span> Send Screenshot on WhatsApp ({ADMIN_PHONE})
+          </a>
+        </div>
+
+        {!paidClicked ? (
+          <button
+            onClick={handleMarkPaid}
+            disabled={busy}
+            style={{ width:"100%", padding:"13px", borderRadius:10, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:800, cursor:busy?"not-allowed":"pointer", fontFamily:"var(--font-head)" }}
+          >
+            {busy ? "Notifying..." : "I've Paid — Notify Admin"}
+          </button>
+        ) : (
+          <div style={{ textAlign:"center", padding:"14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0" }}>
+            <div style={{ fontSize:28, marginBottom:6 }}>✅</div>
+            <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)" }}>Payment Notified!</div>
+            <div style={{ fontSize:12, color:"#64748B", marginTop:4, marginBottom:10 }}>
+              Admin has been alerted. Please also send your screenshot on WhatsApp to <strong>{ADMIN_PHONE}</strong> for fast confirmation.
+            </div>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px 16px", borderRadius:8, background:"#25D366", color:"#FFFFFF", fontSize:12, fontWeight:700, textDecoration:"none", marginBottom:12 }}
+            >
+              <span>💬</span> Open WhatsApp ({ADMIN_PHONE})
+            </a>
+            {auction && <AuctionLinks auction={auction}/>}
+            <button onClick={onClose} style={{ marginTop:12, width:"100%", padding:"12px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer" }}>Done</button>
           </div>
         )}
       </div>
