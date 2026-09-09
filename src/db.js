@@ -1379,34 +1379,66 @@ export async function fetchPlayerAuctionHistory(phone) {
     if (!error && data) {
       const results = data.filter(r => r.auctions)
       const teamIds = results.filter(r => r.sold_team_id).map(r => r.sold_team_id)
-      
+      const auctionIds = [...new Set(results.map(r => r.auction_id).filter(Boolean))]
+
+      let sData = []
+      let allTeams = []
+      try {
+        const [sRes, tRes] = await Promise.all([
+          teamIds.length > 0
+            ? supabase.from("settings").select("key, value").in("key", teamIds.map(tid => `auction_team_logo_${tid}`))
+            : Promise.resolve({ data: [] }),
+          auctionIds.length > 0
+            ? supabase.from("auction_teams").select("id, name, owner_name, captain_name, purse_total, auction_id").in("auction_id", auctionIds)
+            : Promise.resolve({ data: [] })
+        ])
+        sData = sRes?.data || []
+        allTeams = tRes?.data || []
+      } catch {}
+
       let logoMap = {}
-      if (teamIds.length > 0) {
-        try {
-          const keys = teamIds.map(tid => `auction_team_logo_${tid}`)
-          const { data: sData } = await supabase.from("settings").select("key, value").in("key", keys)
-          if (sData) sData.forEach(s => { logoMap[s.key] = s.value })
-        } catch {}
-      }
+      sData.forEach(s => { logoMap[s.key] = s.value })
 
       return results.map(r => {
         const a = r.auctions || {}
         let orgName = null
         if (a.logo_url?.startsWith("org:")) orgName = a.logo_url.replace(/^org:/, "")
         
+        let teamObj = r.auction_teams || null
+        const pNameLower = (r.name || "").toLowerCase().trim()
+
+        // If team not assigned by sold_team_id, check if player is designated as captain/owner in this auction
+        if (!teamObj && r.auction_id && pNameLower) {
+          const matched = allTeams.find(t => 
+            t.auction_id === r.auction_id && (
+              (t.captain_name && t.captain_name.toLowerCase().trim() === pNameLower) ||
+              (t.owner_name && t.owner_name.toLowerCase().trim() === pNameLower)
+            )
+          )
+          if (matched) teamObj = matched
+        }
+
+        const isCap = r.status === "captain" || (teamObj && (
+          (teamObj.captain_name && teamObj.captain_name.toLowerCase().trim() === pNameLower) ||
+          (teamObj.owner_name && teamObj.owner_name.toLowerCase().trim() === pNameLower)
+        ))
+
         let teamLogo = null
-        if (r.sold_team_id) {
-          teamLogo = logoMap[`auction_team_logo_${r.sold_team_id}`] || null
+        if (teamObj?.id) {
+          teamLogo = logoMap[`auction_team_logo_${teamObj.id}`] || null
         }
 
         return {
           ...r,
+          status: isCap ? "captain" : r.status,
+          is_captain: !!isCap,
+          sold_team_id: teamObj?.id || r.sold_team_id,
           auctions: {
             ...a,
             organized_by: orgName || null
           },
-          auction_teams: r.auction_teams ? {
-            ...r.auction_teams,
+          auction_teams: teamObj ? {
+            ...teamObj,
             logo_url: teamLogo
           } : null
         }

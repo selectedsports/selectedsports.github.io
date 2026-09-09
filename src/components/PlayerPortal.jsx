@@ -720,7 +720,8 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
           const firstNameD = (player.name || "Player").split(" ")[0]
           const capTournament = auctionHistory.find(ap => ap.status === "captain" || ap.is_captain)
           const hasCaptainRole = !!capTournament
-          const captainTeamName = capTournament?.auction_teams?.name || "Strikers"
+          const rawCapTeam = capTournament?.auction_teams?.name || ""
+          const captainTeamDisplay = rawCapTeam ? (/^team\s+/i.test(rawCapTeam) ? rawCapTeam : `Team ${rawCapTeam}`) : "Your Franchise"
           const spotlightAuction = capTournament || (auctionHistory.length > 0 ? auctionHistory[0] : null)
 
           return (
@@ -746,7 +747,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                       </span>
                       {hasCaptainRole && (
                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 900, letterSpacing: 0.5, boxShadow: "0 2px 8px rgba(245,158,11,0.35)" }}>
-                          👑 CAPTAIN · TEAM {captainTeamName.toUpperCase()}
+                          👑 CAPTAIN · {captainTeamDisplay.toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -892,7 +893,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               {isCap ? "Leading as Captain & Owner" : "Assigned Team"}
                             </div>
                             <div style={{ fontSize: 17, fontWeight: 900, color: "#FFFFFF", fontFamily: "var(--font-head)" }}>
-                              Team {teamN}
+                              {teamN ? (/^team\s+/i.test(teamN) ? teamN : `Team ${teamN}`) : "Assigned Team"}
                             </div>
                             <div style={{ fontSize: 11.5, color: "#CBD5E1", marginTop: 2 }}>
                               Role: <strong>{spotlightAuction.playing_role || player.playing_role || "All-rounder"}</strong>
@@ -1664,7 +1665,11 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                   const isPaid = ap.payment_status === "paid"
 
                   const shareCaptaincy = () => {
-                    const text = `🏏 *Official Tournament Captain Announcement!*\n\nI am leading *Team ${team.name || "Strikers"}* as Captain & Owner in *${auc.name || "Battle of Champions - Season 3"}*!\n\n📅 *Auction Date:* ${auc.auction_date ? fmtDate(auc.auction_date) : "12 Sep 2026"}\n⏰ *Time:* ${auc.auction_time || "8:00 PM IST"}\n📍 *Venue:* ${auc.location || "Kanade Sports Club, Undri · Pune, Maharashtra"}\n🪙 *Starting Purse:* ₹${Number(team.purse_total || auc.points_purse || 100000).toLocaleString("en-IN")}\n\n📡 Watch the live auction stage here:\n${window.location.origin}/live-auction/${auc.auction_code || ""}`
+                    const tName = team.name ? (/^team\s+/i.test(team.name) ? team.name : `Team ${team.name}`) : "My Franchise Team"
+                    const tourName = auc.name || "Tournament Auction"
+                    const dateStr = auc.auction_date ? fmtDate(auc.auction_date) : "Upcoming"
+                    const locStr = auc.location || "Venue TBD"
+                    const text = `🏏 *Official Tournament Captain Announcement!*\n\nI am leading *${tName}* as Captain & Owner in *${tourName}*!\n\n📅 *Auction Date:* ${dateStr}\n⏰ *Time:* ${auc.auction_time || "8:00 PM IST"}\n📍 *Venue:* ${locStr}\n🪙 *Starting Purse:* ₹${Number(team.purse_total || auc.points_purse || 100000).toLocaleString("en-IN")}\n\n📡 Watch the live auction stage here:\n${window.location.origin}/live-auction/${auc.auction_code || ""}`
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")
                   }
 
@@ -1781,10 +1786,10 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                                   YOUR FRANCHISE TEAM
                                 </div>
                                 <div style={{ fontSize: 19, fontWeight: 900, color: "#FFFFFF", fontFamily: "var(--font-head)" }}>
-                                  Team {team.name || "Strikers"}
+                                  {team.name ? (/^team\s+/i.test(team.name) ? team.name : `Team ${team.name}`) : "Your Franchise Team"}
                                 </div>
                                 <div style={{ fontSize: 12, color: "#CBD5E1", marginTop: 2 }}>
-                                  Owner &amp; Captain: <strong>{team.owner_name || player.name}</strong>
+                                  Owner &amp; Captain: <strong>{team.owner_name || team.captain_name || player.name}</strong>
                                 </div>
                               </div>
                             </div>
@@ -1829,7 +1834,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               <div style={{ fontSize: 13, fontWeight: 800, color: "#4ADE80", marginTop: 3 }}>
                                 Pre-Drafted
                               </div>
-                              <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 1 }}>Team {team.name || "Strikers"}</div>
+                              <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 1 }}>{team.name ? (/^team\s+/i.test(team.name) ? team.name : `Team ${team.name}`) : "Franchise Team"}</div>
                             </div>
                           </div>
 
@@ -1881,7 +1886,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                             color: "#FEF08A",
                             lineHeight: 1.5
                           }}>
-                            <strong>👑 Captaincy Privileges:</strong> As Captain &amp; Owner of <strong>Team {team.name || "Strikers"}</strong>, you have access to your private Team Console during the live auction to place bids in real time, monitor remaining purse coins, and construct your 15-player tournament squad.
+                            <strong>👑 Captaincy Privileges:</strong> As Captain &amp; Owner of <strong>{team.name ? (/^team\s+/i.test(team.name) ? team.name : `Team ${team.name}`) : "your franchise team"}</strong>, you have access to your private Team Console during the live auction to place bids in real time, monitor remaining purse coins, and construct your 15-player tournament squad.
                           </div>
 
                           {/* Four Action Buttons */}
@@ -2203,35 +2208,42 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 </div>
 
                 {/* Official Captaincy Badge on Pass */}
-                {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
-                  <div style={{
-                    marginTop: 14,
-                    padding: "10px 14px",
-                    borderRadius: 12,
-                    background: "linear-gradient(135deg, rgba(245,158,11,0.22), rgba(217,119,6,0.1))",
-                    border: "1.5px solid rgba(245,158,11,0.4)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    flexWrap: "wrap",
-                    gap: 8
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 16 }}>👑</span>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 900, color: "#FEF08A", letterSpacing: 0.5, fontFamily: "var(--font-head)" }}>
-                          OFFICIAL CAPTAIN &amp; OWNER · TEAM STRIKERS
-                        </div>
-                        <div style={{ fontSize: 10.5, color: "#CBD5E1" }}>
-                          Battle of Champions - Season 3
+                {(() => {
+                  const capRow = auctionHistory.find(a => a.is_captain || a.status === "captain")
+                  if (!capRow) return null
+                  const cTeam = capRow.auction_teams?.name || ""
+                  const cTeamDisplay = cTeam ? (/^team\s+/i.test(cTeam) ? cTeam : `Team ${cTeam}`) : "Franchise Team"
+                  const cTourn = capRow.auctions?.name || "Tournament Auction"
+                  return (
+                    <div style={{
+                      marginTop: 14,
+                      padding: "10px 14px",
+                      borderRadius: 12,
+                      background: "linear-gradient(135deg, rgba(245,158,11,0.22), rgba(217,119,6,0.1))",
+                      border: "1.5px solid rgba(245,158,11,0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 8
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 16 }}>👑</span>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 900, color: "#FEF08A", letterSpacing: 0.5, fontFamily: "var(--font-head)" }}>
+                            OFFICIAL CAPTAIN &amp; OWNER · {cTeamDisplay.toUpperCase()}
+                          </div>
+                          <div style={{ fontSize: 10.5, color: "#CBD5E1" }}>
+                            {cTourn}
+                          </div>
                         </div>
                       </div>
+                      <span style={{ fontSize: 10, fontWeight: 800, background: "#F59E0B", color: "#0F172A", padding: "2px 8px", borderRadius: 999 }}>
+                        ACTIVE
+                      </span>
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 800, background: "#F59E0B", color: "#0F172A", padding: "2px 8px", borderRadius: 999 }}>
-                      ACTIVE
-                    </span>
-                  </div>
-                )}
+                  )
+                })()}
 
                 {/* Pass Footer */}
                 <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.85 }}>
