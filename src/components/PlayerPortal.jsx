@@ -4,7 +4,7 @@ import {
   CheckCircle2, XCircle, Hourglass, Zap, Clipboard, CalendarPlus, LogOut,
   Phone, Bell as BellIcon, CreditCard, Home, ChevronRight, Share2, Award,
   ExternalLink, Sparkles, Check, ShieldCheck, ArrowLeft, Send, MessageSquare,
-  ChevronDown, HelpCircle
+  ChevronDown, HelpCircle, Activity
 } from "lucide-react"
 import {
   LogoFull, Logo, Av, Tag, Card, Spinner, StatsBanner, Bell, MessageInbox,
@@ -92,7 +92,7 @@ function ppShare(expenses, confirmedCount) {
   return confirmedCount > 0 ? Math.round(total / confirmedCount) : 0
 }
 
-export default function PlayerPortal({ player, matches = [], onLogout }) {
+function PlayerPortalInner({ player, matches = [], onLogout }) {
   const [myMatches, setMyMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [selId, setSelId] = useState(null)
@@ -1870,6 +1870,19 @@ export default function PlayerPortal({ player, matches = [], onLogout }) {
       </nav>
     </div>
   )
+}
+
+export default function PlayerPortal({ player, matches = [], onLogout }) {
+  if (!player || !player.id) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#F8FAF8", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14 }}>
+        <Spinner />
+        <div style={{ fontSize: 13, color: "#166534", fontWeight: 700, fontFamily: "var(--font-head)" }}>Loading Player Profile...</div>
+        <button onClick={onLogout} style={{ marginTop: 8, padding: "8px 16px", borderRadius: 8, background: "#EF4444", color: "#FFFFFF", border: "none", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>Return to Home</button>
+      </div>
+    )
+  }
+  return <PlayerPortalInner player={player} matches={matches} onLogout={onLogout} />
 }
 
 // ── MATCH DETAIL VIEW FOR PLAYER ──
