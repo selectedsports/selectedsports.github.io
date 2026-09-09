@@ -36,16 +36,37 @@ async function ensureLatestVersion() {
   } catch {}
 }
 ensureLatestVersion()
+setInterval(ensureLatestVersion, 30000)
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") ensureLatestVersion()
 })
 
 // Gracefully handle any Vite dynamic import chunk loading failure (e.g. after a deploy)
 window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault()
   console.warn("Dynamic import preload error, fetching fresh bundle:", event)
-  const u = new URL(window.location.href)
-  u.searchParams.set("_retry", String(Date.now()))
-  window.location.replace(u.toString())
+  const lastReload = parseInt(sessionStorage.getItem("vite_preload_ts") || "0", 10)
+  if (Date.now() - lastReload > 6000) {
+    sessionStorage.setItem("vite_preload_ts", String(Date.now()))
+    const u = new URL(window.location.href)
+    u.searchParams.set("_v", String(Date.now()))
+    window.location.replace(u.toString())
+  }
+})
+
+// Catch unhandled dynamic chunk failures
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason?.message || String(event.reason || "")
+  if (/dynamically imported|loading chunk|failed to fetch/i.test(reason)) {
+    event.preventDefault()
+    const lastReload = parseInt(sessionStorage.getItem("unhandled_chunk_ts") || "0", 10)
+    if (Date.now() - lastReload > 6000) {
+      sessionStorage.setItem("unhandled_chunk_ts", String(Date.now()))
+      const u = new URL(window.location.href)
+      u.searchParams.set("_v", String(Date.now()))
+      window.location.replace(u.toString())
+    }
+  }
 })
 
 ReactDOM.createRoot(document.getElementById("root")).render(
