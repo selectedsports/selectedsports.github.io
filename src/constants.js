@@ -553,28 +553,30 @@ export function generateAuctionPlayerInvite(auction, origin) {
   const timeFormatted = auction.auction_time || "To Be Announced"
   const venue = auction.location || "Ground / Venue to be confirmed"
   const org = auction.organized_by ? `\n🛡️ *Organized By:* ${auction.organized_by}` : ""
-  const feeText = Number(auction.player_entry_fee) > 0 ? `₹${Number(auction.player_entry_fee).toLocaleString("en-IN")}` : "FREE"
+  const fee = Number(auction.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
+  const feeText = `₹${fee}`
 
   return `🏏 *PLAYER REGISTRATION OPEN — ${(auction.name || "CRICKET TOURNAMENT").toUpperCase()}* 🏏${org}
 
 📅 *Auction Date:* ${dateFormatted}
 ⏰ *Auction Time:* ${timeFormatted}
 📍 *Venue:* ${venue}
-💰 *Player Entry Fee:* ${feeText}
+💰 *Player Entry Fee:* ${feeText} (Mandatory for player registration)
 
 📢 *ATTENTION CRICKET PLAYERS:*
-Official player registrations are now LIVE! All players must register before the auction to enter the player pool and get selected by franchise teams.
+Official player registrations are now LIVE! All players must register before the auction deadline to enter the player pool and get picked by franchise teams.
 
 📝 *How to Register:*
 1️⃣ Click the official registration link below
-2️⃣ Enter your Name, Mobile Number, Playing Role & City
-3️⃣ Upload your profile photo & enter your preferred jersey number
-4️⃣ Submit to confirm your spot in the auction pool
+2️⃣ Enter your Mobile Number (existing player details will auto-fill)
+3️⃣ Review & edit your Name, Playing Role, City, Jersey # & Profile Photo
+4️⃣ Pay the ${feeText} registration fee via Google Pay / UPI & attach payment screenshot
+5️⃣ Submit your registration — the organizer will verify your payment and approve you into the live auction pool!
 
-👉 *REGISTER NOW VIA LINK:*
+👉 *REGISTER NOW VIA OFFICIAL LINK:*
 🔗 ${regLink}
 
-⚡ _Register early before the deadline to ensure your name is included in the live bidding pool!_
+⚡ _Register and transfer the entry fee before the deadline to ensure your spot in the auction!_
 🏆 *Selected Sports Cricket Platform*`
 }
 

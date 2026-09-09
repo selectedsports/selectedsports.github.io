@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, uploadPaymentReceipt, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionSponsors } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
-import { isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
+import { isValidName, birthDateError, maxBirthDateForMinAge, ADMIN_UPI, ADMIN_PHONE } from "../constants.js"
 import { Search as SearchIcon, ShieldCheck, Star } from "lucide-react"
 
 const ROLES = ["Batsman", "Bowler", "All-rounder", "Wicket-keeper"]
@@ -24,20 +24,21 @@ function Header({ auctionName, organizedBy }) {
           🛡️ Organized by {organizedBy}
         </div>
       )}
-      <div style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>Fill in your details below — the organizer sets your base price separately.</div>
+      <div style={{ color:"rgba(255,255,255,0.75)", fontSize:13 }}>Fill in your details below — player registration fee applies to all participants.</div>
     </div>
   )
 }
 
 function AuctionDetailsCard({ auction }) {
   if (!auction) return null
+  const fee = Number(auction.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
   const rows = [
     ...(auction.organized_by ? [["Organized By", auction.organized_by]] : []),
     ["Auction Date", auction.auction_date ? new Date(auction.auction_date+"T00:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"}) : "Date TBD"],
     ["Time", auction.auction_time || "TBD"],
     ["Venue", auction.location || "TBD"],
     ["Points / Team", auction.points_purse ? auction.points_purse.toLocaleString("en-IN") : "Not set"],
-    ["Registration Fee", Number(auction.player_entry_fee) > 0 ? `₹${Number(auction.player_entry_fee).toLocaleString("en-IN")}` : "Free"],
+    ["Registration Fee", `₹${fee.toLocaleString("en-IN")}`],
   ]
   return (
     <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>
@@ -350,15 +351,18 @@ function TournamentSponsorsList({ auctionId }) {
 }
 
 function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setReceiptFile, setReceiptPreview, copiedText, setCopiedText }) {
-  if (!auction || !(Number(auction.player_entry_fee) > 0)) return null
+  const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
+  const upiId = auction?.organizer_upi_id || ADMIN_UPI || "9897439743@okbizaxis"
+  const paymentPhone = auction?.organizer_payment_phone || ADMIN_PHONE || "9897439743"
+
   return (
     <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
         <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Registration Fee Required</div>
-        <span style={{ background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, padding:"4px 10px", borderRadius:8 }}>₹{Number(auction.player_entry_fee).toLocaleString("en-IN")}</span>
+        <span style={{ background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, padding:"4px 10px", borderRadius:8 }}>₹{fee}</span>
       </div>
       <div style={{ fontSize:12, color:"#64748B", marginBottom:12, lineHeight:1.5 }}>
-        Please transfer ₹{Number(auction.player_entry_fee).toLocaleString("en-IN")} to the organizer's details below and upload your payment screenshot. Form cannot be submitted without payment proof.
+        Please transfer the registration fee of ₹{fee} to the details below and upload your payment screenshot. Form cannot be submitted without payment proof.
       </div>
 
       {/* Notice explaining Google Pay opens while page stays in background */}
@@ -366,49 +370,43 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
         💡 <strong>Notice:</strong> When you tap <em>Pay with Google Pay</em>, your GPay app will open while this registration page remains open in the background. Complete payment in GPay, take a screenshot, and switch back here to upload it below.
       </div>
 
-      {/* Organizer Payment Info */}
+      {/* Payment Info */}
       <div style={{ background:"#FFFFFF", padding:"12px 14px", borderRadius:10, border:"1px solid #E2E8F0", display:"grid", gap:10, marginBottom:14 }}>
-        {auction.organizer_upi_id && (
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-            <div>
-              <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>UPI ID</div>
-              <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{auction.organizer_upi_id}</div>
-            </div>
-            <button type="button" onClick={() => { navigator.clipboard?.writeText(auction.organizer_upi_id); setCopiedText("upi"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="upi"?"#166534":"#64748B" }}>
-              {copiedText === "upi" ? "Copied!" : "Copy"}
-            </button>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>UPI ID</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{upiId}</div>
           </div>
-        )}
+          <button type="button" onClick={() => { navigator.clipboard?.writeText(upiId); setCopiedText("upi"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="upi"?"#166534":"#64748B" }}>
+            {copiedText === "upi" ? "Copied!" : "Copy"}
+          </button>
+        </div>
 
-        {auction.organizer_payment_phone && (
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop: auction.organizer_upi_id ? 8 : 0, borderTop: auction.organizer_upi_id ? "1px solid #F1F5F9" : "none" }}>
-            <div>
-              <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
-              <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>+91 {auction.organizer_payment_phone}</div>
-            </div>
-            <button type="button" onClick={() => { navigator.clipboard?.writeText(auction.organizer_payment_phone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
-              {copiedText === "phone" ? "Copied!" : "Copy"}
-            </button>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px solid #F1F5F9" }}>
+          <div>
+            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>+91 {paymentPhone}</div>
           </div>
-        )}
+          <button type="button" onClick={() => { navigator.clipboard?.writeText(paymentPhone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
+            {copiedText === "phone" ? "Copied!" : "Copy"}
+          </button>
+        </div>
 
-        {auction.organizer_upi_id && (
-          <div style={{ display:"grid", gap:8, marginTop:6 }}>
-            <a
-              href={`tez://upi/pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
-              onClick={() => { if (auction.organizer_payment_phone) navigator.clipboard?.writeText(auction.organizer_payment_phone) }}
-              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"11px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
-            >
-              <span>📱</span> Pay ₹{auction.player_entry_fee} with Google Pay
-            </a>
-            <a
-              href={`upi://pay?pa=${encodeURIComponent(auction.organizer_upi_id)}&pn=${encodeURIComponent(auction.name || "Selected Sports")}&am=${auction.player_entry_fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
-              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:12, fontWeight:700, textAlign:"center" }}
-            >
-              <span>⚡</span> Pay via Any UPI App
-            </a>
-          </div>
-        )}
+        <div style={{ display:"grid", gap:8, marginTop:6 }}>
+          <a
+            href={`tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(auction?.name || "Selected Sports")}&am=${fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
+            onClick={() => { if (paymentPhone) navigator.clipboard?.writeText(paymentPhone) }}
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"11px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
+          >
+            <span>📱</span> Pay ₹{fee} with Google Pay
+          </a>
+          <a
+            href={`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(auction?.name || "Selected Sports")}&am=${fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:12, fontWeight:700, textAlign:"center" }}
+          >
+            <span>⚡</span> Pay ₹{fee} via Any UPI App
+          </a>
+        </div>
       </div>
 
       {/* Screenshot Upload Field */}
@@ -475,8 +473,6 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [receiptPreview, setReceiptPreview] = useState("")
   const [copiedText, setCopiedText] = useState("")
   const [lookedUp, setLookedUp] = useState(false)
-  const [profileComplete, setProfileComplete] = useState(false)
-  const [editingExisting, setEditingExisting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
@@ -521,12 +517,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
           if (p.jersey_number) setJerseyNumber(p.jersey_number)
           if (p.jersey_size) setJerseySize(p.jersey_size)
           setLookedUp(true)
-          const complete = !!(parts[0] && parts.length > 1 && p.city && p.playing_role && ROLES.includes(p.playing_role) && p.birth_date && p.profile_image_url && p.jersey_number && p.jersey_size)
-          setProfileComplete(complete)
-          setEditingExisting(false)
         } else {
           setLookedUp(false)
-          setProfileComplete(false)
         }
       }).catch(() => {})
     }, 400)
@@ -549,9 +541,9 @@ export default function PublicAuctionRegister({ auctionCode }) {
     if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
-    const fee = Number(auction?.player_entry_fee) || 0
-    if (fee > 0 && !receiptFile && !receiptPreview) {
-      setError("Please transfer the registration fee and upload your payment screenshot."); return
+    const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
+    if (!receiptFile && !receiptPreview) {
+      setError(`Please transfer the registration fee of ₹${fee} and upload your payment screenshot.`); return
     }
     setBusy(true)
     try {
@@ -564,7 +556,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
       await registerAuctionPlayer(`${firstName.trim()} ${lastName.trim()}`, cleaned, role, birthDate, photoUrl, auctionId, {
         city: city.trim(), jerseyNumber: jerseyNumber.trim(), jerseySize,
         paymentScreenshotUrl: receiptUrl,
-        paymentStatus: fee > 0 ? "pending" : "free"
+        paymentStatus: "pending"
       })
       setDone(true)
     } catch(e) { setError(e.message) }
@@ -695,7 +687,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
         <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>
           {[
-            ["register", "📝 Register"],
+            ["register", `📝 Register (₹${Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180})`],
             ["details", "📋 Details"],
             ["players", `🏏 Players (${registeredCount})`],
             ["teams", "🛡️ Teams & Squads"],
@@ -731,52 +723,27 @@ export default function PublicAuctionRegister({ auctionCode }) {
         <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"1px solid #E2E8F0" }}>
 
           <label style={lS}>Phone Number</label>
-          <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: lookedUp ? 6 : 16 }}/>
-          {lookedUp && profileComplete && !editingExisting && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — your profile is already complete.</div>}
-          {lookedUp && (!profileComplete || editingExisting) && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — details auto-filled below{!profileComplete ? ", just fill in what's missing" : ""}.</div>}
+          <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: lookedUp ? 8 : 16 }}/>
+          {lookedUp && (
+            <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600, background:"rgba(22,101,52,0.08)", border:"1px solid rgba(22,101,52,0.2)", padding:"10px 12px", borderRadius:9, lineHeight:1.5 }}>
+              ✓ Found your account! Your details are pre-filled below. You can review or edit any fields, then complete payment to submit.
+            </div>
+          )}
 
-          {lookedUp && profileComplete && !editingExisting ? (
-            <>
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"18px 14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
-                <img src={photoPreview} alt={firstName} style={{ width:120, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #166534", marginBottom:10 }}/>
-                <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
-                <div style={{ fontSize:12, color:"#64748B", marginTop:3 }}>{city} · {role}</div>
-                <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
-              </div>
-              <div style={{ fontSize:12, color:"#64748B", marginBottom:16, textAlign:"center" }}>
-                These are your saved details. <button type="button" onClick={()=>setEditingExisting(true)} style={{ background:"none", border:"none", color:"#166534", fontWeight:700, cursor:"pointer", padding:0, fontSize:12, textDecoration:"underline" }}>Edit before submitting</button>
-              </div>
-              <PaymentSection
-                auction={auction}
-                firstName={firstName}
-                receiptFile={receiptFile}
-                receiptPreview={receiptPreview}
-                setReceiptFile={setReceiptFile}
-                setReceiptPreview={setReceiptPreview}
-                copiedText={copiedText}
-                setCopiedText={setCopiedText}
-              />
-              {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
-              <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : "Confirm & Register for Auction"}</button>
-            </>
-          ) : (
-            <>
           <div style={{ marginBottom:16 }}>
             <PhotoUploadField photoPreview={photoPreview} onPhotoSaved={(file, dataUrl) => { setPhotoFile(file); setPhotoPreview(dataUrl) }}/>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
             <div>
               <label style={lS}>First Name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} disabled={lookedUp} placeholder="First name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={iS}/>
             </div>
             <div>
               <label style={lS}>Last Name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} disabled={lookedUp} placeholder="Last name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={iS}/>
             </div>
           </div>
-          {lookedUp && <div style={{ fontSize:11, color:"#94A3B8", marginBottom:10 }}>Name matches your existing account and can't be changed here.</div>}
-          <div style={{ marginBottom:16 }}/>
 
           <label style={lS}>State</label>
           <select value={selectedState} onChange={e => { setSelectedState(e.target.value); setCity(""); setCityMode("select") }} style={{ ...iS, marginBottom:16 }}>
@@ -824,7 +791,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
             ))}
           </div>
 
-          {/* Mandatory Payment Section when entry fee is set */}
+          {/* Mandatory Payment Section */}
           <PaymentSection
             auction={auction}
             firstName={firstName}
@@ -841,8 +808,6 @@ export default function PublicAuctionRegister({ auctionCode }) {
           <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>
             {busy ? "Registering..." : "Register for Auction"}
           </button>
-            </>
-          )}
         </div>
         )}
       </div>
