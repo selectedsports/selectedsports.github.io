@@ -715,7 +715,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
 
               <div style={{ display:"grid", gap:8 }}>
                 <a
-                  href={`tez://upi/pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
+                  href={`upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${plan.price}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (createdAuction?.name || name))}`}
                   onClick={() => copyText(ADMIN_PHONE, "phone")}
                   style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#1A73E8", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
                 >
@@ -885,7 +885,7 @@ export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
 
           <div style={{ display:"grid", gap:8 }}>
             <a
-              href={`tez://upi/pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${amount}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (auction?.name || "Cricket Auction"))}`}
+              href={`upi://pay?pa=${encodeURIComponent(adminUpi)}&pn=${encodeURIComponent("Selected Sports Admin")}&am=${amount}&cu=INR&tn=${encodeURIComponent("Auction plan - " + (auction?.name || "Cricket Auction"))}`}
               onClick={() => copyText(ADMIN_PHONE, "phone")}
               style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", padding:"11px", borderRadius:8, background:"#1A73E8", color:"#FFFFFF", fontSize:13, fontWeight:800, textDecoration:"none", boxSizing:"border-box", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
             >

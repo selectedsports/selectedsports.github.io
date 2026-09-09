@@ -358,60 +358,98 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
   const rawPhone = auction?.organizer_payment_phone || ADMIN_PHONE || "9897439743"
   const paymentPhone = String(rawPhone).replace(/[^0-9]/g, "").slice(-10) || "9897439743"
 
+  const payeeName = "Zeeshan Shakoor Bagwan"
+  const cleanUpiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(payeeName)}&am=${fee}&cu=INR`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(cleanUpiUrl)}`
+
   return (
     <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
         <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>Registration Fee Required</div>
         <span style={{ background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:800, padding:"4px 10px", borderRadius:8 }}>₹{fee}</span>
       </div>
-      <div style={{ fontSize:12, color:"#64748B", marginBottom:12, lineHeight:1.5 }}>
-        Please transfer the registration fee of ₹{fee} to the details below and upload your payment screenshot. Form cannot be submitted without payment proof.
+      <div style={{ fontSize:12, color:"#64748B", marginBottom:14, lineHeight:1.5 }}>
+        Please transfer the registration fee of ₹{fee} using any of the easy methods below and attach your payment screenshot.
       </div>
 
-      {/* Notice explaining Google Pay opens while page stays in background */}
-      <div style={{ fontSize:11, color:"#1E40AF", background:"rgba(37,99,235,0.08)", padding:"9px 12px", borderRadius:8, border:"1px solid rgba(37,99,235,0.2)", marginBottom:14, lineHeight:1.4 }}>
-        💡 <strong>Notice:</strong> When you tap <em>Pay with Google Pay</em>, your GPay app will open. If GPay displays an advisory notice at the bottom, tap <strong>DISMISS</strong> to proceed with the payment, take a screenshot, and upload it below.
-      </div>
+      {/* Recommended 100% Reliable Method: Pay by Google Pay Phone Number */}
+      <div style={{ background:"#FFFFFF", border:"1.5px solid #166534", borderRadius:12, padding:"14px", marginBottom:12, boxShadow:"0 2px 8px rgba(22,101,52,0.06)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6 }}>
+          <div style={{ fontSize:11, fontWeight:800, color:"#166534", textTransform:"uppercase", letterSpacing:0.5 }}>⭐ Recommended • Instant &amp; Guaranteed</div>
+          <span style={{ background:"#DCFCE7", color:"#166534", fontSize:10, fontWeight:800, padding:"2px 8px", borderRadius:6 }}>No App Issues</span>
+        </div>
+        <div style={{ fontSize:13, fontWeight:800, color:"#0F172A", marginBottom:2 }}>Pay directly to Google Pay Number</div>
+        <div style={{ fontSize:12, color:"#475569", marginBottom:10 }}>
+          Name: <strong>Zeeshan Shakoor Bagwan</strong> · Amount: <strong>₹{fee}</strong>
+        </div>
 
-      {/* Payment Info */}
-      <div style={{ background:"#FFFFFF", padding:"12px 14px", borderRadius:10, border:"1px solid #E2E8F0", display:"grid", gap:10, marginBottom:14 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"#F8FAF8", border:"1px solid #E2E8F0", padding:"10px 12px", borderRadius:9, marginBottom:10 }}>
           <div>
-            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>UPI ID</div>
+            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay Number</div>
+            <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", letterSpacing:1 }}>{paymentPhone}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(paymentPhone)
+              setCopiedText("phone")
+              setTimeout(() => setCopiedText(""), 2000)
+            }}
+            style={{ padding:"8px 14px", borderRadius:8, border:"none", background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer" }}
+          >
+            {copiedText === "phone" ? "✓ Copied!" : "Copy Number"}
+          </button>
+        </div>
+
+        <div style={{ fontSize:11, color:"#64748B", lineHeight:1.5 }}>
+          👉 <strong>How to pay:</strong> Open Google Pay ➔ Tap <strong>Pay phone number</strong> ➔ Paste <strong>{paymentPhone}</strong> ➔ Send <strong>₹{fee}</strong>
+        </div>
+      </div>
+
+      {/* Alternative Methods: Direct App Tap or QR Code */}
+      <div style={{ background:"#FFFFFF", borderRadius:12, padding:"14px", border:"1px solid #E2E8F0", marginBottom:14 }}>
+        <div style={{ fontSize:11, fontWeight:700, color:"#64748B", textTransform:"uppercase", marginBottom:10 }}>Other Payment Options</div>
+
+        {/* UPI ID Row */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, paddingBottom:10, borderBottom:"1px solid #F1F5F9" }}>
+          <div>
+            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>UPI ID (Zeeshan Shakoor Bagwan)</div>
             <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{upiId}</div>
           </div>
-          <button type="button" onClick={() => { navigator.clipboard?.writeText(upiId); setCopiedText("upi"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="upi"?"#166534":"#64748B" }}>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard?.writeText(upiId)
+              setCopiedText("upi")
+              setTimeout(() => setCopiedText(""), 2000)
+            }}
+            style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="upi"?"#166534":"#64748B" }}
+          >
             {copiedText === "upi" ? "Copied!" : "Copy"}
           </button>
         </div>
 
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px solid #F1F5F9" }}>
-          <div>
-            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
-            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{paymentPhone}</div>
-          </div>
-          <button type="button" onClick={() => { navigator.clipboard?.writeText(paymentPhone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
-            {copiedText === "phone" ? "Copied!" : "Copy"}
-          </button>
+        {/* Direct Pay Button */}
+        <div style={{ display:"grid", gap:8, marginBottom:14 }}>
+          <a
+            href={cleanUpiUrl}
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"12px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
+          >
+            <span>📱</span> Pay ₹{fee} with Google Pay / UPI App
+          </a>
         </div>
 
-        <div style={{ display:"grid", gap:8, marginTop:6 }}>
-          <a
-            href={`tez://upi/pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(auction?.name || "Selected Sports")}&am=${fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
-            onClick={() => { if (paymentPhone) navigator.clipboard?.writeText(paymentPhone) }}
-            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"11px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
-          >
-            <span>📱</span> Pay ₹{fee} with Google Pay
-          </a>
-          <a
-            href={`upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(auction?.name || "Selected Sports")}&am=${fee}&cu=INR&tn=${encodeURIComponent("Auction Fee - " + (firstName || "Player"))}`}
-            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:6, padding:"10px", borderRadius:8, background:"#166534", color:"#FFFFFF", textDecoration:"none", fontSize:12, fontWeight:700, textAlign:"center" }}
-          >
-            <span>⚡</span> Pay ₹{fee} via Any UPI App
-          </a>
-        </div>
-        <div style={{ fontSize:11, color:"#64748B", textAlign:"center", marginTop:2 }}>
-          Or pay manually in GPay to <strong>{paymentPhone}</strong> or UPI <strong>{upiId}</strong>
+        {/* Live Camera Scannable QR Code */}
+        <div style={{ textAlign:"center", padding:"12px", background:"#F8FAF8", borderRadius:10, border:"1px dashed #CBD5E1" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#166534", marginBottom:6 }}>📸 Or Scan with Camera via Google Pay / UPI</div>
+          <img
+            src={qrUrl}
+            alt="Payment QR Code"
+            style={{ width:150, height:150, borderRadius:8, border:"2px solid #FFFFFF", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", display:"inline-block" }}
+          />
+          <div style={{ fontSize:11, color:"#64748B", marginTop:6 }}>
+            Scan using live camera in Google Pay (has zero gallery limits)
+          </div>
         </div>
       </div>
 
