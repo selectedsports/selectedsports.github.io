@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, fetchAuctionByCode, uploadProfilePhoto, uploadPaymentReceipt, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionSponsors } from "../db.js"
+import { registerAuctionPlayer, checkAuctionPhoneExists, findPlayerByPhone, findAuctionPlayerByPhone, updateAuctionPlayerRegistration, fetchAuctionByCode, uploadProfilePhoto, uploadPaymentReceipt, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionSponsors } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
 import { isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
@@ -369,8 +369,9 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [receiptPreview, setReceiptPreview] = useState("")
   const [copiedText, setCopiedText] = useState("")
   const [lookedUp, setLookedUp] = useState(false)
-  const [profileComplete, setProfileComplete] = useState(false)
-  const [editingExisting, setEditingExisting] = useState(false)
+  const [alreadyInAuction, setAlreadyInAuction] = useState(false)
+  const [existingAuctionPlayerId, setExistingAuctionPlayerId] = useState(null)
+  const [isUpdated, setIsUpdated] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
@@ -398,9 +399,40 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   useEffect(() => {
     const cleaned = phone.replace(/[^0-9]/g, "")
-    if (cleaned.length !== 10) { setLookedUp(false); return }
-    const t = setTimeout(() => {
-      findPlayerByPhone(cleaned).then(p => {
+    if (cleaned.length !== 10) {
+      setLookedUp(false)
+      setAlreadyInAuction(false)
+      setExistingAuctionPlayerId(null)
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        // 1. Check if already registered in this auction
+        const ap = await findAuctionPlayerByPhone(cleaned, auctionId)
+        if (ap) {
+          const parts = (ap.name || "").trim().split(/\s+/)
+          setFirstName(parts[0] || "")
+          setLastName(parts.slice(1).join(" ") || "")
+          if (ap.city) {
+            setCity(ap.city)
+            const foundState = Object.keys(CITIES_BY_STATE).find(st => CITIES_BY_STATE[st].includes(ap.city))
+            if (foundState) { setSelectedState(foundState); setCityMode("select") }
+            else { setCityMode("other") }
+          }
+          if (ap.playing_role && ROLES.includes(ap.playing_role)) setRole(ap.playing_role)
+          if (ap.birth_date) setBirthDate(ap.birth_date)
+          if (ap.profile_image_url) setPhotoPreview(ap.profile_image_url)
+          if (ap.jersey_number) setJerseyNumber(String(ap.jersey_number))
+          if (ap.jersey_size) setJerseySize(ap.jersey_size)
+          if (ap.payment_screenshot_url) setReceiptPreview(ap.payment_screenshot_url)
+          setLookedUp(true)
+          setAlreadyInAuction(true)
+          setExistingAuctionPlayerId(ap.id)
+          return
+        }
+
+        // 2. Fallback: check Selected Sports player database
+        const p = await findPlayerByPhone(cleaned)
         if (p) {
           const parts = (p.name || "").trim().split(/\s+/)
           setFirstName(parts[0] || "")
@@ -414,20 +446,22 @@ export default function PublicAuctionRegister({ auctionCode }) {
           if (p.playing_role && ROLES.includes(p.playing_role)) setRole(p.playing_role)
           if (p.birth_date) setBirthDate(p.birth_date)
           if (p.profile_image_url) setPhotoPreview(p.profile_image_url)
-          if (p.jersey_number) setJerseyNumber(p.jersey_number)
+          if (p.jersey_number) setJerseyNumber(String(p.jersey_number))
           if (p.jersey_size) setJerseySize(p.jersey_size)
           setLookedUp(true)
-          const complete = !!(parts[0] && parts.length > 1 && p.city && p.playing_role && ROLES.includes(p.playing_role) && p.birth_date && p.profile_image_url && p.jersey_number && p.jersey_size)
-          setProfileComplete(complete)
-          setEditingExisting(false)
+          setAlreadyInAuction(false)
+          setExistingAuctionPlayerId(null)
         } else {
           setLookedUp(false)
-          setProfileComplete(false)
+          setAlreadyInAuction(false)
+          setExistingAuctionPlayerId(null)
         }
-      }).catch(() => {})
+      } catch (err) {
+        console.error(err)
+      }
     }, 400)
     return () => clearTimeout(t)
-  }, [phone])
+  }, [phone, auctionId])
 
   const submit = async () => {
     setError("")
@@ -451,8 +485,54 @@ export default function PublicAuctionRegister({ auctionCode }) {
     }
     setBusy(true)
     try {
-      const exists = await checkAuctionPhoneExists(cleaned, auctionId)
-      if (exists) { setError("This phone number is already registered for this auction."); setBusy(false); return }
+      if (alreadyInAuction && existingAuctionPlayerId) {
+        let photoUrl = photoPreview
+        if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
+        let receiptUrl = receiptPreview || null
+        if (!isWaitlist && receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
+        const payStatus = isWaitlist ? "waitlist" : (fee > 0 ? (receiptUrl ? "pending" : "unpaid") : "free")
+        await updateAuctionPlayerRegistration(existingAuctionPlayerId, {
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          playingRole: role,
+          birthDate,
+          profileImageUrl: photoUrl,
+          city: city.trim(),
+          jerseyNumber: jerseyNumber.trim(),
+          jerseySize,
+          paymentScreenshotUrl: receiptUrl,
+          paymentStatus: payStatus
+        })
+        setIsUpdated(true)
+        setDone(true)
+        setBusy(false)
+        return
+      }
+
+      // Check if phone was registered in auction between form open and submit
+      const existingInAuction = await findAuctionPlayerByPhone(cleaned, auctionId)
+      if (existingInAuction) {
+        let photoUrl = photoPreview
+        if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
+        let receiptUrl = receiptPreview || null
+        if (!isWaitlist && receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
+        const payStatus = isWaitlist ? "waitlist" : (fee > 0 ? (receiptUrl ? "pending" : "unpaid") : "free")
+        await updateAuctionPlayerRegistration(existingInAuction.id, {
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          playingRole: role,
+          birthDate,
+          profileImageUrl: photoUrl,
+          city: city.trim(),
+          jerseyNumber: jerseyNumber.trim(),
+          jerseySize,
+          paymentScreenshotUrl: receiptUrl,
+          paymentStatus: payStatus
+        })
+        setIsUpdated(true)
+        setDone(true)
+        setBusy(false)
+        return
+      }
+
       let photoUrl = photoPreview
       if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
       let receiptUrl = (!isWaitlist && receiptPreview) ? receiptPreview : null
@@ -463,6 +543,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
         paymentScreenshotUrl: receiptUrl,
         paymentStatus: payStatus
       })
+      setIsUpdated(false)
       setDone(true)
     } catch(e) { setError(e.message) }
     setBusy(false)
@@ -537,12 +618,16 @@ export default function PublicAuctionRegister({ auctionCode }) {
       <Header auctionName={auction?.name} organizedBy={auction?.organized_by}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>{isWaitlist ? "⏳" : "✅"}</div>
+          <div style={{ fontSize:36, marginBottom:10 }}>{isUpdated ? "✅" : (isWaitlist ? "⏳" : "✅")}</div>
           <div style={{ fontWeight:800, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)" }}>
-            {isWaitlist ? "You're on the Standby Waitlist!" : "You're registered!"}
+            {isUpdated ? "Registration Details Updated!" : (isWaitlist ? "You're on the Standby Waitlist!" : "You're registered!")}
           </div>
           <div style={{ fontSize:13, color:"#64748B", marginTop:8, lineHeight:1.5 }}>
-            {isWaitlist ? (
+            {isUpdated ? (
+              <span>
+                {firstName}, your auction registration details and profile have been successfully saved and updated.
+              </span>
+            ) : isWaitlist ? (
               <span>
                 {firstName}, all 45 tournament squad spots are currently filled. No payment was taken — your details have been saved to the standby waitlist. If an opening becomes available in a squad, the organizer will contact you directly to confirm your spot and collect the registration fee.
               </span>
@@ -634,41 +719,42 @@ export default function PublicAuctionRegister({ auctionCode }) {
         <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"1px solid #E2E8F0" }}>
 
           <label style={lS}>Phone Number</label>
-          <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: lookedUp ? 6 : 16 }}/>
-          {lookedUp && profileComplete && !editingExisting && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — your profile is already complete.</div>}
-          {lookedUp && (!profileComplete || editingExisting) && <div style={{ fontSize:12, color:"#166534", marginBottom:16, fontWeight:600 }}>✓ Found your account — details auto-filled below{!profileComplete ? ", just fill in what's missing" : ""}.</div>}
+          <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: (alreadyInAuction || lookedUp) ? 10 : 16 }}/>
 
-          {lookedUp && profileComplete && !editingExisting ? (
-            <>
-              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"18px 14px", background:"#F8FAF8", borderRadius:12, border:"1px solid #E2E8F0", marginBottom:16 }}>
-                <img src={photoPreview} alt={firstName} style={{ width:120, height:140, borderRadius:14, objectFit:"cover", border:"2px solid #166534", marginBottom:10 }}/>
-                <div style={{ fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>{firstName} {lastName}</div>
-                <div style={{ fontSize:12, color:"#64748B", marginTop:3 }}>{city} · {role}</div>
-                <div style={{ fontSize:12, color:"#94A3B8", marginTop:1 }}>Jersey #{jerseyNumber} ({jerseySize}) · DOB {birthDate}</div>
+          {alreadyInAuction && (
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"12px 14px", background:"rgba(22,101,52,0.08)", border:"1.5px solid #166534", borderRadius:10, marginBottom:16 }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>✓</span>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:"#166534" }}>Already Registered for this Auction</div>
+                <div style={{ fontSize:11.5, color:"#334155", marginTop:2 }}>Your complete details have been pre-filled below. You can review, edit, or fill in any missing details and save your changes.</div>
               </div>
-              <div style={{ fontSize:12, color:"#64748B", marginBottom:16, textAlign:"center" }}>
-                These are your saved details. <button type="button" onClick={()=>setEditingExisting(true)} style={{ background:"none", border:"none", color:"#166534", fontWeight:700, cursor:"pointer", padding:0, fontSize:12, textDecoration:"underline" }}>Edit before submitting</button>
+            </div>
+          )}
+
+          {!alreadyInAuction && lookedUp && (
+            <div style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"12px 14px", background:"rgba(37,99,235,0.08)", border:"1.5px solid #2563EB", borderRadius:10, marginBottom:16 }}>
+              <span style={{ fontSize:18, lineHeight:1 }}>👤</span>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:"#1E40AF" }}>Selected Sports Profile Found</div>
+                <div style={{ fontSize:11.5, color:"#334155", marginTop:2 }}>Your profile details have been auto-filled below. Review your details, make any needed edits, and complete your registration.</div>
               </div>
-              {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
-              <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>{busy ? "Registering..." : (isWaitlist ? "Confirm & Join Standby Waitlist" : "Confirm & Register for Auction")}</button>
-            </>
-          ) : (
-            <>
+            </div>
+          )}
+
           <div style={{ marginBottom:16 }}>
             <PhotoUploadField photoPreview={photoPreview} onPhotoSaved={(file, dataUrl) => { setPhotoFile(file); setPhotoPreview(dataUrl) }}/>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:6 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
             <div>
               <label style={lS}>First Name</label>
-              <input value={firstName} onChange={e => setFirstName(e.target.value)} disabled={lookedUp} placeholder="First name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
+              <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={iS}/>
             </div>
             <div>
               <label style={lS}>Last Name</label>
-              <input value={lastName} onChange={e => setLastName(e.target.value)} disabled={lookedUp} placeholder="Last name" style={{ ...iS, background: lookedUp ? "#F1F5F9" : iS.background, color: lookedUp ? "#64748B" : iS.color }}/>
+              <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={iS}/>
             </div>
           </div>
-          {lookedUp && <div style={{ fontSize:11, color:"#94A3B8", marginBottom:10 }}>Name matches your existing account and can't be changed here.</div>}
           <div style={{ marginBottom:16 }}/>
 
           <label style={lS}>State</label>
@@ -834,10 +920,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
           {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
 
           <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>
-            {busy ? "Registering..." : (isWaitlist ? "Join Standby Waitlist (No Payment Needed)" : "Register for Auction")}
+            {busy ? "Saving..." : (alreadyInAuction ? "💾 Save & Update Registration" : (isWaitlist ? "Join Standby Waitlist (No Payment Needed)" : "🏏 Confirm & Register for Auction"))}
           </button>
-            </>
-          )}
         </div>
         )}
       </div>
