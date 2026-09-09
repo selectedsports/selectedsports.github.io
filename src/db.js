@@ -1368,22 +1368,74 @@ export async function fetchAllAuctionPlayerCounts() {
 export async function fetchPlayerAuctionHistory(phone) {
   if (!phone) return []
   const norm = phone.replace(/[^0-9]/g, "").slice(-10)
+
   try {
     const { data, error } = await supabase
       .from("auction_players")
-      .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, organized_by), auction_teams!sold_team_id(id, name, color, logo_url)")
+      .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, logo_url, location, auction_time), auction_teams!sold_team_id(id, name, owner_name, captain_name)")
       .or(`phone.eq.${phone},phone.eq.${norm},phone.like.%${norm}`)
       .order("created_at", { ascending: false })
-    if (!error && data) return data.filter(r => r.auctions)
-  } catch {}
 
-  const { data, error } = await supabase
-    .from("auction_players")
-    .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, organized_by)")
-    .or(`phone.eq.${phone},phone.eq.${norm},phone.like.%${norm}`)
-    .order("created_at", { ascending: false })
-  if (error) throw error
-  return (data || []).filter(r => r.auctions)
+    if (!error && data) {
+      const results = data.filter(r => r.auctions)
+      const teamIds = results.filter(r => r.sold_team_id).map(r => r.sold_team_id)
+      
+      let logoMap = {}
+      if (teamIds.length > 0) {
+        try {
+          const keys = teamIds.map(tid => `auction_team_logo_${tid}`)
+          const { data: sData } = await supabase.from("settings").select("key, value").in("key", keys)
+          if (sData) sData.forEach(s => { logoMap[s.key] = s.value })
+        } catch {}
+      }
+
+      return results.map(r => {
+        const a = r.auctions || {}
+        let orgName = null
+        if (a.logo_url?.startsWith("org:")) orgName = a.logo_url.replace(/^org:/, "")
+        
+        let teamLogo = null
+        if (r.sold_team_id) {
+          teamLogo = logoMap[`auction_team_logo_${r.sold_team_id}`] || null
+        }
+
+        return {
+          ...r,
+          auctions: {
+            ...a,
+            organized_by: orgName || null
+          },
+          auction_teams: r.auction_teams ? {
+            ...r.auction_teams,
+            logo_url: teamLogo
+          } : null
+        }
+      })
+    }
+  } catch (err) {
+    console.warn("fetchPlayerAuctionHistory main query failed:", err)
+  }
+
+  // Fallback: simpler query
+  try {
+    const { data, error } = await supabase
+      .from("auction_players")
+      .select("*, auctions(id, name, auction_code, auction_date, points_purse, status, logo_url, location, auction_time)")
+      .or(`phone.eq.${phone},phone.eq.${norm},phone.like.%${norm}`)
+      .order("created_at", { ascending: false })
+
+    if (error) throw error
+    return (data || []).filter(r => r.auctions).map(r => ({
+      ...r,
+      auctions: {
+        ...r.auctions,
+        organized_by: r.auctions.logo_url?.startsWith("org:") ? r.auctions.logo_url.replace(/^org:/, "") : null
+      }
+    }))
+  } catch (err2) {
+    console.warn("fetchPlayerAuctionHistory fallback failed:", err2)
+    return []
+  }
 }
 
 // One-time backfill: sync every existing auction registration (across every

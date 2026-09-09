@@ -390,6 +390,57 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
           </div>
         </div>
 
+        {/* Desktop Navigation Tabs */}
+        {!isMobile && (
+          <nav style={{ display: "flex", alignItems: "center", gap: 4, margin: "0 16px" }}>
+            {[
+              { id: "dashboard", label: "Dashboard", icon: Home },
+              { id: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
+              { id: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => a.is_captain || a.status === "captain") ? "👑 Captain" : (auctionHistory.length > 0 ? auctionHistory.length : null) },
+              { id: "leaderboard", label: "Rankings", icon: Award },
+              { id: "profile", label: "Pass & Profile", icon: UserIcon },
+            ].map(item => {
+              const isActive = tab === item.id
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setTab(item.id)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "7px 12px",
+                    borderRadius: 9,
+                    border: isActive ? "1.5px solid #166534" : "1.5px solid transparent",
+                    background: isActive ? "rgba(22,101,52,0.08)" : "transparent",
+                    color: isActive ? "#166534" : "#475569",
+                    fontWeight: isActive ? 800 : 600,
+                    fontSize: 12.5,
+                    cursor: "pointer",
+                    fontFamily: "var(--font-body)",
+                    transition: "all 140ms"
+                  }}
+                >
+                  <item.icon size={15} color={isActive ? "#166534" : "#64748B"} />
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span style={{
+                      background: item.badge === "👑 Captain" ? "linear-gradient(135deg, #F59E0B, #D97706)" : "#EF4444",
+                      color: item.badge === "👑 Captain" ? "#0F172A" : "#FFFFFF",
+                      fontSize: 10,
+                      fontWeight: 900,
+                      padding: "1px 6px",
+                      borderRadius: 999
+                    }}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           {/* Notifications Bell */}
           <button
@@ -660,75 +711,284 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
       )}
 
       {/* ── MAIN PORTAL CONTENT WRAPPER ── */}
-      <main style={{ maxWidth: 680, margin: "0 auto", padding: isMobile ? "16px 12px" : "24px 16px" }}>
+      <main style={{ maxWidth: isMobile ? "100%" : 860, margin: "0 auto", padding: isMobile ? "16px 12px" : "28px 18px" }}>
         
         {/* TAB 1: DASHBOARD */}
         {tab === "dashboard" && (() => {
           const hour = new Date().getHours()
           const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
           const firstNameD = (player.name || "Player").split(" ")[0]
+          const capTournament = auctionHistory.find(ap => ap.status === "captain" || ap.is_captain)
+          const hasCaptainRole = !!capTournament
+          const captainTeamName = capTournament?.auction_teams?.name || "Strikers"
+          const spotlightAuction = capTournament || (auctionHistory.length > 0 ? auctionHistory[0] : null)
 
           return (
             <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-              {/* Top stats banner if any */}
-              <StatsBanner stats={stats} isMobile={isMobile}/>
-
               {/* Player Hero Card */}
               <div style={{
-                background: "linear-gradient(135deg, #166534 0%, #15803D 60%, #0F766E 100%)",
-                borderRadius: 20,
-                padding: isMobile ? "20px 18px" : "24px 22px",
+                background: "linear-gradient(135deg, #14532D 0%, #166534 50%, #0F766E 100%)",
+                borderRadius: 22,
+                padding: isMobile ? "20px 18px" : "24px 24px",
                 color: "#FFFFFF",
-                boxShadow: "0 10px 25px rgba(22,101,52,0.25)",
+                boxShadow: "0 10px 30px rgba(20,83,45,0.28)",
                 position: "relative",
-                overflow: "hidden"
+                overflow: "hidden",
+                border: hasCaptainRole ? "2px solid #F59E0B" : "1px solid rgba(255,255,255,0.15)"
               }}>
-                <div style={{ position: "absolute", top: -20, right: -20, width: 140, height: 140, borderRadius: "50%", background: "rgba(255,255,255,0.08)", pointerEvents: "none" }}/>
+                <div style={{ position: "absolute", top: -30, right: -30, width: 150, height: 150, borderRadius: "50%", background: hasCaptainRole ? "rgba(245,158,11,0.15)" : "rgba(255,255,255,0.08)", pointerEvents: "none" }}/>
 
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                  <div>
-                    <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.18)", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" }}>
-                      🏏 {player.playing_role || "Cricket Player"}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.18)", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase" }}>
+                        🏏 {player.playing_role || "Cricket Player"}
+                      </span>
+                      {hasCaptainRole && (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 900, letterSpacing: 0.5, boxShadow: "0 2px 8px rgba(245,158,11,0.35)" }}>
+                          👑 CAPTAIN · TEAM {captainTeamName.toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                    <h1 style={{ fontSize: isMobile ? 22 : 26, fontWeight: 900, margin: "8px 0 4px", fontFamily: "var(--font-head)" }}>
+                    <h1 style={{ fontSize: isMobile ? 22 : 28, fontWeight: 900, margin: "4px 0", fontFamily: "var(--font-head)" }}>
                       {greeting}, {firstNameD}!
                     </h1>
-                    <div style={{ fontSize: 12, opacity: 0.9, display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 12.5, opacity: 0.9, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
                       <span><Calendar size={12} style={{ verticalAlign: "-2px" }}/> {dayName(todayStr)}</span>
                       <span>·</span>
-                      <span>{player.city || "Pune"}</span>
+                      <span>📍 {player.city || "Pune"}</span>
                       {player.jersey_number && (
                         <>
                           <span>·</span>
-                          <span style={{ fontWeight: 800, background: "rgba(255,255,255,0.2)", padding: "1px 6px", borderRadius: 4 }}>#{player.jersey_number}</span>
+                          <span style={{ fontWeight: 800, background: "rgba(255,255,255,0.2)", padding: "1px 7px", borderRadius: 4 }}>
+                            Jersey #{player.jersey_number} ({player.jersey_size || "L"})
+                          </span>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <div onClick={() => setTab("profile")} style={{ cursor: "pointer", textAlign: "center" }}>
+                  <div onClick={() => setTab("profile")} style={{ cursor: "pointer", textAlign: "center", flexShrink: 0 }}>
                     {player.profile_image_url ? (
-                      <img src={player.profile_image_url} alt={player.name} style={{ width: 62, height: 62, borderRadius: "50%", objectFit: "cover", border: "3px solid #FFFFFF", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}/>
+                      <img src={player.profile_image_url} alt={player.name} style={{ width: 68, height: 68, borderRadius: "50%", objectFit: "cover", border: hasCaptainRole ? "3px solid #F59E0B" : "3px solid #FFFFFF", boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}/>
                     ) : (
-                      <Av name={player.name} id={player.id} sz={62} />
+                      <Av name={player.name} id={player.id} sz={68} />
                     )}
                   </div>
                 </div>
 
-                {/* Micro Attendance tracker */}
-                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <Activity size={14} />
-                    <span>Attendance Rate: <strong>{attendanceRate}%</strong></span>
+                {/* Quick stats / Attendance tracker */}
+                <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12, flexWrap: "wrap", gap: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <Activity size={14} />
+                      <span>Attendance: <strong>{attendanceRate}%</strong></span>
+                    </div>
+                    <span>·</span>
+                    <span>Confirmed: <strong>{confirmedMatches.length}</strong></span>
                   </div>
                   <button
                     onClick={() => setTab("profile")}
-                    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}
+                    style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#FFFFFF", fontSize: 11.5, fontWeight: 800, padding: "5px 12px", borderRadius: 8, cursor: "pointer" }}
                   >
-                    View Pass →
+                    Digital Pass →
                   </button>
                 </div>
               </div>
+
+              {/* ── TOURNAMENT & CAPTAIN SPOTLIGHT CARD ── */}
+              {spotlightAuction && (() => {
+                const auc = spotlightAuction.auctions || {}
+                const team = spotlightAuction.auction_teams || {}
+                const isCap = spotlightAuction.status === "captain" || spotlightAuction.is_captain
+                const teamN = team.name || (spotlightAuction.status === "sold" ? "Drafted Team" : null)
+
+                return (
+                  <div style={{
+                    background: "linear-gradient(145deg, #131E30 0%, #1E293B 100%)",
+                    borderRadius: 20,
+                    padding: isMobile ? "18px 16px" : "22px 22px",
+                    color: "#FFFFFF",
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.35)",
+                    border: isCap ? "1.5px solid #F59E0B" : "1.5px solid rgba(255,255,255,0.12)",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}>
+                    {/* Glowing ambient ring */}
+                    <div style={{ position: "absolute", top: -30, right: -30, width: 140, height: 140, borderRadius: "50%", background: isCap ? "rgba(245,158,11,0.15)" : "rgba(34,197,94,0.15)", pointerEvents: "none", filter: "blur(20px)" }}/>
+
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                      <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: isCap ? "rgba(245,158,11,0.2)" : "rgba(255,255,255,0.1)", border: isCap ? "1px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.15)", padding: "4px 11px", borderRadius: 999, fontSize: 11, fontWeight: 900, color: isCap ? "#FEF08A" : "#86EFAC", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                        {isCap ? "👑 TOURNAMENT CAPTAIN & OWNER" : "🏆 TOURNAMENT REGISTRATION"}
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, background: "rgba(255,255,255,0.1)", color: "#CBD5E1", padding: "3px 8px", borderRadius: 6 }}>
+                        {auc.status === "live" ? "🔴 Live Auction" : "Registration Open"}
+                      </span>
+                    </div>
+
+                    <h2 style={{ fontSize: isMobile ? 18 : 22, fontWeight: 900, margin: "0 0 6px", fontFamily: "var(--font-head)", color: "#FFFFFF" }}>
+                      {auc.name || "Battle of Champions"}
+                    </h2>
+
+                    <div style={{ fontSize: 12, color: "#94A3B8", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+                      {auc.organized_by && <span>🛡️ Org: <strong style={{ color: "#E2E8F0" }}>{auc.organized_by}</strong></span>}
+                      {auc.location && (
+                        <>
+                          <span>·</span>
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(auc.location)}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: "#86EFAC", textDecoration: "none", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}
+                          >
+                            <MapPin size={12}/> {auc.location} ↗
+                          </a>
+                        </>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.06)", borderRadius: 10, padding: "8px 12px", marginBottom: 16, fontSize: 12, border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap" }}>
+                      <span>📅 <strong>{auc.auction_date ? fmtDate(auc.auction_date) : "Date TBD"}</strong></span>
+                      {auc.auction_time && <span>⏰ {auc.auction_time}</span>}
+                      <span>🪙 Purse: <strong>{Number(auc.points_purse || 100000).toLocaleString("en-IN")} Coins</strong></span>
+                      <span style={{ color: "#86EFAC", fontWeight: 700 }}>✅ ₹180 Fee Paid</span>
+                    </div>
+
+                    {/* Team & Captain Showcase */}
+                    {teamN && (
+                      <div style={{
+                        background: isCap ? "linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.05))" : "rgba(255,255,255,0.05)",
+                        borderRadius: 14,
+                        padding: "14px 16px",
+                        border: isCap ? "1.5px solid rgba(245,158,11,0.4)" : "1px solid rgba(255,255,255,0.1)",
+                        marginBottom: 16,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: 10
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 10,
+                            background: isCap ? "#F59E0B" : "#166534",
+                            color: isCap ? "#0F172A" : "#FFFFFF",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontWeight: 900,
+                            fontSize: 18
+                          }}>
+                            {team.logo_url ? (
+                              <img src={team.logo_url} alt={teamN} style={{ width: "100%", height: "100%", borderRadius: 10, objectFit: "cover" }}/>
+                            ) : (
+                              isCap ? "👑" : "🛡️"
+                            )}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, color: isCap ? "#FEF08A" : "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>
+                              {isCap ? "Leading as Captain & Owner" : "Assigned Team"}
+                            </div>
+                            <div style={{ fontSize: 17, fontWeight: 900, color: "#FFFFFF", fontFamily: "var(--font-head)" }}>
+                              Team {teamN}
+                            </div>
+                            <div style={{ fontSize: 11.5, color: "#CBD5E1", marginTop: 2 }}>
+                              Role: <strong>{spotlightAuction.playing_role || player.playing_role || "All-rounder"}</strong>
+                              {spotlightAuction.jersey_number && <span> · Kit #{spotlightAuction.jersey_number} ({spotlightAuction.jersey_size || "L"})</span>}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 10, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Starting Purse</div>
+                          <div style={{ fontSize: 15, fontWeight: 900, color: "#FEF08A", fontFamily: "var(--font-head)" }}>
+                            🪙 {Number(team.purse_total || auc.points_purse || 100000).toLocaleString("en-IN")}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Direct Action Links */}
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(3, 1fr)", gap: 8 }}>
+                      {team.id && auc.auction_code && (
+                        <a
+                          href={`/team-view/${auc.auction_code}/${team.id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: "#F59E0B",
+                            color: "#0F172A",
+                            fontWeight: 900,
+                            fontSize: 12,
+                            textDecoration: "none",
+                            textAlign: "center",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            boxShadow: "0 2px 6px rgba(245,158,11,0.25)"
+                          }}
+                        >
+                          👑 Team Console
+                        </a>
+                      )}
+                      {auc.auction_code && (
+                        <a
+                          href={`/live-auction/${auc.auction_code}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: "#166534",
+                            color: "#FFFFFF",
+                            fontWeight: 800,
+                            fontSize: 12,
+                            textDecoration: "none",
+                            textAlign: "center",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            border: "1px solid rgba(255,255,255,0.2)"
+                          }}
+                        >
+                          📡 Live Auction
+                        </a>
+                      )}
+                      {auc.auction_code && (
+                        <a
+                          href={`/auction-register/${auc.auction_code}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            background: "rgba(255,255,255,0.12)",
+                            color: "#FFFFFF",
+                            fontWeight: 800,
+                            fontSize: 12,
+                            textDecoration: "none",
+                            textAlign: "center",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            gridColumn: isMobile && team.id ? "span 2" : "auto"
+                          }}
+                        >
+                          📋 Squads &amp; Pool
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* ── ACTION NEEDED: PENDING MATCH INVITES ── */}
               {pendingMatches.length > 0 && (
@@ -996,58 +1256,72 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 </div>
               </Card>
 
-              {/* ── RECENT TOURNAMENT REGISTRATION SNAPSHOT ── */}
+              {/* ── TOURNAMENT & LEAGUE CENTER ── */}
               {auctionHistory.length > 0 && (
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)" }}>
-                      My Tournaments &amp; Auctions
+                    <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", display: "flex", alignItems: "center", gap: 6 }}>
+                      <Trophy size={16} color="#B8860B"/> Tournament &amp; Auction Hub
                     </div>
                     <button onClick={() => setTab("tournaments")} style={{ background: "none", border: "none", color: "#166534", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      View All ({auctionHistory.length}) →
+                      View Full Details ({auctionHistory.length}) →
                     </button>
                   </div>
 
                   {(() => {
                     const latest = auctionHistory[0]
-                    const isSold = latest.status === "sold"
+                    const auc = latest.auctions || {}
+                    const team = latest.auction_teams || {}
                     const isCaptain = latest.is_captain || latest.status === "captain"
-                    const teamName = latest.auction_teams?.name || (isSold ? "Drafted Team" : null)
 
                     return (
-                      <Card style={{ padding: "16px", border: "1.5px solid #E2E8F0" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Card style={{
+                        padding: "16px",
+                        border: isCaptain ? "1.5px solid rgba(245,158,11,0.4)" : "1.5px solid #E2E8F0",
+                        background: isCaptain ? "linear-gradient(135deg, rgba(245,158,11,0.06), #FFFFFF)" : "#FFFFFF",
+                        boxShadow: "0 2px 8px rgba(15,23,42,0.04)"
+                      }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
                           <div>
-                            <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A" }}>
-                              {latest.auctions?.name || "Tournament Auction"}
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              {isCaptain && (
+                                <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 4 }}>
+                                  👑 CAPTAIN
+                                </span>
+                              )}
+                              <div style={{ fontWeight: 800, fontSize: 15, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                                {auc.name || "Battle of Champions - Season 3"}
+                              </div>
                             </div>
-                            <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
-                              {latest.auctions?.auction_date ? fmtDate(latest.auctions.auction_date) : "Upcoming Auction"}
+                            <div style={{ fontSize: 12, color: "#64748B", marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span><Calendar size={12}/> {auc.auction_date ? fmtDate(auc.auction_date) : "12 Sep 2026"}</span>
+                              <span>·</span>
+                              <span><Clock size={12}/> {auc.auction_time || "8:00 PM"}</span>
+                              {team.name && (
+                                <>
+                                  <span>·</span>
+                                  <span style={{ color: "#166534", fontWeight: 800 }}>Team {team.name}</span>
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          <div>
-                            {isSold ? (
-                              <span style={{ background: "rgba(22,101,52,0.1)", color: "#166534", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999 }}>
-                                Sold: ₹{latest.sold_price || latest.bid_price || "—"}
-                              </span>
-                            ) : isCaptain ? (
-                              <span style={{ background: "rgba(246,196,83,0.2)", color: "#B8860B", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999 }}>
-                                👑 Captain
-                              </span>
-                            ) : (
-                              <span style={{ background: "rgba(37,99,235,0.1)", color: "#2563EB", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 999 }}>
-                                In Pool (Base: ₹{latest.base_price || 0})
-                              </span>
-                            )}
-                          </div>
+                          <button
+                            onClick={() => setTab("tournaments")}
+                            style={{
+                              padding: "7px 14px",
+                              borderRadius: 9,
+                              background: "#166534",
+                              color: "#FFFFFF",
+                              border: "none",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              cursor: "pointer"
+                            }}
+                          >
+                            Open Tournament Hub →
+                          </button>
                         </div>
-
-                        {teamName && (
-                          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #F1F5F9", fontSize: 12, color: "#166534", fontWeight: 700 }}>
-                            Team: {teamName}
-                          </div>
-                        )}
                       </Card>
                     )
                   })()}
@@ -1274,70 +1548,99 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
 
         {/* TAB 3: TOURNAMENTS & AUCTIONS */}
         {tab === "tournaments" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div>
-              <h2 style={{ margin: "0 0 4px", fontSize: isMobile ? 18 : 22, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", display: "flex", alignItems: "center", gap: 8 }}>
-                <Trophy size={22} color="#B8860B"/> My Tournaments &amp; Auctions
-              </h2>
-              <p style={{ color: "#64748B", fontSize: 13, margin: 0 }}>
-                Track your auction pool registrations, live bidding status, team assignments, and tournament fixtures.
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <Trophy size={24} color="#B8860B"/>
+                <h2 style={{ margin: 0, fontSize: isMobile ? 20 : 24, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                  My Tournaments &amp; Auctions
+                </h2>
+              </div>
+              <p style={{ color: "#64748B", fontSize: 13, margin: 0, lineHeight: 1.4 }}>
+                Official tournament registrations, team captaincy consoles, auction pool bidding stage, and team squads.
               </p>
             </div>
 
-            {/* Quick summary banner */}
+            {/* Quick Summary / Status Banner */}
             <div style={{
-              background: "linear-gradient(135deg, rgba(246,196,83,0.14), rgba(246,196,83,0.04))",
-              borderRadius: 16,
-              padding: "16px",
-              border: "1.5px solid rgba(246,196,83,0.35)",
+              background: "linear-gradient(135deg, rgba(20,83,45,0.08), rgba(245,158,11,0.08))",
+              borderRadius: 18,
+              padding: isMobile ? "16px 14px" : "18px 20px",
+              border: "1.5px solid rgba(22,101,52,0.2)",
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center"
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12
             }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#B8860B", textTransform: "uppercase", letterSpacing: 0.5 }}>AUCTION PROFILE</div>
-                <div style={{ fontSize: 15, fontWeight: 900, color: "#0F172A", marginTop: 2 }}>{player.name}</div>
-                <div style={{ fontSize: 12, color: "#64748B" }}>Registered Tournaments: <strong>{auctionHistory.length}</strong></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ position: "relative" }}>
+                  {player.profile_image_url ? (
+                    <img src={player.profile_image_url} alt={player.name} style={{ width: 50, height: 50, borderRadius: "50%", objectFit: "cover", border: "2.5px solid #166534" }}/>
+                  ) : (
+                    <Av name={player.name} id={player.id} sz={50} />
+                  )}
+                  {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
+                    <div style={{ position: "absolute", bottom: -3, right: -3, background: "#F59E0B", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, border: "2px solid #FFFFFF" }}>
+                      👑
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
+                    {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
+                      <span style={{ fontSize: 10, fontWeight: 900, background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", padding: "1px 7px", borderRadius: 4 }}>
+                        OFFICIAL CAPTAIN
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2 }}>
+                    Registered Tournaments: <strong style={{ color: "#166534" }}>{auctionHistory.length}</strong> · Player ID: #SS-{String(player.id).slice(-4).toUpperCase()}
+                  </div>
+                </div>
               </div>
+
               <button
                 onClick={() => setShowSupportModal(true)}
                 style={{
-                  padding: "8px 14px",
+                  padding: "9px 16px",
                   borderRadius: 10,
                   background: "#166534",
                   color: "#FFFFFF",
                   border: "none",
-                  fontSize: 12,
+                  fontSize: 12.5,
                   fontWeight: 800,
-                  cursor: "pointer"
+                  cursor: "pointer",
+                  fontFamily: "var(--font-head)"
                 }}
               >
-                Join Next Auction
+                + Register Next Tournament
               </button>
             </div>
 
             {/* Auction registrations list */}
             {loadingAuctions ? (
-              <Card style={{ padding: "30px", textAlign: "center" }}>
+              <Card style={{ padding: "36px", textAlign: "center" }}>
                 <Spinner />
-                <div style={{ fontSize: 12, color: "#64748B", marginTop: 8 }}>Loading auction registrations...</div>
+                <div style={{ fontSize: 13, color: "#166534", fontWeight: 700, marginTop: 10 }}>Loading tournament registrations...</div>
               </Card>
             ) : auctionHistory.length === 0 ? (
-              <Card style={{ padding: "40px 20px", textAlign: "center" }}>
-                <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
-                  <Trophy size={42} color="#CBD5E1" />
+              <Card style={{ padding: "44px 20px", textAlign: "center" }}>
+                <div style={{ marginBottom: 14, display: "flex", justifyContent: "center" }}>
+                  <Trophy size={48} color="#CBD5E1" />
                 </div>
-                <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A", marginBottom: 6, fontFamily: "var(--font-head)" }}>
-                  No Auction Registrations Found
+                <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", marginBottom: 6, fontFamily: "var(--font-head)" }}>
+                  No Tournament Registrations Found
                 </div>
-                <div style={{ color: "#64748B", fontSize: 13, maxWidth: 360, margin: "0 auto 16px", lineHeight: 1.5 }}>
-                  You haven't registered for any auction tournaments yet. When an organizer creates an auction tournament, register with your phone ({player.phone}) to enter the bidding pool.
+                <div style={{ color: "#64748B", fontSize: 13, maxWidth: 380, margin: "0 auto 18px", lineHeight: 1.5 }}>
+                  You haven't registered for any auction tournaments yet. When an organizer opens registrations, sign up with your phone ({player.phone}) to enter the player pool.
                 </div>
                 <button
                   onClick={() => setShowSupportModal(true)}
                   style={{
-                    padding: "10px 18px",
-                    borderRadius: 10,
+                    padding: "11px 20px",
+                    borderRadius: 11,
                     background: "#166534",
                     color: "#FFFFFF",
                     border: "none",
@@ -1350,27 +1653,360 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 </button>
               </Card>
             ) : (
-              <div style={{ display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 18 }}>
                 {auctionHistory.map((ap) => {
                   const auc = ap.auctions || {}
-                  const isSold = ap.status === "sold"
+                  const team = ap.auction_teams || {}
                   const isCaptain = ap.is_captain || ap.status === "captain"
+                  const isSold = ap.status === "sold"
                   const isUnsold = ap.status === "unsold"
-                  const teamName = ap.auction_teams?.name || (isSold ? "Drafted Team" : null)
+                  const teamName = team.name || (isSold ? "Drafted Team" : null)
+                  const isPaid = ap.payment_status === "paid"
 
+                  const shareCaptaincy = () => {
+                    const text = `🏏 *Official Tournament Captain Announcement!*\n\nI am leading *Team ${team.name || "Strikers"}* as Captain & Owner in *${auc.name || "Battle of Champions - Season 3"}*!\n\n📅 *Auction Date:* ${auc.auction_date ? fmtDate(auc.auction_date) : "12 Sep 2026"}\n⏰ *Time:* ${auc.auction_time || "8:00 PM IST"}\n📍 *Venue:* ${auc.location || "Kanade Sports Club, Undri · Pune, Maharashtra"}\n🪙 *Starting Purse:* ₹${Number(team.purse_total || auc.points_purse || 100000).toLocaleString("en-IN")}\n\n📡 Watch the live auction stage here:\n${window.location.origin}/live-auction/${auc.auction_code || ""}`
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank")
+                  }
+
+                  if (isCaptain) {
+                    return (
+                      <div
+                        key={ap.id}
+                        style={{
+                          background: "linear-gradient(145deg, #0B3B24 0%, #0F172A 100%)",
+                          borderRadius: 22,
+                          color: "#FFFFFF",
+                          border: "2px solid #F59E0B",
+                          boxShadow: "0 12px 35px rgba(11,59,36,0.35)",
+                          overflow: "hidden",
+                          position: "relative"
+                        }}
+                      >
+                        {/* Shimmer background circle */}
+                        <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(245,158,11,0.18), transparent 70%)", pointerEvents: "none" }}/>
+
+                        {/* Top Captain Ribbon */}
+                        <div style={{
+                          background: "linear-gradient(90deg, #F59E0B, #D97706)",
+                          padding: "8px 18px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          fontSize: 11,
+                          fontWeight: 900,
+                          color: "#0F172A",
+                          letterSpacing: 0.8,
+                          textTransform: "uppercase"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span>👑</span>
+                            <span>OFFICIAL CAPTAIN &amp; TEAM OWNER</span>
+                          </div>
+                          <span style={{ background: "rgba(15,23,42,0.15)", padding: "2px 8px", borderRadius: 4, fontSize: 10 }}>
+                            {auc.name ? auc.name.toUpperCase() : "BATTLE OF CHAMPIONS S3"}
+                          </span>
+                        </div>
+
+                        {/* Card Content */}
+                        <div style={{ padding: isMobile ? "18px 16px" : "24px 22px", display: "flex", flexDirection: "column", gap: 16 }}>
+                          {/* Tournament & Organizer Header */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+                            <div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                                <span style={{ background: "rgba(255,255,255,0.14)", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "2px 9px", borderRadius: 6 }}>
+                                  🏢 {auc.organized_by || "Morning Cricket Club - MCC"}
+                                </span>
+                                <span style={{ background: "rgba(34,197,94,0.22)", color: "#4ADE80", fontSize: 11, fontWeight: 800, padding: "2px 9px", borderRadius: 6, border: "1px solid rgba(74,222,128,0.3)" }}>
+                                  ₹180 REGISTRATION {isPaid ? "PAID ✅" : "VERIFIED"}
+                                </span>
+                              </div>
+                              <h3 style={{ margin: "2px 0 6px", fontSize: isMobile ? 20 : 24, fontWeight: 900, fontFamily: "var(--font-head)", color: "#FFFFFF" }}>
+                                {auc.name || "Battle of Champions - Season 3"}
+                              </h3>
+                              <div style={{ fontSize: 12.5, color: "#CBD5E1", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <span><Calendar size={13} style={{ verticalAlign: "-2px" }}/> {auc.auction_date ? fmtDate(auc.auction_date) : "12 Sep 2026"}</span>
+                                <span>·</span>
+                                <span><Clock size={13} style={{ verticalAlign: "-2px" }}/> {auc.auction_time || "8:00 PM IST"}</span>
+                              </div>
+                            </div>
+
+                            <span style={{
+                              background: "linear-gradient(135deg, #F59E0B, #D97706)",
+                              color: "#0F172A",
+                              fontSize: 12,
+                              fontWeight: 900,
+                              padding: "6px 14px",
+                              borderRadius: 999,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 6,
+                              boxShadow: "0 4px 12px rgba(245,158,11,0.35)"
+                            }}>
+                              👑 CONFIRMED CAPTAIN
+                            </span>
+                          </div>
+
+                          {/* Team Strikers Spotlight Banner */}
+                          <div style={{
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1.5px solid rgba(245,158,11,0.35)",
+                            borderRadius: 16,
+                            padding: "16px 18px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: 14
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                              <div style={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 12,
+                                background: "#F59E0B",
+                                color: "#0F172A",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 24,
+                                fontWeight: 900,
+                                boxShadow: "0 4px 12px rgba(245,158,11,0.3)"
+                              }}>
+                                {team.logo_url ? (
+                                  <img src={team.logo_url} alt={team.name} style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }}/>
+                                ) : "👑"}
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 11, color: "#FEF08A", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                                  YOUR FRANCHISE TEAM
+                                </div>
+                                <div style={{ fontSize: 19, fontWeight: 900, color: "#FFFFFF", fontFamily: "var(--font-head)" }}>
+                                  Team {team.name || "Strikers"}
+                                </div>
+                                <div style={{ fontSize: 12, color: "#CBD5E1", marginTop: 2 }}>
+                                  Owner &amp; Captain: <strong>{team.owner_name || player.name}</strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div style={{ textAlign: isMobile ? "left" : "right" }}>
+                              <div style={{ fontSize: 11, color: "#94A3B8", textTransform: "uppercase", fontWeight: 700 }}>Starting Auction Purse</div>
+                              <div style={{ fontSize: 20, fontWeight: 900, color: "#FEF08A", fontFamily: "var(--font-head)" }}>
+                                🪙 {Number(team.purse_total || auc.points_purse || 100000).toLocaleString("en-IN")} Coins
+                              </div>
+                              <div style={{ fontSize: 11, color: "#4ADE80", fontWeight: 700, marginTop: 1 }}>Purse Active for Bidding</div>
+                            </div>
+                          </div>
+
+                          {/* Logistics Grid (4 metrics) */}
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10 }}>
+                            <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Playing Role</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF", marginTop: 3 }}>
+                                🏏 {ap.playing_role || player.playing_role || "All-rounder"}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 1 }}>{ap.batting_style || "Right Hand"}</div>
+                            </div>
+
+                            <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Kit &amp; Jersey</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF", marginTop: 3 }}>
+                                #{ap.jersey_number || player.jersey_number || "11"} (Size: {ap.jersey_size || player.jersey_size || "L"})
+                              </div>
+                              <div style={{ fontSize: 11, color: "#4ADE80", marginTop: 1 }}>Kit Reserved</div>
+                            </div>
+
+                            <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Base Valuation</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#FFFFFF", marginTop: 3 }}>
+                                ₹{Number(ap.base_price || 1000).toLocaleString("en-IN")}
+                              </div>
+                              <div style={{ fontSize: 11, color: "#FEF08A", marginTop: 1 }}>Retained Captain</div>
+                            </div>
+
+                            <div style={{ background: "rgba(255,255,255,0.05)", padding: "12px 14px", borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)" }}>
+                              <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Auction Status</div>
+                              <div style={{ fontSize: 13, fontWeight: 800, color: "#4ADE80", marginTop: 3 }}>
+                                Pre-Drafted
+                              </div>
+                              <div style={{ fontSize: 11, color: "#CBD5E1", marginTop: 1 }}>Team {team.name || "Strikers"}</div>
+                            </div>
+                          </div>
+
+                          {/* Venue Banner with Direct Google Maps Link */}
+                          {auc.location && (
+                            <div style={{
+                              background: "rgba(255,255,255,0.04)",
+                              border: "1px solid rgba(255,255,255,0.1)",
+                              borderRadius: 12,
+                              padding: "12px 16px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: 8
+                            }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <MapPin size={16} color="#4ADE80" />
+                                <span style={{ fontSize: 12.5, color: "#FFFFFF", fontWeight: 600 }}>
+                                  <strong>Venue:</strong> {auc.location}
+                                </span>
+                              </div>
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(auc.location)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  color: "#4ADE80",
+                                  textDecoration: "none",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4
+                                }}
+                              >
+                                Google Maps Navigation ↗
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Captain Privileges Note */}
+                          <div style={{
+                            padding: "12px 14px",
+                            background: "rgba(245,158,11,0.08)",
+                            border: "1px solid rgba(245,158,11,0.25)",
+                            borderRadius: 12,
+                            fontSize: 12,
+                            color: "#FEF08A",
+                            lineHeight: 1.5
+                          }}>
+                            <strong>👑 Captaincy Privileges:</strong> As Captain &amp; Owner of <strong>Team {team.name || "Strikers"}</strong>, you have access to your private Team Console during the live auction to place bids in real time, monitor remaining purse coins, and construct your 15-player tournament squad.
+                          </div>
+
+                          {/* Four Action Buttons */}
+                          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)", gap: 10 }}>
+                            {team.id && auc.auction_code && (
+                              <a
+                                href={`/team-view/${auc.auction_code}/${team.id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 12,
+                                  background: "linear-gradient(135deg, #F59E0B, #D97706)",
+                                  color: "#0F172A",
+                                  fontWeight: 900,
+                                  fontSize: 13,
+                                  textDecoration: "none",
+                                  textAlign: "center",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                  boxShadow: "0 4px 12px rgba(245,158,11,0.3)"
+                                }}
+                              >
+                                👑 Team Console
+                              </a>
+                            )}
+
+                            {auc.auction_code && (
+                              <a
+                                href={`/live-auction/${auc.auction_code}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 12,
+                                  background: "#166534",
+                                  color: "#FFFFFF",
+                                  fontWeight: 800,
+                                  fontSize: 13,
+                                  textDecoration: "none",
+                                  textAlign: "center",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                  border: "1px solid rgba(255,255,255,0.2)"
+                                }}
+                              >
+                                📡 Live Auction
+                              </a>
+                            )}
+
+                            {auc.auction_code && (
+                              <a
+                                href={`/auction-register/${auc.auction_code}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{
+                                  padding: "12px 14px",
+                                  borderRadius: 12,
+                                  background: "rgba(255,255,255,0.1)",
+                                  color: "#FFFFFF",
+                                  fontWeight: 800,
+                                  fontSize: 13,
+                                  textDecoration: "none",
+                                  textAlign: "center",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 6,
+                                  border: "1px solid rgba(255,255,255,0.2)"
+                                }}
+                              >
+                                📋 Pool &amp; Squads
+                              </a>
+                            )}
+
+                            <button
+                              onClick={shareCaptaincy}
+                              style={{
+                                padding: "12px 14px",
+                                borderRadius: 12,
+                                background: "#25D366",
+                                color: "#FFFFFF",
+                                fontWeight: 800,
+                                fontSize: 13,
+                                border: "none",
+                                cursor: "pointer",
+                                textAlign: "center",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6
+                              }}
+                            >
+                              💬 Share Captaincy
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  }
+
+                  // Non-captain card
                   return (
-                    <Card key={ap.id} style={{ padding: "18px", border: "1.5px solid #E2E8F0" }}>
+                    <Card key={ap.id} style={{ padding: "20px", border: "1.5px solid #E2E8F0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
                         <div>
-                          <div style={{ fontWeight: 900, fontSize: 16, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                          <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)" }}>
                             {auc.name || "Selected Sports Auction Tournament"}
                           </div>
-                          <div style={{ fontSize: 12, color: "#64748B", marginTop: 3, display: "flex", alignItems: "center", gap: 8 }}>
-                            <span><Calendar size={12} style={{ verticalAlign: "-2px" }}/> {auc.auction_date ? fmtDate(auc.auction_date) : "Date TBD"}</span>
+                          <div style={{ fontSize: 12, color: "#64748B", marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <span><Calendar size={13} style={{ verticalAlign: "-2px" }}/> {auc.auction_date ? fmtDate(auc.auction_date) : "Date TBD"}</span>
+                            {auc.auction_time && (
+                              <>
+                                <span>·</span>
+                                <span><Clock size={13} style={{ verticalAlign: "-2px" }}/> {auc.auction_time}</span>
+                              </>
+                            )}
                             {auc.organized_by && (
                               <>
                                 <span>·</span>
-                                <span>Org: {auc.organized_by}</span>
+                                <span>Org: <strong>{auc.organized_by}</strong></span>
                               </>
                             )}
                           </div>
@@ -1379,19 +2015,15 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                         {/* Status Tag */}
                         <div>
                           {isSold ? (
-                            <span style={{ background: "#166534", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 11px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ background: "#166534", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 5 }}>
                               <CheckCircle2 size={13}/> SOLD
                             </span>
-                          ) : isCaptain ? (
-                            <span style={{ background: "linear-gradient(135deg,#F59E0B,#D97706)", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 11px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                              👑 CAPTAIN
-                            </span>
                           ) : isUnsold ? (
-                            <span style={{ background: "#64748B", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 11px", borderRadius: 999 }}>
+                            <span style={{ background: "#64748B", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999 }}>
                               UNSOLD
                             </span>
                           ) : (
-                            <span style={{ background: "rgba(37,99,235,0.12)", color: "#2563EB", fontSize: 11, fontWeight: 800, padding: "4px 11px", borderRadius: 999 }}>
+                            <span style={{ background: "rgba(37,99,235,0.12)", color: "#2563EB", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999 }}>
                               IN POOL
                             </span>
                           )}
@@ -1399,18 +2031,18 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                       </div>
 
                       {/* Details Box */}
-                      <div style={{ background: "#F8FAF8", borderRadius: 12, padding: "12px 14px", marginTop: 14, border: "1px solid #E2E8F0", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, textAlign: "center" }}>
+                      <div style={{ background: "#F8FAF8", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #E2E8F0", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, textAlign: "center" }}>
                         <div>
-                          <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Playing Role</div>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>{ap.playing_role || player.playing_role || "Player"}</div>
+                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Playing Role</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>{ap.playing_role || player.playing_role || "Player"}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Base Price</div>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>₹{ap.base_price || 0}</div>
+                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Base Price</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>₹{ap.base_price || 0}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Sold Price</div>
-                          <div style={{ fontSize: 12, fontWeight: 800, color: isSold ? "#166534" : "#64748B", marginTop: 2 }}>
+                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Sold Price</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: isSold ? "#166534" : "#64748B", marginTop: 2 }}>
                             {isSold ? `₹${ap.sold_price || ap.bid_price || "—"}` : "—"}
                           </div>
                         </div>
@@ -1418,14 +2050,14 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
 
                       {/* Team Assignment Banner */}
                       {teamName && (
-                        <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(22,101,52,0.06)", borderRadius: 10, border: "1px solid rgba(22,101,52,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(22,101,52,0.06)", borderRadius: 10, border: "1px solid rgba(22,101,52,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Award size={16} color="#166534"/>
                             <span style={{ fontSize: 13, fontWeight: 800, color: "#166534" }}>Assigned Team: {teamName}</span>
                           </div>
                           {auc.auction_code && (
                             <a
-                              href={`#/public-auction/${auc.auction_code}`}
+                              href={`/live-auction/${auc.auction_code}`}
                               target="_blank"
                               rel="noreferrer"
                               style={{ fontSize: 12, fontWeight: 800, color: "#166534", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}
@@ -1433,6 +2065,49 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               Live Screen ↗
                             </a>
                           )}
+                        </div>
+                      )}
+
+                      {/* Action Links */}
+                      {auc.auction_code && (
+                        <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+                          <a
+                            href={`/live-auction/${auc.auction_code}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              flex: 1,
+                              padding: "10px",
+                              borderRadius: 10,
+                              background: "#166534",
+                              color: "#FFFFFF",
+                              fontWeight: 800,
+                              fontSize: 12.5,
+                              textAlign: "center",
+                              textDecoration: "none"
+                            }}
+                          >
+                            📡 Live Auction
+                          </a>
+                          <a
+                            href={`/auction-register/${auc.auction_code}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              flex: 1,
+                              padding: "10px",
+                              borderRadius: 10,
+                              background: "#F8FAF8",
+                              color: "#0F172A",
+                              border: "1px solid #CBD5E1",
+                              fontWeight: 800,
+                              fontSize: 12.5,
+                              textAlign: "center",
+                              textDecoration: "none"
+                            }}
+                          >
+                            📋 View Squads
+                          </a>
                         </div>
                       )}
                     </Card>
@@ -1526,6 +2201,37 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                     <div style={{ fontSize: 10, color: "#CBD5E1", fontWeight: 700 }}>{player.jersey_size || "M"}</div>
                   </div>
                 </div>
+
+                {/* Official Captaincy Badge on Pass */}
+                {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
+                  <div style={{
+                    marginTop: 14,
+                    padding: "10px 14px",
+                    borderRadius: 12,
+                    background: "linear-gradient(135deg, rgba(245,158,11,0.22), rgba(217,119,6,0.1))",
+                    border: "1.5px solid rgba(245,158,11,0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 8
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 16 }}>👑</span>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: "#FEF08A", letterSpacing: 0.5, fontFamily: "var(--font-head)" }}>
+                          OFFICIAL CAPTAIN &amp; OWNER · TEAM STRIKERS
+                        </div>
+                        <div style={{ fontSize: 10.5, color: "#CBD5E1" }}>
+                          Battle of Champions - Season 3
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 800, background: "#F59E0B", color: "#0F172A", padding: "2px 8px", borderRadius: 999 }}>
+                      ACTIVE
+                    </span>
+                  </div>
+                )}
 
                 {/* Pass Footer */}
                 <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.85 }}>
@@ -1814,7 +2520,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
         {[
           { key: "dashboard", label: "Home", icon: Home },
           { key: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
-          { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.length > 0 ? null : null },
+          { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => a.is_captain || a.status === "captain") ? "👑" : null },
           { key: "leaderboard", label: "Rankings", icon: Award },
           { key: "profile", label: "Pass", icon: UserIcon },
         ].map(({ key, label, icon: Icon, badge }) => {
@@ -1848,12 +2554,12 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                     position: "absolute",
                     top: -4,
                     right: -7,
-                    background: "#EF4444",
-                    color: "#FFFFFF",
-                    fontSize: 9,
+                    background: badge === "👑" ? "linear-gradient(135deg, #F59E0B, #D97706)" : "#EF4444",
+                    color: badge === "👑" ? "#0F172A" : "#FFFFFF",
+                    fontSize: badge === "👑" ? 10 : 9,
                     fontWeight: 900,
-                    width: 15,
-                    height: 15,
+                    width: 16,
+                    height: 16,
                     borderRadius: "50%",
                     display: "flex",
                     alignItems: "center",
