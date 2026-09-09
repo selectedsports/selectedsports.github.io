@@ -352,8 +352,10 @@ function TournamentSponsorsList({ auctionId }) {
 
 function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setReceiptFile, setReceiptPreview, copiedText, setCopiedText }) {
   const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
-  const upiId = auction?.organizer_upi_id || ADMIN_UPI || "9897439743@okbizaxis"
-  const paymentPhone = auction?.organizer_payment_phone || ADMIN_PHONE || "9897439743"
+  const rawUpi = auction?.organizer_upi_id
+  const upiId = (rawUpi && rawUpi !== "9897439743@okbizaxis") ? rawUpi : "9897439743@pz"
+  const rawPhone = auction?.organizer_payment_phone || ADMIN_PHONE || "9897439743"
+  const paymentPhone = rawPhone.replace(/[^0-9]/g, "").slice(-10)
 
   return (
     <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>
@@ -384,8 +386,8 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px solid #F1F5F9" }}>
           <div>
-            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay / PhonePe / Paytm</div>
-            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>+91 {paymentPhone}</div>
+            <div style={{ fontSize:10, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Google Pay</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#0F172A" }}>{paymentPhone}</div>
           </div>
           <button type="button" onClick={() => { navigator.clipboard?.writeText(paymentPhone); setCopiedText("phone"); setTimeout(() => setCopiedText(""), 2000) }} style={{ padding:"5px 10px", borderRadius:6, border:"1px solid #E2E8F0", background:"#F8FAF8", fontSize:11, fontWeight:700, cursor:"pointer", color: copiedText==="phone"?"#166534":"#64748B" }}>
             {copiedText === "phone" ? "Copied!" : "Copy"}

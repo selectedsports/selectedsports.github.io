@@ -125,7 +125,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
   const [loadingRoster, setLoadingRoster] = useState(false)
 
   const plan = AUCTION_PLANS.find(p => p.id === planId) || AUCTION_PLANS[0]
-  const adminUpi = platformUpi || ADMIN_UPI || "9897439743@okbizaxis"
+  const adminUpi = (platformUpi && platformUpi !== "9897439743@okbizaxis") ? platformUpi : (ADMIN_UPI || "9897439743@pz")
   const copyText = (txt, field) => {
     navigator.clipboard?.writeText(txt)
     setCopiedField(field)
@@ -230,7 +230,7 @@ export default function CreateAuctionFlow({ organizerId, isMobile, onClose, onCr
     if (feeNum > 0) {
       if (!organizerUpiId.trim()) { setError("Please enter your UPI ID so players can pay the entry fee."); return }
       const cleanPhone = organizerPaymentPhone.replace(/[^0-9]/g, "").slice(-10)
-      if (cleanPhone.length !== 10) { setError("Please enter a valid 10-digit mobile number for GPay/PhonePe."); return }
+      if (cleanPhone.length !== 10) { setError("Please enter a valid 10-digit mobile number for Google Pay."); return }
     }
     const groundClean = groundName.trim()
     const location = groundClean ? `${groundClean} · ${city.trim()}, ${selectedState}` : `${city.trim()}, ${selectedState}`
@@ -810,7 +810,7 @@ export function AuctionPaymentModal({ auction, isMobile, onClose, onPaid }) {
     maxTeams: auction?.max_teams || 6
   }
   const amount = auction?.amount_due !== undefined ? Number(auction.amount_due) : plan.price
-  const adminUpi = platformUpi || ADMIN_UPI || "9897439743@okbizaxis"
+  const adminUpi = (platformUpi && platformUpi !== "9897439743@okbizaxis") ? platformUpi : (ADMIN_UPI || "9897439743@pz")
 
   const copyText = (txt, field) => {
     navigator.clipboard?.writeText(txt)
