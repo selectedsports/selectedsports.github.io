@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
-import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction } from "../db.js"
+import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction, updateAuctionPlayerPaymentStatus } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
@@ -1358,6 +1358,16 @@ export default function ProPortal({ player, onLogout }) {
                             🧾 Receipt
                           </button>
                         )}
+                        {p.payment_status === "pending" && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                            ⏳ Pending
+                          </span>
+                        )}
+                        {p.payment_status === "paid" && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                            ✓ Paid
+                          </span>
+                        )}
                         <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
                       </div>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1665,6 +1675,47 @@ export default function ProPortal({ player, onLogout }) {
                         <button onClick={() => setReceiptModalImg(viewingAuctionPlayer.payment_screenshot_url)} style={{ background: "none", border: "none", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0, textDecoration: "underline" }}>Enlarge View ↗</button>
                       </div>
                       <img src={viewingAuctionPlayer.payment_screenshot_url} alt="Payment Receipt" onClick={() => setReceiptModalImg(viewingAuctionPlayer.payment_screenshot_url)} style={{ width: "100%", maxHeight: 180, objectFit: "contain", borderRadius: 8, background: "#FFFFFF", border: "1px solid #E2E8F0", cursor: "pointer" }}/>
+                    </div>
+                  )}
+
+                  {(viewingAuctionPlayer.payment_status || viewingAuctionPlayer.payment_screenshot_url) && (
+                    <div style={{ marginBottom: 16, padding: "12px 14px", background: viewingAuctionPlayer.payment_status === "paid" ? "rgba(34,197,94,0.08)" : (viewingAuctionPlayer.payment_status === "pending" ? "rgba(245,158,11,0.08)" : "#F8FAF8"), border: viewingAuctionPlayer.payment_status === "paid" ? "1.5px solid #166534" : (viewingAuctionPlayer.payment_status === "pending" ? "1.5px solid #F59E0B" : "1px solid #E2E8F0"), borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#64748B", fontWeight: 700, textTransform: "uppercase" }}>Payment Status</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: viewingAuctionPlayer.payment_status === "paid" ? "#166534" : (viewingAuctionPlayer.payment_status === "pending" ? "#B45309" : "#0F172A") }}>
+                          {viewingAuctionPlayer.payment_status === "paid" ? "✓ Paid & Approved" : (viewingAuctionPlayer.payment_status === "pending" ? "⏳ Pending Verification" : (viewingAuctionPlayer.payment_status || "Free Entry"))}
+                        </div>
+                      </div>
+                      {viewingAuctionPlayer.payment_status === "pending" && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await updateAuctionPlayerPaymentStatus(viewingAuctionPlayer.id, "paid")
+                              setViewingAuctionPlayer(p => ({ ...p, payment_status: "paid" }))
+                              setAuctionPlayers(list => list.map(x => x.id === viewingAuctionPlayer.id ? { ...x, payment_status: "paid" } : x))
+                            } catch(err) { alert(err.message) }
+                          }}
+                          style={{ padding: "8px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)" }}
+                        >
+                          ✓ Approve Payment
+                        </button>
+                      )}
+                      {viewingAuctionPlayer.payment_status === "paid" && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await updateAuctionPlayerPaymentStatus(viewingAuctionPlayer.id, "pending")
+                              setViewingAuctionPlayer(p => ({ ...p, payment_status: "pending" }))
+                              setAuctionPlayers(list => list.map(x => x.id === viewingAuctionPlayer.id ? { ...x, payment_status: "pending" } : x))
+                            } catch(err) { alert(err.message) }
+                          }}
+                          style={{ padding: "5px 10px", borderRadius: 6, background: "none", border: "1px solid #CBD5E1", color: "#64748B", fontSize: 11, cursor: "pointer" }}
+                        >
+                          Mark Pending
+                        </button>
+                      )}
                     </div>
                   )}
 

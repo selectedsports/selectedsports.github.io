@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite } from "../constants.js"
@@ -2987,6 +2987,16 @@ function AuctionPage({ isMobile, isFounder }) {
                         🧾 Receipt
                       </button>
                     )}
+                    {p.payment_status === "pending" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                        ⏳ Pending
+                      </span>
+                    )}
+                    {p.payment_status === "paid" && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                        ✓ Paid
+                      </span>
+                    )}
                     <ChevronRight size={16} color="#94A3B8"/>
                     <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
                   </div>
@@ -3453,6 +3463,47 @@ function AuctionPage({ isMobile, isFounder }) {
                   <button onClick={()=>setReceiptModalImg(viewingPlayer.payment_screenshot_url)} style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, textDecoration:"underline" }}>Enlarge View ↗</button>
                 </div>
                 <img src={viewingPlayer.payment_screenshot_url} alt="Payment Receipt" onClick={()=>setReceiptModalImg(viewingPlayer.payment_screenshot_url)} style={{ width:"100%", maxHeight:180, objectFit:"contain", borderRadius:8, background:"#FFFFFF", border:"1px solid #E2E8F0", cursor:"pointer" }}/>
+              </div>
+            )}
+
+            {(viewingPlayer.payment_status || viewingPlayer.payment_screenshot_url) && (
+              <div style={{ marginBottom:16, padding:"12px 14px", background:viewingPlayer.payment_status === "paid" ? "rgba(34,197,94,0.08)" : (viewingPlayer.payment_status === "pending" ? "rgba(245,158,11,0.08)" : "#F8FAF8"), border:viewingPlayer.payment_status === "paid" ? "1.5px solid #166534" : (viewingPlayer.payment_status === "pending" ? "1.5px solid #F59E0B" : "1px solid #E2E8F0"), borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Payment Status</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:viewingPlayer.payment_status === "paid" ? "#166534" : (viewingPlayer.payment_status === "pending" ? "#B45309" : "#0F172A") }}>
+                    {viewingPlayer.payment_status === "paid" ? "✓ Paid & Approved" : (viewingPlayer.payment_status === "pending" ? "⏳ Pending Verification" : (viewingPlayer.payment_status || "Free Entry"))}
+                  </div>
+                </div>
+                {viewingPlayer.payment_status === "pending" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateAuctionPlayerPaymentStatus(viewingPlayer.id, "paid")
+                        setViewingPlayer(p => ({ ...p, payment_status: "paid" }))
+                        setAuctionPlayers(list => list.map(x => x.id === viewingPlayer.id ? { ...x, payment_status: "paid" } : x))
+                      } catch(err) { alert(err.message) }
+                    }}
+                    style={{ padding:"8px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}
+                  >
+                    ✓ Approve Payment
+                  </button>
+                )}
+                {viewingPlayer.payment_status === "paid" && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await updateAuctionPlayerPaymentStatus(viewingPlayer.id, "pending")
+                        setViewingPlayer(p => ({ ...p, payment_status: "pending" }))
+                        setAuctionPlayers(list => list.map(x => x.id === viewingPlayer.id ? { ...x, payment_status: "pending" } : x))
+                      } catch(err) { alert(err.message) }
+                    }}
+                    style={{ padding:"5px 10px", borderRadius:6, background:"none", border:"1px solid #CBD5E1", color:"#64748B", fontSize:11, cursor:"pointer" }}
+                  >
+                    Mark Pending
+                  </button>
+                )}
               </div>
             )}
 
