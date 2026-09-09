@@ -8,7 +8,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const [state, setState] = useState(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-  const [increment, setIncrement] = useState("100")
+  const [increment, setIncrement] = useState("1000")
   const [bidHistory, setBidHistory] = useState([])
   const [sponsors, setSponsors] = useState([])
   const [jumpTo, setJumpTo] = useState("")
@@ -21,7 +21,14 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     try {
       const s = await fetchAuctionState(auctionId)
       setState(s)
-      if (s.current_player_id) setBidHistory(await fetchAuctionBidHistory(s.current_player_id, auctionId))
+      if (s?.bid_increment) {
+        setIncrement(String(s.bid_increment))
+        setBidStep(Number(s.bid_increment) || 1000)
+      } else {
+        setIncrement("1000")
+        setBidStep(1000)
+      }
+      if (s?.current_player_id) setBidHistory(await fetchAuctionBidHistory(s.current_player_id, auctionId))
       else setBidHistory([])
       if (auctionId) {
         fetchAuctionSponsors(auctionId).then(setSponsors).catch(()=>{})
@@ -38,7 +45,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const leadingTeam = state?.current_team_id ? auctionTeams.find(t => t.id === state.current_team_id) : null
 
   const doStart = async () => {
-    const inc = Number(increment)
+    const inc = Number(increment) || 1000
     if (!inc || inc <= 0) { alert("Enter a valid bid increment in Coins"); return }
     if (auctionTeams.length < 2) { alert("Add at least 2 teams before starting the auction"); return }
     setBusy(true)
@@ -148,7 +155,33 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         </div>
         {tooEarly && <div style={{ padding:"10px 12px", background:"rgba(184,134,11,0.08)", borderRadius:9, color:"#B8860B", fontSize:12, marginBottom:14 }}>This auction is scheduled for {new Date(auctionDate+"T00:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})} — it can't be started before then.</div>}
         {auctionTeams.length < 2 && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:14 }}>Add at least 2 teams (in the Teams tab) before starting.</div>}
-        <div style={{ fontSize:12, color:"#6b7280", marginBottom:5, fontWeight:600 }}>Bid Increment (🪙 Coins)</div>
+        <div style={{ fontSize:12, color:"#6b7280", marginBottom:6, fontWeight:600, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>Bid Increment (🪙 Coins)</span>
+          <span style={{ fontSize:11, color:"#166534", fontWeight:800 }}>Default: 🪙 1,000</span>
+        </div>
+        <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+          {[500, 1000, 2000, 5000].map(val => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setIncrement(String(val))}
+              style={{
+                flex: 1,
+                padding: "8px 4px",
+                borderRadius: 8,
+                border: increment === String(val) ? "2px solid #166534" : "1.5px solid #E2E8F0",
+                background: increment === String(val) ? "#DCFCE7" : "#FFFFFF",
+                color: increment === String(val) ? "#166534" : "#64748B",
+                fontSize: 12,
+                fontWeight: increment === String(val) ? 800 : 600,
+                cursor: "pointer",
+                transition: "all 150ms ease"
+              }}
+            >
+              🪙 {val >= 1000 ? `${val/1000}k` : val}
+            </button>
+          ))}
+        </div>
         <input type="number" min="1" value={increment} onChange={e=>setIncrement(e.target.value)} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #e5e7eb", fontSize:14, outline:"none", background:"#fafafa", boxSizing:"border-box", marginBottom:16 }}/>
         <button onClick={doStart} disabled={busy || auctionTeams.length < 2 || tooEarly} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:(busy||auctionTeams.length<2||tooEarly)?"not-allowed":"pointer", opacity:(busy||auctionTeams.length<2||tooEarly)?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
       </Card>

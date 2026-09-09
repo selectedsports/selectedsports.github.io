@@ -1239,6 +1239,8 @@ export async function updateAuction(id, updates = {}) {
   if (updates.location !== undefined) payload.location = updates.location ? updates.location.trim() : null
   if (updates.pointsPurse !== undefined) payload.points_purse = updates.pointsPurse ? Number(updates.pointsPurse) : null
   if (updates.points_purse !== undefined) payload.points_purse = updates.points_purse ? Number(updates.points_purse) : null
+  if (updates.bidIncrement !== undefined) payload.bid_increment = updates.bidIncrement ? Number(updates.bidIncrement) : 1000
+  if (updates.bid_increment !== undefined) payload.bid_increment = updates.bid_increment ? Number(updates.bid_increment) : 1000
 
   const orgClean = updates.organizedBy ? updates.organizedBy.trim() : (updates.organized_by ? updates.organized_by.trim() : null)
   if (orgClean !== null) {

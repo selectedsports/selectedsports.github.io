@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -1935,6 +1935,7 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
   const [minute, setMinute] = useState("00")
   const [period, setPeriod] = useState("AM")
   const [location, setLocation] = useState(auction.location || "")
+  const [bidIncrement, setBidIncrement] = useState(auction.bid_increment ? String(auction.bid_increment) : "1000")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
 
@@ -1946,6 +1947,9 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
         setMinute(match[2])
         if (match[3]) setPeriod(match[3].toUpperCase())
       }
+    }
+    if (auction.bid_increment) {
+      setBidIncrement(String(auction.bid_increment))
     }
   }, [auction])
 
@@ -1961,7 +1965,8 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
       const updated = await updateAuction(auction.id, {
         auctionDate: date,
         auctionTime: timeStr,
-        location: location.trim() || null
+        location: location.trim() || null,
+        bidIncrement: Number(bidIncrement) || 1000
       })
       if (onUpdated) onUpdated(updated)
       onClose()
@@ -2028,6 +2033,43 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
               value={location}
               onChange={e => setLocation(e.target.value)}
               placeholder="e.g. Shinde High School Ground, Pune"
+              style={iS}
+            />
+          </div>
+
+          <div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <label style={lS}>Bid Increment (🪙 Coins)</label>
+              <span style={{ fontSize:11, color:"#166534", fontWeight:800 }}>Default: 🪙 1,000</span>
+            </div>
+            <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+              {[500, 1000, 2000, 5000].map(val => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setBidIncrement(String(val))}
+                  style={{
+                    flex: 1,
+                    padding: "7px 4px",
+                    borderRadius: 8,
+                    border: bidIncrement === String(val) ? "2px solid #166534" : "1.5px solid #E2E8F0",
+                    background: bidIncrement === String(val) ? "#DCFCE7" : "#FFFFFF",
+                    color: bidIncrement === String(val) ? "#166534" : "#64748B",
+                    fontSize: 12,
+                    fontWeight: bidIncrement === String(val) ? 800 : 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  🪙 {val >= 1000 ? `${val/1000}k` : val}
+                </button>
+              ))}
+            </div>
+            <input
+              type="number"
+              min="1"
+              value={bidIncrement}
+              onChange={e => setBidIncrement(e.target.value)}
+              placeholder="1000"
               style={iS}
             />
           </div>
@@ -2525,7 +2567,70 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               </div>
             ))}
-            <div style={{ fontSize:11, color:"#94A3B8", marginTop:12 }}>Note: the "Team Points Screen" and "YouTube overlay" links some auction apps offer aren't separate pages in Selected Sports — your Live Auction Link above already shows real-time team purses to anyone who opens it.</div>
+            <div style={{ fontSize:11, color:"#94A3B8", marginTop:12, marginBottom:16 }}>Note: the "Team Points Screen" and "YouTube overlay" links some auction apps offer aren't separate pages in Selected Sports — your Live Auction Link above already shows real-time team purses to anyone who opens it.</div>
+
+            {/* Ready-to-Share WhatsApp Player Registration Invite Card */}
+            <div style={{ padding:"16px", background:"#F0FDF4", borderRadius:12, border:"1.5px solid #BBF7D0" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6, flexWrap:"wrap", gap:6 }}>
+                <div style={{ fontSize:13, fontWeight:900, color:"#166534", display:"flex", alignItems:"center", gap:6, fontFamily:"var(--font-head)" }}>
+                  <span>📲</span> Ready-to-Share Player Registration Invite (WhatsApp / SMS)
+                </div>
+                <span style={{ fontSize:10, fontWeight:800, background:"#DCFCE7", color:"#166534", padding:"2px 8px", borderRadius:999 }}>Official Template</span>
+              </div>
+              <p style={{ fontSize:12, color:"#475569", margin:"0 0 10px", lineHeight:1.4 }}>
+                Copy and share this formatted text directly to WhatsApp groups and players. It contains all tournament details and the registration link!
+              </p>
+              <div style={{ background:"#FFFFFF", border:"1px solid #CBD5E1", borderRadius:8, padding:"12px", fontSize:11.5, fontFamily:"monospace", whiteSpace:"pre-wrap", color:"#0F172A", maxHeight:160, overflowY:"auto", marginBottom:12, lineHeight:1.5 }}>
+                {generateAuctionPlayerInvite(managingAuction, base)}
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => copyLink(generateAuctionPlayerInvite(managingAuction, base), "invite")}
+                  style={{
+                    flex: 1,
+                    minWidth: 150,
+                    padding: "11px 14px",
+                    borderRadius: 8,
+                    background: copiedLink==="invite" ? "#14532D" : "#166534",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6
+                  }}
+                >
+                  {copiedLink==="invite" ? "✅ Invite Copied to Clipboard!" : "📋 Copy Full Invite Text"}
+                </button>
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(generateAuctionPlayerInvite(managingAuction, base))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    flex: 1,
+                    minWidth: 150,
+                    padding: "11px 14px",
+                    borderRadius: 8,
+                    background: "#22C55E",
+                    color: "#FFFFFF",
+                    textDecoration: "none",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    textAlign: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6
+                  }}
+                >
+                  <span>💬</span> Share to WhatsApp
+                </a>
+              </div>
+            </div>
           </Card>
         )
       })()}

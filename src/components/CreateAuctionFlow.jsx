@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI, searchMapGrounds } from "../constants.js"
+import { AUCTION_PLANS, ADMIN_PHONE, ADMIN_UPI, searchMapGrounds, generateAuctionPlayerInvite } from "../constants.js"
 import { createAuction, fetchPlatformUpi, markAuctionPaidByOrganizer, fetchTeams, fetchPlayers, createAuctionTeam, addRosterPlayerToAuction, fetchGrounds, addGround } from "../db.js"
 import { Av } from "./ui.jsx"
 import { INDIAN_STATES, CITIES_BY_STATE } from "../indianStatesCities.js"
@@ -14,6 +14,7 @@ function AuctionLinks({ auction }) {
   const base = window.location.origin
   const regLink = `${base}/auction-register/${auction.auction_code}`
   const liveLink = `${base}/live-auction/${auction.auction_code}`
+  const inviteText = generateAuctionPlayerInvite(auction, base)
   const copy = (text, which) => { navigator.clipboard?.writeText(text); setCopied(which); setTimeout(() => setCopied(""), 2000) }
   return (
     <div style={{ marginTop: 16 }}>
@@ -27,6 +28,60 @@ function AuctionLinks({ auction }) {
           </div>
         </div>
       ))}
+
+      {/* WhatsApp Ready-to-Share Invite */}
+      <div style={{ marginTop:14, padding:"14px", background:"#F0FDF4", borderRadius:10, border:"1.5px solid #BBF7D0" }}>
+        <div style={{ fontSize:12, fontWeight:800, color:"#166534", marginBottom:6, display:"flex", alignItems:"center", gap:6 }}>
+          <span>📲</span> Ready-to-Share WhatsApp Invite
+        </div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          <button
+            type="button"
+            onClick={() => copy(inviteText, "invite")}
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: "10px 12px",
+              borderRadius: 8,
+              background: copied==="invite" ? "#14532D" : "#166534",
+              color: "#FFFFFF",
+              border: "none",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6
+            }}
+          >
+            {copied==="invite" ? "✅ Copied Invite!" : "📋 Copy WhatsApp Invite"}
+          </button>
+          <a
+            href={`https://wa.me/?text=${encodeURIComponent(inviteText)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex: 1,
+              minWidth: 140,
+              padding: "10px 12px",
+              borderRadius: 8,
+              background: "#22C55E",
+              color: "#FFFFFF",
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 800,
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6
+            }}
+          >
+            <span>💬</span> Share to WhatsApp
+          </a>
+        </div>
+      </div>
     </div>
   )
 }

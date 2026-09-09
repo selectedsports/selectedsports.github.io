@@ -545,3 +545,36 @@ export async function searchPuneMapGrounds(query = "") {
   return searchMapGrounds(query, "Pune", "Maharashtra")
 }
 
+export function generateAuctionPlayerInvite(auction, origin) {
+  if (!auction) return ""
+  const base = origin || (typeof window !== "undefined" ? window.location.origin : "https://selectedsports.github.io")
+  const regLink = `${base}/auction-register/${auction.auction_code || ""}`
+  const dateFormatted = auction.auction_date ? fmtDate(auction.auction_date) : "To Be Announced"
+  const timeFormatted = auction.auction_time || "To Be Announced"
+  const venue = auction.location || "Ground / Venue to be confirmed"
+  const org = auction.organized_by ? `\n🛡️ *Organized By:* ${auction.organized_by}` : ""
+  const feeText = Number(auction.player_entry_fee) > 0 ? `₹${Number(auction.player_entry_fee).toLocaleString("en-IN")}` : "FREE"
+
+  return `🏏 *PLAYER REGISTRATION OPEN — ${(auction.name || "CRICKET TOURNAMENT").toUpperCase()}* 🏏${org}
+
+📅 *Auction Date:* ${dateFormatted}
+⏰ *Auction Time:* ${timeFormatted}
+📍 *Venue:* ${venue}
+💰 *Player Entry Fee:* ${feeText}
+
+📢 *ATTENTION CRICKET PLAYERS:*
+Official player registrations are now LIVE! All players must register before the auction to enter the player pool and get selected by franchise teams.
+
+📝 *How to Register:*
+1️⃣ Click the official registration link below
+2️⃣ Enter your Name, Mobile Number, Playing Role & City
+3️⃣ Upload your profile photo & enter your preferred jersey number
+4️⃣ Submit to confirm your spot in the auction pool
+
+👉 *REGISTER NOW VIA LINK:*
+🔗 ${regLink}
+
+⚡ _Register early before the deadline to ensure your name is included in the live bidding pool!_
+🏆 *Selected Sports Cricket Platform*`
+}
+
