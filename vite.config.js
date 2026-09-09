@@ -2,13 +2,18 @@ import { defineConfig } from "vite"
 import { writeFileSync } from "fs"
 import react from "@vitejs/plugin-react"
 
+const buildTime = Date.now()
+
 export default defineConfig({
+  define: {
+    __APP_BUILD_TIME__: buildTime,
+  },
   plugins: [
     react(),
     {
       name: "write-version",
       closeBundle() {
-        try { writeFileSync("dist/version.json", JSON.stringify({ v: Date.now() })) } catch {}
+        try { writeFileSync("dist/version.json", JSON.stringify({ v: buildTime })) } catch {}
       }
     },
   ],

@@ -352,10 +352,11 @@ function TournamentSponsorsList({ auctionId }) {
 
 function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setReceiptFile, setReceiptPreview, copiedText, setCopiedText }) {
   const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
-  const rawUpi = auction?.organizer_upi_id
-  const upiId = (rawUpi && rawUpi !== "9897439743@okbizaxis") ? rawUpi : "9897439743@pz"
+  const rawUpi = (auction?.organizer_upi_id || "").trim()
+  const isLegacyOkBiz = !rawUpi || rawUpi.toLowerCase() === "9897439743@okbizaxis"
+  const upiId = isLegacyOkBiz ? (ADMIN_UPI || "9897439743@pz") : rawUpi
   const rawPhone = auction?.organizer_payment_phone || ADMIN_PHONE || "9897439743"
-  const paymentPhone = rawPhone.replace(/[^0-9]/g, "").slice(-10)
+  const paymentPhone = String(rawPhone).replace(/[^0-9]/g, "").slice(-10) || "9897439743"
 
   return (
     <div style={{ padding:"16px", background:"rgba(34,197,94,0.06)", border:"1.5px solid #166534", borderRadius:14, marginBottom:20 }}>

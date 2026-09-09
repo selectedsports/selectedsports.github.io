@@ -2,13 +2,16 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Selected Sports</title>
   <script>
     var path = window.location.pathname;
     var query = window.location.search;
-    var redirectUrl = "/?p=" + encodeURIComponent(path + query);
+    var redirectUrl = "/?_cb=" + Date.now() + "&p=" + encodeURIComponent(path + query);
     window.location.replace(redirectUrl);
   </script>
 </head>
-<body>Redirecting...</body>
+<body>Redirecting to Selected Sports...</body>
 </html>
