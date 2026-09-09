@@ -188,18 +188,17 @@ export default function PlayerPortal({ player, matches = [], onLogout }) {
   // Load matches
   useEffect(() => {
     ;(async () => {
-      const results = []
-      for (const m of matches) {
+      const matchPromises = (matches || []).map(async (m) => {
         try {
           const mps = await fetchMatchPlayers(m.id)
-          const myRow = mps.find(mp => mp.player_id === player.id)
-          if (myRow) {
-            results.push({ match: m, myStatus: myRow.status, matchPlayers: mps })
-          } else if (m.visibility === "public") {
-            results.push({ match: m, myStatus: "none", matchPlayers: mps })
-          }
+          const myRow = (mps || []).find(mp => mp.player_id === player.id)
+          if (myRow) return { match: m, myStatus: myRow.status, matchPlayers: mps }
+          if (m.visibility === "public") return { match: m, myStatus: "none", matchPlayers: mps }
         } catch {}
-      }
+        return null
+      })
+      const resolved = await Promise.all(matchPromises)
+      const results = resolved.filter(Boolean)
       setMyMatches(results)
       setLoading(false)
 

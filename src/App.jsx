@@ -1,9 +1,12 @@
 import { useState, useEffect, lazy, Suspense } from "react"
 import HomeScreen from "./components/HomeScreen.jsx"
-import { UnifiedLoginScreen, RegisterScreen, RegistrationSubmittedScreen } from "./components/LoginScreens.jsx"
 import { fetchMatches } from "./db.js"
 import { ADMIN_PHONE } from "./constants.js"
 import { Spinner } from "./components/ui.jsx"
+
+const UnifiedLoginScreen = lazy(() => import("./components/LoginScreens.jsx").then(m => ({ default: m.UnifiedLoginScreen })))
+const RegisterScreen = lazy(() => import("./components/LoginScreens.jsx").then(m => ({ default: m.RegisterScreen })))
+const RegistrationSubmittedScreen = lazy(() => import("./components/LoginScreens.jsx").then(m => ({ default: m.RegistrationSubmittedScreen })))
 
 const AdminPortal = lazy(() => import("./components/AdminPortal.jsx"))
 const PlayerPortal = lazy(() => import("./components/PlayerPortal.jsx"))

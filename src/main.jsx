@@ -8,15 +8,11 @@ import "./index.css"
 document.documentElement.style.setProperty("background", "#F8FAF8", "important")
 document.body.style.setProperty("background", "#F8FAF8", "important")
 
-// PWA fully removed. Clean up any previously-installed service workers & caches
-// so users who installed the old PWA get the fresh web version.
+// Unregister any legacy service workers once
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.getRegistrations().then(regs => {
     regs.forEach(reg => reg.unregister())
   }).catch(() => {})
-}
-if (window.caches && caches.keys) {
-  caches.keys().then(keys => keys.forEach(k => caches.delete(k))).catch(() => {})
 }
 
 // Auto-update: when a new version is deployed, reload once to get it.
