@@ -821,44 +821,6 @@ export async function findPlayerByPhone(phone) {
   return (data && data[0]) || null
 }
 
-export async function findAuctionPlayerByPhone(phone, auctionId = null) {
-  const cleaned = (phone || "").replace(/[^0-9]/g, "").slice(-10)
-  if (cleaned.length !== 10) return null
-  let q = supabase.from("auction_players").select("id, name, phone, playing_role, birth_date, profile_image_url, city, jersey_number, jersey_size, payment_screenshot_url, payment_status, status")
-  q = auctionId ? q.eq("auction_id", auctionId) : q.is("auction_id", null)
-  const { data, error } = await q
-  if (error) return null
-  return (data || []).find(p => (p.phone || "").replace(/[^0-9]/g, "").slice(-10) === cleaned) || null
-}
-
-export async function updateAuctionPlayerRegistration(id, updates = {}) {
-  const payload = {}
-  if (updates.name !== undefined) payload.name = updates.name.trim()
-  if (updates.playingRole !== undefined) payload.playing_role = updates.playingRole
-  if (updates.birthDate !== undefined) {
-    payload.birth_date = updates.birthDate || null
-    payload.category = computeAgeCategory(updates.birthDate)
-  }
-  if (updates.profileImageUrl !== undefined) payload.profile_image_url = updates.profileImageUrl
-  if (updates.city !== undefined) payload.city = updates.city ? updates.city.trim() : null
-  if (updates.jerseyNumber !== undefined) payload.jersey_number = updates.jerseyNumber || null
-  if (updates.jerseySize !== undefined) payload.jersey_size = updates.jerseySize || null
-  if (updates.paymentScreenshotUrl !== undefined) payload.payment_screenshot_url = updates.paymentScreenshotUrl
-  if (updates.paymentStatus !== undefined) payload.payment_status = updates.paymentStatus
-
-  let { data, error } = await supabase.from("auction_players").update(payload).eq("id", id).select().single()
-  if (error && (error.message?.includes("payment_screenshot_url") || error.message?.includes("payment_status"))) {
-    delete payload.payment_screenshot_url
-    delete payload.payment_status
-    const res = await supabase.from("auction_players").update(payload).eq("id", id).select().single()
-    if (res.error) throw res.error
-    data = res.data
-  } else if (error) {
-    throw error
-  }
-  return data
-}
-
 export async function fetchAuctionRegistrationOpen(auctionId = null) {
   if (auctionId) {
     const { data, error } = await supabase.from("auctions").select("registration_open").eq("id", auctionId).maybeSingle()
