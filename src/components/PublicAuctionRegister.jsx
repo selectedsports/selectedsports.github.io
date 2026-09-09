@@ -370,7 +370,7 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
 
       {/* Notice explaining Google Pay opens while page stays in background */}
       <div style={{ fontSize:11, color:"#1E40AF", background:"rgba(37,99,235,0.08)", padding:"9px 12px", borderRadius:8, border:"1px solid rgba(37,99,235,0.2)", marginBottom:14, lineHeight:1.4 }}>
-        💡 <strong>Notice:</strong> When you tap <em>Pay with Google Pay</em>, your GPay app will open while this registration page remains open in the background. Complete payment in GPay, take a screenshot, and switch back here to upload it below.
+        💡 <strong>Notice:</strong> When you tap <em>Pay with Google Pay</em>, your GPay app will open. If GPay displays an advisory notice at the bottom, tap <strong>DISMISS</strong> to proceed with the payment, take a screenshot, and upload it below.
       </div>
 
       {/* Payment Info */}
@@ -409,6 +409,9 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
           >
             <span>⚡</span> Pay ₹{fee} via Any UPI App
           </a>
+        </div>
+        <div style={{ fontSize:11, color:"#64748B", textAlign:"center", marginTop:2 }}>
+          Or pay manually in GPay to <strong>{paymentPhone}</strong> or UPI <strong>{upiId}</strong>
         </div>
       </div>
 
