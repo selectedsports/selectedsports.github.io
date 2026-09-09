@@ -631,6 +631,8 @@ export default function ProPortal({ player, onLogout }) {
   const [viewingAuctionPlayer, setViewingAuctionPlayer] = useState(null)
   const [showAddAuctionTeam, setShowAddAuctionTeam] = useState(false)
   const [editAuctionTeam, setEditAuctionTeam] = useState(null)
+  const [auctionTeamLogoFile, setAuctionTeamLogoFile] = useState(null)
+  const [auctionTeamLogoPreview, setAuctionTeamLogoPreview] = useState("")
   const [delAuctionTeam, setDelAuctionTeam] = useState(null)
   const [auctionTeamName, setAuctionTeamName] = useState("")
   const [auctionCaptainPhone, setAuctionCaptainPhone] = useState("")
@@ -685,6 +687,8 @@ export default function ProPortal({ player, onLogout }) {
 
   const openAddAuctionTeam = () => {
     setEditAuctionTeam(null)
+    setAuctionTeamLogoFile(null)
+    setAuctionTeamLogoPreview("")
     setAuctionCaptainPhone("")
     setAuctionCaptainName("")
     setAuctionCaptainPlayerId(null)
@@ -697,6 +701,8 @@ export default function ProPortal({ player, onLogout }) {
   }
   const openEditAuctionTeam = (t) => {
     setEditAuctionTeam(t)
+    setAuctionTeamLogoFile(null)
+    setAuctionTeamLogoPreview(t.logo_url || "")
     const capPlayer = auctionPlayers.find(p => p.sold_team_id === t.id && (p.is_captain || p.status === "captain"))
     setAuctionCaptainPhone(t.captain_phone || capPlayer?.phone || "")
     setAuctionCaptainName(t.captain_name || capPlayer?.name || "")
@@ -745,7 +751,9 @@ export default function ProPortal({ player, onLogout }) {
           captainPhone: cleanCapPhone,
           ownerPhone: finalOwnerPhone,
           captainPlayerId: auctionCaptainPlayerId,
-          auctionId: managingAuction.id
+          auctionId: managingAuction.id,
+          logoFile: auctionTeamLogoFile,
+          logoUrl: auctionTeamLogoPreview
         })
       } else {
         await createAuctionTeam(
@@ -756,7 +764,9 @@ export default function ProPortal({ player, onLogout }) {
           auctionCaptainName.trim(),
           cleanCapPhone,
           finalOwnerPhone,
-          auctionCaptainPlayerId
+          auctionCaptainPlayerId,
+          auctionTeamLogoFile,
+          auctionTeamLogoPreview
         )
       }
       setShowAddAuctionTeam(false)
@@ -1397,7 +1407,7 @@ export default function ProPortal({ player, onLogout }) {
                       return (
                       <Card key={t.id} style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                          <TeamAv name={t.name} logo={null} size={38}/>
+                          <TeamAv name={t.name} logo={t.logo_url} size={38}/>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)" }}>{t.name}</div>
                             <div style={{ fontSize: 12, color: "#64748B", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 2 }}>
@@ -1575,6 +1585,82 @@ export default function ProPortal({ player, onLogout }) {
                     placeholder="e.g. Mumbai Warriors"
                     style={{ ...aiS, marginBottom: 12 }}
                   />
+
+                  {/* Team Logo / Badge */}
+                  <div style={{ marginBottom: 14, padding: "12px", background: "#F8FAF8", borderRadius: 10, border: "1px solid #E2E8F0" }}>
+                    <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>Team Logo</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <div style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 12,
+                        background: "#FFFFFF",
+                        border: auctionTeamLogoPreview ? "2px solid #166534" : "1.5px dashed #CBD5E1",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        flexShrink: 0
+                      }}>
+                        {auctionTeamLogoPreview ? (
+                          <img src={auctionTeamLogoPreview} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          <TeamAv name={auctionTeamName || "T"} logo={null} size={52} />
+                        )}
+                      </div>
+                      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <label style={{ cursor: "pointer", display: "inline-block" }}>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "6px 12px",
+                              borderRadius: 7,
+                              background: "#166534",
+                              color: "#FFFFFF",
+                              fontSize: 12,
+                              fontWeight: 700
+                            }}>
+                              {auctionTeamLogoPreview ? "Change Logo" : "Upload Logo"}
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              style={{ display: "none" }}
+                              onChange={e => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                setAuctionTeamLogoFile(file)
+                                const reader = new FileReader()
+                                reader.onload = () => setAuctionTeamLogoPreview(reader.result)
+                                reader.readAsDataURL(file)
+                              }}
+                            />
+                          </label>
+                          {auctionTeamLogoPreview && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAuctionTeamLogoFile(null)
+                                setAuctionTeamLogoPreview("")
+                              }}
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#EF4444",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                padding: "4px 6px"
+                              }}
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <span style={{ fontSize: 10, color: "#94A3B8" }}>PNG, JPG or WebP (Square recommended)</span>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Field 4: Checkbox Same as Captain */}
                   <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: auctionOwnerSameAsCaptain ? 14 : 10, cursor: "pointer", padding: "8px 10px", background: "#F8FAF8", borderRadius: 8, border: "1px solid #E2E8F0" }}>

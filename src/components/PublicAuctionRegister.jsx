@@ -230,11 +230,20 @@ function TournamentTeamsAndSquads({ auctionId }) {
               onClick={() => setExpandedTeamId(isExpanded ? null : t.id)}
               style={{ padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, background: isExpanded ? "#F8FAF8" : "#FFFFFF" }}
             >
-              <div style={{ minWidth:0, flex:1 }}>
-                <div style={{ fontSize:15, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
-                <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-                  {t.captain_name && <span>👑 Captain: <strong style={{ color:"#0F172A" }}>{t.captain_name}</strong></span>}
-                  {t.owner_name && t.owner_name !== t.captain_name && <span>· Owner: {t.owner_name}</span>}
+              <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0, flex:1 }}>
+                {t.logo_url ? (
+                  <img src={t.logo_url} alt={t.name} style={{ width:38, height:38, borderRadius:8, objectFit:"cover", flexShrink:0, border:"1px solid #E2E8F0" }}/>
+                ) : (
+                  <div style={{ width:38, height:38, borderRadius:8, background:"#F1F5F9", color:"#166534", fontWeight:800, fontSize:15, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    {t.name?.[0]?.toUpperCase() || "T"}
+                  </div>
+                )}
+                <div style={{ minWidth:0, flex:1 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
+                  <div style={{ fontSize:12, color:"#64748B", marginTop:3, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                    {t.captain_name && <span>👑 Captain: <strong style={{ color:"#0F172A" }}>{t.captain_name}</strong></span>}
+                    {t.owner_name && t.owner_name !== t.captain_name && <span>· Owner: {t.owner_name}</span>}
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign:"right", flexShrink:0 }}>
@@ -427,16 +436,6 @@ function PaymentSection({ auction, firstName, receiptFile, receiptPreview, setRe
           >
             {copiedText === "upi" ? "Copied!" : "Copy"}
           </button>
-        </div>
-
-        {/* Direct Pay Button */}
-        <div style={{ display:"grid", gap:8, marginBottom:14 }}>
-          <a
-            href={cleanUpiUrl}
-            style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"12px", borderRadius:9, background:"#1A73E8", color:"#FFFFFF", textDecoration:"none", fontSize:13, fontWeight:800, textAlign:"center", boxShadow:"0 2px 8px rgba(26,115,232,0.25)" }}
-          >
-            <span>📱</span> Pay ₹{fee} with Google Pay / UPI App
-          </a>
         </div>
 
         {/* Live Camera Scannable QR Code */}

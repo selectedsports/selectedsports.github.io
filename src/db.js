@@ -864,7 +864,23 @@ export async function fetchAuctionTeams(auctionId = null) {
   q = auctionId ? q.eq("auction_id", auctionId) : q.is("auction_id", null)
   const { data, error } = await q
   if (error) throw error
-  return data
+  if (!data || data.length === 0) return []
+
+  try {
+    const keys = data.map(t => `auction_team_logo_${t.id}`)
+    const { data: settingsData } = await supabase.from("settings").select("key, value").in("key", keys)
+    const logoMap = {}
+    if (settingsData) {
+      settingsData.forEach(s => { logoMap[s.key] = s.value })
+    }
+    return data.map(t => ({
+      ...t,
+      logo_url: t.logo_url || logoMap[`auction_team_logo_${t.id}`] || null
+    }))
+  } catch (e) {
+    console.warn("Could not load team logos:", e)
+    return data
+  }
 }
 export async function assignCaptainToTeam(teamId, auctionId, { captainPlayerId, captainPhone, captainName }) {
   const cleanedPhone = (captainPhone || "").replace(/[^0-9]/g, "").slice(-10)
@@ -998,7 +1014,7 @@ export async function assignCaptainToTeam(teamId, auctionId, { captainPlayerId, 
   }
 }
 
-export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null, captainName = null, captainPhone = null, ownerPhone = null, captainPlayerId = null) {
+export async function createAuctionTeam(name, ownerName, purseTotal, auctionId = null, captainName = null, captainPhone = null, ownerPhone = null, captainPlayerId = null, logoFile = null, logoUrl = null) {
   const payload = {
     name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal, auction_id: auctionId || null
   }
@@ -1027,10 +1043,25 @@ export async function createAuctionTeam(name, ownerName, purseTotal, auctionId =
     }
   }
 
+  if (teamData?.id) {
+    try {
+      let finalLogo = logoUrl || null
+      if (logoFile) {
+        finalLogo = await uploadTeamLogo(logoFile, name)
+      }
+      if (finalLogo) {
+        await upsertSetting(`auction_team_logo_${teamData.id}`, finalLogo)
+        teamData.logo_url = finalLogo
+      }
+    } catch (err) {
+      console.warn("Could not save team logo:", err)
+    }
+  }
+
   return teamData
 }
 
-export async function updateAuctionTeam(id, { name, ownerName, purseTotal, captainName, captainPhone, ownerPhone, captainPlayerId, auctionId }) {
+export async function updateAuctionTeam(id, { name, ownerName, purseTotal, captainName, captainPhone, ownerPhone, captainPlayerId, auctionId, logoFile, logoUrl }) {
   const payload = {
     name, owner_name: ownerName || null, captain_name: captainName || null, purse_total: purseTotal, purse_remaining: purseTotal
   }
@@ -1054,12 +1085,54 @@ export async function updateAuctionTeam(id, { name, ownerName, purseTotal, capta
       console.warn("Could not update pre-assigned captain:", err)
     }
   }
+
+  try {
+    if (logoFile) {
+      const finalLogo = await uploadTeamLogo(logoFile, name)
+      await upsertSetting(`auction_team_logo_${id}`, finalLogo)
+    } else if (logoUrl !== undefined) {
+      if (logoUrl) {
+        await upsertSetting(`auction_team_logo_${id}`, logoUrl)
+      } else {
+        await supabase.from("settings").delete().eq("key", `auction_team_logo_${id}`)
+      }
+    }
+  } catch (err) {
+    console.warn("Could not update team logo:", err)
+  }
 }
 
 export async function deleteAuctionTeam(id) {
+  // 1. Safely unlink players assigned/sold to this team back to the pool
+  const { error: pErr } = await supabase.from("auction_players").update({
+    status: "registered",
+    sold_team_id: null,
+    sold_price: null,
+    sold_at: null
+  }).eq("sold_team_id", id)
+  if (pErr) throw pErr
+
+  // 2. Remove any bids by this team
   try {
-    await supabase.from("auction_players").update({ status: "registered", sold_team_id: null, sold_price: null, is_captain: false }).eq("sold_team_id", id)
+    await supabase.from("auction_bids").delete().eq("team_id", id)
+  } catch (bErr) {
+    console.warn("Could not delete bids for team:", bErr)
+  }
+
+  // 3. Clear active team in auctions and auction_state
+  try {
+    await supabase.from("auctions").update({ current_team_id: null }).eq("current_team_id", id)
   } catch {}
+  try {
+    await supabase.from("auction_state").update({ current_team_id: null }).eq("current_team_id", id)
+  } catch {}
+
+  // 4. Clean up team logo from settings
+  try {
+    await supabase.from("settings").delete().eq("key", `auction_team_logo_${id}`)
+  } catch {}
+
+  // 5. Delete the team
   const { error } = await supabase.from("auction_teams").delete().eq("id", id)
   if (error) throw error
 }

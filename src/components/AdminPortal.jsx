@@ -2108,6 +2108,8 @@ function AuctionPage({ isMobile, isFounder }) {
   const [priceDrafts, setPriceDrafts] = useState({})
   const [showAddTeam, setShowAddTeam] = useState(false)
   const [editTeam, setEditTeam] = useState(null)
+  const [teamLogoFile, setTeamLogoFile] = useState(null)
+  const [teamLogoPreview, setTeamLogoPreview] = useState("")
   const [delTeam, setDelTeam] = useState(null)
   const [teamName, setTeamName] = useState("")
   const [captainPhone, setCaptainPhone] = useState("")
@@ -2300,6 +2302,8 @@ function AuctionPage({ isMobile, isFounder }) {
 
   const openAddTeam = () => {
     setEditTeam(null)
+    setTeamLogoFile(null)
+    setTeamLogoPreview("")
     setCaptainPhone("")
     setTeamCaptain("")
     setCaptainPlayerId(null)
@@ -2312,6 +2316,8 @@ function AuctionPage({ isMobile, isFounder }) {
   }
   const openEditTeam = (t) => {
     setEditTeam(t)
+    setTeamLogoFile(null)
+    setTeamLogoPreview(t.logo_url || "")
     const capPlayer = auctionPlayers.find(p => p.sold_team_id === t.id && (p.is_captain || p.status === "captain"))
     setCaptainPhone(t.captain_phone || capPlayer?.phone || "")
     setTeamCaptain(t.captain_name || capPlayer?.name || "")
@@ -2373,7 +2379,9 @@ function AuctionPage({ isMobile, isFounder }) {
           captainPhone: cleanCapPhone,
           ownerPhone: finalOwnerPhone,
           captainPlayerId,
-          auctionId: managingAuction?.id || null
+          auctionId: managingAuction?.id || null,
+          logoFile: teamLogoFile,
+          logoUrl: teamLogoPreview
         })
       } else {
         await createAuctionTeam(
@@ -2384,7 +2392,9 @@ function AuctionPage({ isMobile, isFounder }) {
           teamCaptain.trim(),
           cleanCapPhone,
           finalOwnerPhone,
-          captainPlayerId
+          captainPlayerId,
+          teamLogoFile,
+          teamLogoPreview
         )
       }
       setShowAddTeam(false)
@@ -3056,7 +3066,7 @@ function AuctionPage({ isMobile, isFounder }) {
                 return (
                 <Card key={t.id} style={{ padding:"14px 16px" }}>
                   <div onClick={()=>setViewingTeam(t)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
-                    <TeamAv name={t.name} logo={null} size={38}/>
+                    <TeamAv name={t.name} logo={t.logo_url} size={38}/>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
                       <div style={{ fontSize:12, color:"#64748B", display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginTop:2 }}>
@@ -3220,6 +3230,82 @@ function AuctionPage({ isMobile, isFounder }) {
               style={{ ...iS, marginBottom:12 }}
             />
 
+            {/* Team Logo / Badge */}
+            <div style={{ marginBottom: 14, padding: "12px", background: "#F8FAF8", borderRadius: 10, border: "1px solid #E2E8F0" }}>
+              <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8, fontWeight: 600 }}>Team Logo</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 12,
+                  background: "#FFFFFF",
+                  border: teamLogoPreview ? "2px solid #166534" : "1.5px dashed #CBD5E1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  flexShrink: 0
+                }}>
+                  {teamLogoPreview ? (
+                    <img src={teamLogoPreview} alt="Logo" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <TeamAv name={teamName || "T"} logo={null} size={52} />
+                  )}
+                </div>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <label style={{ cursor: "pointer", display: "inline-block" }}>
+                      <span style={{
+                        display: "inline-block",
+                        padding: "6px 12px",
+                        borderRadius: 7,
+                        background: "#166534",
+                        color: "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 700
+                      }}>
+                        {teamLogoPreview ? "Change Logo" : "Upload Logo"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={e => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          setTeamLogoFile(file)
+                          const reader = new FileReader()
+                          reader.onload = () => setTeamLogoPreview(reader.result)
+                          reader.readAsDataURL(file)
+                        }}
+                      />
+                    </label>
+                    {teamLogoPreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTeamLogoFile(null)
+                          setTeamLogoPreview("")
+                        }}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#EF4444",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          padding: "4px 6px"
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 10, color: "#94A3B8" }}>PNG, JPG or WebP (Square recommended)</span>
+                </div>
+              </div>
+            </div>
+
             {/* Field 4: Checkbox Same as Captain */}
             <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom: ownerSameAsCaptain ? 14 : 10, cursor:"pointer", padding:"8px 10px", background:"#F8FAF8", borderRadius:8, border:"1px solid #E2E8F0" }}>
               <input
@@ -3320,7 +3406,7 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
 
             <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
-              <TeamAv name={viewingTeam.name} logo={null} size={56}/>
+              <TeamAv name={viewingTeam.name} logo={viewingTeam.logo_url} size={56}/>
               <div>
                 <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>{viewingTeam.name}</div>
                 {viewingTeam.owner_name && <div style={{ fontSize:13, color:"#64748B", marginTop:2 }}>Owner: {viewingTeam.owner_name}</div>}

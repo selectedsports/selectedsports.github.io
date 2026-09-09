@@ -733,6 +733,11 @@ export default function PublicAuctionView({ auctionCode }) {
                         }}>
                           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
                             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                              {t.logo_url ? (
+                                <img src={t.logo_url} alt={t.name} style={{ width:24, height:24, borderRadius:6, objectFit:"cover" }} />
+                              ) : (
+                                <span style={{ width:24, height:24, borderRadius:6, background:"rgba(255,255,255,0.08)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:800, color:"#FEF08A" }}>{t.name?.[0]?.toUpperCase()}</span>
+                              )}
                               <span style={{ fontSize:14, fontWeight:800, color:"#FFFFFF" }}>{t.name}</span>
                               <span style={{ fontSize:11, color:"#94A3B8", background:"rgba(255,255,255,0.06)", padding:"2px 8px", borderRadius:4, fontWeight:600 }}>
                                 {squadCount} / 9 Squad
@@ -817,9 +822,16 @@ export default function PublicAuctionView({ auctionCode }) {
                 return (
                   <div key={t.id} style={{ background:"#131E30", borderRadius:16, padding:"16px 18px", border:"1px solid rgba(255,255,255,0.08)", color:"#FFFFFF", boxShadow:"0 6px 20px rgba(0,0,0,0.25)" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                      <div>
-                        <div style={{ fontWeight:800, fontSize:16, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>{t.name}</div>
-                        <div style={{ fontSize:12, color:"#94A3B8" }}>{squad.length}/9 squad members</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                        {t.logo_url ? (
+                          <img src={t.logo_url} alt={t.name} style={{ width:36, height:36, borderRadius:8, objectFit:"cover", border:"1px solid rgba(255,255,255,0.15)" }} />
+                        ) : (
+                          <span style={{ width:36, height:36, borderRadius:8, background:"rgba(255,255,255,0.08)", display:"inline-flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:"#FEF08A" }}>{t.name?.[0]?.toUpperCase()}</span>
+                        )}
+                        <div>
+                          <div style={{ fontWeight:800, fontSize:16, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>{t.name}</div>
+                          <div style={{ fontSize:12, color:"#94A3B8" }}>{squad.length}/9 squad members</div>
+                        </div>
                       </div>
                       <div style={{ fontSize:13, color:"#FEF08A", fontWeight:800 }}>
                         🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")} left
