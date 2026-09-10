@@ -1352,42 +1352,62 @@ export default function ProPortal({ player, onLogout }) {
               ) : (
                 <div style={{ display: "grid", gap: 10 }}>
                   {poolPlayers.map(p => (
-                    <Card key={p.id} style={{ padding: "14px 16px" }}>
-                      <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, cursor: "pointer" }}>
+                    <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", borderRadius: 14 }}>
+                      <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
                         {p.profile_image_url ? (
-                          <img src={p.profile_image_url} alt={p.name} style={{ width: 42, height: 42, borderRadius: 9, objectFit: "cover", flexShrink: 0 }}/>
+                          <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #E2E8F0" }}/>
                         ) : (
-                          <div style={{ width: 42, height: 42, borderRadius: 9, background: "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#64748B", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#475569", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)" }}>{p.name}</div>
-                          <div style={{ fontSize: 12, color: "#94A3B8", display: "flex", alignItems: "center", gap: 4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                          <div style={{ fontSize: 11.5, color: "#64748B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                            <Phone size={11} style={{ flexShrink: 0 }}/>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</span>
+                          </div>
                         </div>
-                        {p.payment_screenshot_url && (
-                          <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid #166534", background: "rgba(34,197,94,0.08)", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                            🧾 Receipt
-                          </button>
-                        )}
-                        {p.payment_status === "pending" && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                            ⏳ Pending
-                          </span>
-                        )}
-                        {p.payment_status === "paid" && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                            ✓ Paid
-                          </span>
-                        )}
-                        {(p.status === "waitlist" || p.payment_status === "waitlist") && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                            ⏳ Waitlist
-                          </span>
-                        )}
-                        <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 4 }}><Trash2 size={16}/></button>
+                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                          <ChevronRight size={16} color="#94A3B8"/>
+                          <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Remove player"><Trash2 size={15}/></button>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "#64748B", fontWeight: 600 }}>Base Price 🪙</span>
-                        <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e => setPriceDrafts({ ...priceDrafts, [p.id]: e.target.value })} onBlur={() => saveAuctionPrice(p.id)} placeholder="0" style={{ ...aiS, flex: 1, padding: "8px 10px" }}/>
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingTop: 10, borderTop: "1px solid #F1F5F9", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                          {p.payment_status === "paid" && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                              ✓ Paid
+                            </span>
+                          )}
+                          {p.payment_status === "pending" && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                              ⏳ Pending
+                            </span>
+                          )}
+                          {(p.status === "waitlist" || p.payment_status === "waitlist") && (
+                            <span style={{ fontSize: 11, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "3px 8px", borderRadius: 6 }}>
+                              ⏳ Waitlist
+                            </span>
+                          )}
+                          {p.payment_screenshot_url && (
+                            <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #166534", background: "rgba(34,197,94,0.08)", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                              🧾 Receipt
+                            </button>
+                          )}
+                        </div>
+
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+                          <span style={{ fontSize: 11.5, color: "#64748B", fontWeight: 700, whiteSpace: "nowrap" }}>🪙 Base Price:</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")}
+                            onChange={e => setPriceDrafts({ ...priceDrafts, [p.id]: e.target.value })}
+                            onBlur={() => saveAuctionPrice(p.id)}
+                            placeholder="0"
+                            style={{ width: isMobile ? 85 : 110, padding: "5px 8px", borderRadius: 8, border: "1.5px solid #CBD5E1", fontSize: 13, fontWeight: 700, color: "#0F172A", textAlign: "right", outline: "none", background: "#FFFFFF" }}
+                          />
+                        </div>
                       </div>
                     </Card>
                   ))}

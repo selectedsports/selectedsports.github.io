@@ -243,7 +243,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
   ]
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)", paddingBottom:70 }}>
+    <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)", paddingBottom: isMobile ? 120 : 80 }}>
       {/* Top bar */}
       <div style={{ background:"#FFFFFF", height:56, borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", padding:"0 16px", gap:12, position:"sticky", top:0, zIndex:200 }}>
         <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
@@ -2466,19 +2466,19 @@ function AuctionPage({ isMobile, isFounder }) {
 
   return (
     <div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18, gap:12, flexWrap:"wrap" }}>
-        <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom:18, gap:12, flexWrap:"wrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {managingAuction && (
             <button onClick={()=>{ setManagingAuction(null); setSubTab("today") }} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", padding:0, marginBottom:6, display:"flex", alignItems:"center", gap:4 }}>← All Auctions</button>
           )}
-          <h2 style={{ color:"#0F172A", fontSize:isMobile?20:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)" }}>{managingAuction ? managingAuction.name : "Auction"}</h2>
+          <h2 style={{ color:"#0F172A", fontSize:isMobile?19:26, fontWeight:900, margin:0, fontFamily:"var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", wordBreak: "break-word" }}>{managingAuction ? managingAuction.name : "Auction"}</h2>
           {!managingAuction && <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>Create and manage cricket player auctions</div>}
         </div>
         {!managingAuction && !isMobile && (
           <div style={{ width:44, height:44, borderRadius:12, background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Gavel size={22} color="#B8860B"/></div>
         )}
         {managingAuction ? (
-          <button onClick={()=>setDelAuction(managingAuction)} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #EF4444", background:"#FFFFFF", color:"#EF4444", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Trash2 size={15}/> Delete Auction</button>
+          <button onClick={()=>setDelAuction(managingAuction)} style={{ padding: isMobile ? "8px 12px" : "10px 16px", borderRadius:12, border:"1.5px solid #EF4444", background:"#FFFFFF", color:"#EF4444", fontSize: isMobile ? 12 : 13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:5, flexShrink:0, whiteSpace:"nowrap" }}><Trash2 size={14}/> Delete Auction</button>
         ) : (
           <button onClick={()=>setShowCreateAuction(true)} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, flexShrink:0, whiteSpace:"nowrap" }}><Plus size={15}/> New Auction</button>
         )}
@@ -2741,12 +2741,21 @@ function AuctionPage({ isMobile, isFounder }) {
         </div>
       )}
 
-      <div style={{ display:"flex", gap:8, marginBottom:18, flexWrap:"wrap" }}>
+      <div style={{
+        display:"flex",
+        gap:8,
+        marginBottom:18,
+        overflowX: isMobile ? "auto" : "visible",
+        flexWrap: isMobile ? "nowrap" : "wrap",
+        paddingBottom: isMobile ? 6 : 0,
+        WebkitOverflowScrolling: "touch",
+        scrollbarWidth: "none"
+      }}>
         {(managingAuction
           ? [["players", `Player Pool (${auctionPlayers.filter(p => !p.is_captain && p.status !== "captain").length})`], ["teams", `Teams (${auctionTeams.length})`], ["live", "Live Auction"], ["sponsors", "Sponsors"], ["links", "Links"], ["details", "Details"]]
           : [["today", "Today's Auctions"], ["upcoming", "Upcoming Auctions"], ["completed", "Completed"], ["pricing", "Pricing"], ...(isFounder ? [["payments", `Payments (${pendingPayments.length})`]] : [])]
         ).map(([v, label]) => (
-          <button key={v} onClick={()=>setSubTab(v)} style={{ padding:"9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
+          <button key={v} onClick={()=>setSubTab(v)} style={{ padding: isMobile ? "8px 14px" : "9px 16px", borderRadius:999, border:subTab===v?"none":"1.5px solid #E2E8F0", background:subTab===v?"#166534":"#FFFFFF", color:subTab===v?"#FFFFFF":"#0F172A", fontSize: isMobile ? 12 : 12.5, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink: 0 }}>{label}</button>
         ))}
       </div>
 
@@ -2899,22 +2908,31 @@ function AuctionPage({ isMobile, isFounder }) {
 
         return (
         <div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:8 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom:10, flexDirection: isMobile ? "column" : "row", gap: 10 }}>
             <div style={{ fontSize:12, color:"#64748B" }}>
               Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding {waitlistPlayers.length > 0 && <span>· ⏳ <strong>{waitlistPlayers.length}</strong> on Waiting List</span>}
             </div>
-            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+            <div style={{ display:"flex", gap:10, alignItems:"center", width: isMobile ? "100%" : "auto", justifyContent: isMobile ? "space-between" : "flex-end" }}>
               <button
                 type="button"
                 onClick={() => setShowExportPoolModal(true)}
-                style={{ background:"rgba(22,101,52,0.08)", border:"1px solid #166534", borderRadius:8, color:"#166534", fontSize:12, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:"5px 12px" }}
+                style={{ background:"rgba(22,101,52,0.08)", border:"1px solid #166534", borderRadius:8, color:"#166534", fontSize:12, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:"6px 12px" }}
               >
                 <FileText size={13}/> Export Pool ({auctionPoolPlayers.length})
               </button>
               <button onClick={load} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:0 }}><RotateCcw size={13}/> Refresh</button>
             </div>
           </div>
-          <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
+            gap: 1,
+            background: "#E2E8F0",
+            border: "1px solid #E2E8F0",
+            borderRadius: 16,
+            marginBottom: 16,
+            overflow: "hidden"
+          }}>
             {(isFounder ? [
               { icon:Users, v:allPlatformPlayers.length, label:"Total Players" },
               { icon:Gavel, v:auctionPoolPlayers.length, label:"In Auction Pool" },
@@ -2925,43 +2943,45 @@ function AuctionPage({ isMobile, isFounder }) {
               { icon:Clock, v:waitlistPlayers.length, label:"Waiting List" },
               { icon:CheckCircle2, v:soldCount, label:"Sold" },
               { icon:Wallet, v:`🪙 ${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
-            ]).map((c,i,arr)=>(
-              <div key={i} style={{ flex:`1 1 ${100/arr.length}%`, minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<arr.length-1?"1px solid #F1F5F9":"none" }}>
-                <c.icon size={17} color="#166534"/>
-                <div>
-                  <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
-                  <div style={{ fontSize:10, color:"#64748B", marginTop:2 }}>{c.label}</div>
+            ]).map((c,i)=>(
+              <div key={i} style={{ background: "#FFFFFF", padding: isMobile ? "12px 10px" : "14px 16px", display:"flex", alignItems:"center", gap: 10 }}>
+                <c.icon size={isMobile ? 16 : 18} color="#166534" style={{ flexShrink: 0 }}/>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: isMobile ? 14 : 16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.v}</div>
+                  <div style={{ fontSize:10, color:"#64748B", marginTop:2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.label}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ display:"flex", gap:8, marginBottom:16, overflowX:"auto" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", scrollbarWidth:"none", borderBottom:"1px solid #E2E8F0", paddingBottom:2 }}>
             {[
               ...(isFounder ? [["registered",`Registered Players`]] : []),
               ["pool",`Auction Pool (${auctionPoolPlayers.length})`],
               ["waitlist",`⏳ Waiting List (${waitlistPlayers.length})`]
             ].map(([k,label])=>(
-              <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
+              <button key={k} onClick={()=>setPoolView(k)} style={{ padding: isMobile ? "8px 12px" : "9px 16px", borderRadius:"8px 8px 0 0", border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize: isMobile ? 12 : 13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink: 0 }}>{label}</button>
             ))}
           </div>
 
           {poolView === "registered" && isFounder ? (
             <>
               <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>All players registered on Selected Sports. Add players to the auction pool to include them in the auction.</div>
-              <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-                <div style={{ flex:1, minWidth:200, position:"relative" }}>
+              <div style={{ display:"flex", gap:10, marginBottom:14, flexDirection: isMobile ? "column" : "row" }}>
+                <div style={{ flex:1, position:"relative" }}>
                   <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
                   <input value={platformSearch} onChange={e=>setPlatformSearch(e.target.value)} placeholder="Search players by name or phone..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
                 </div>
-                <select value={platformTypeFilter} onChange={e=>setPlatformTypeFilter(e.target.value)} style={{ padding:"12px 14px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, background:"#FFFFFF", color:"#0F172A" }}>
-                  <option value="">All Types</option>
-                  <option value="player">Player</option>
-                  <option value="pro">PRO</option>
-                </select>
-                {selectedPlatformIds.size > 0 && (
-                  <button onClick={doBulkAddToPool} disabled={addingToPool} style={{ padding:"12px 18px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><Plus size={15}/> Add {selectedPlatformIds.size} to Pool</button>
-                )}
+                <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <select value={platformTypeFilter} onChange={e=>setPlatformTypeFilter(e.target.value)} style={{ padding:"12px 14px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, background:"#FFFFFF", color:"#0F172A", flex: isMobile ? 1 : "none" }}>
+                    <option value="">All Types</option>
+                    <option value="player">Player</option>
+                    <option value="pro">PRO</option>
+                  </select>
+                  {selectedPlatformIds.size > 0 && (
+                    <button onClick={doBulkAddToPool} disabled={addingToPool} style={{ padding:"12px 18px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", flex: isMobile ? 1 : "none", justifyContent: "center" }}><Plus size={15}/> Add {selectedPlatformIds.size}</button>
+                  )}
+                </div>
               </div>
               {loadingPlatformPlayers ? <Spinner/> : filteredPlatform.length === 0 ? (
                 <Card style={{ padding:"32px 16px", textAlign:"center" }}><div style={{ fontSize:14, color:"#64748B" }}>No players found.</div></Card>
@@ -2970,7 +2990,7 @@ function AuctionPage({ isMobile, isFounder }) {
                   {filteredPlatform.map(p => {
                     const already = inPoolPhones.has((p.phone||"").replace(/[^0-9]/g,"").slice(-10))
                     return (
-                      <Card key={p.id} style={{ padding:"12px 14px", display:"flex", alignItems:"center", gap:12 }}>
+                      <Card key={p.id} style={{ padding: isMobile ? "10px 12px" : "12px 14px", display:"flex", alignItems:"center", gap: 10 }}>
                         <input type="checkbox" checked={selectedPlatformIds.has(p.id)} disabled={already} onChange={()=>toggleSelect(p.id)} style={{ flexShrink:0 }}/>
                         {p.profile_image_url ? (
                           <img src={p.profile_image_url} alt={p.name} style={{ width:38, height:38, borderRadius:10, objectFit:"cover", flexShrink:0 }}/>
@@ -2978,10 +2998,18 @@ function AuctionPage({ isMobile, isFounder }) {
                           <Av name={p.name} id={p.id} sz={38}/>
                         )}
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontWeight:700, fontSize:14, color:"#0F172A" }}>{p.name}{p.role==="pro" && <span style={{ marginLeft:6, fontSize:9, fontWeight:800, color:"#B8860B", background:"rgba(184,134,11,0.12)", padding:"2px 6px", borderRadius:999 }}>PRO</span>}</div>
-                          <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.city ? ` · ${p.city}` : ""}</div>
+                          <div style={{ fontWeight:700, fontSize:13.5, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            {p.name}
+                            {p.role==="pro" && <span style={{ marginLeft:6, fontSize:9, fontWeight:800, color:"#B8860B", background:"rgba(184,134,11,0.12)", padding:"2px 6px", borderRadius:999 }}>PRO</span>}
+                          </div>
+                          <div style={{ fontSize:11.5, color:"#94A3B8", display:"flex", alignItems:"center", gap:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            <Phone size={11} style={{ flexShrink: 0 }}/>
+                            <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.city ? ` · ${p.city}` : ""}</span>
+                          </div>
                         </div>
-                        <button onClick={()=>doAddPlayerToPool(p)} disabled={already || addingToPool} style={{ padding:"8px 14px", borderRadius:9, border:already?"none":"1.5px solid #166534", background:already?"rgba(34,197,94,0.12)":"#FFFFFF", color:already?"#166534":"#166534", fontSize:12, fontWeight:700, cursor:already?"default":"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{already ? <><CheckCircle2 size={13}/> Added</> : <><Plus size={13}/> Add</>}</button>
+                        <button onClick={()=>doAddPlayerToPool(p)} disabled={already || addingToPool} style={{ padding:"6px 12px", borderRadius:8, border:already?"none":"1.5px solid #166534", background:already?"rgba(34,197,94,0.12)":"#FFFFFF", color:already?"#166534":"#166534", fontSize:12, fontWeight:700, cursor:already?"default":"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                          {already ? <><CheckCircle2 size={13}/> Added</> : <><Plus size={13}/> Add</>}
+                        </button>
                       </Card>
                     )
                   })}
@@ -3006,27 +3034,36 @@ function AuctionPage({ isMobile, isFounder }) {
               ) : (
                 <div style={{ display:"grid", gap:10 }}>
                   {filteredWaitlist.map((p, idx) => (
-                    <Card key={p.id} style={{ padding:"14px 16px", background:"#FFFBEB", border:"1px solid #FDE68A" }}>
-                      <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
-                        <div style={{ width:24, fontSize:12, fontWeight:800, color:"#B45309", textAlign:"center" }}>#{idx + 1}</div>
+                    <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background:"#FFFBEB", border:"1px solid #FDE68A", borderRadius: 14 }}>
+                      <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap: 10, marginBottom: 10, cursor:"pointer" }}>
+                        <span style={{ background:"#FEF3C7", color:"#B45309", border:"1px solid #FDE68A", borderRadius:6, fontSize:11, fontWeight:800, padding:"2px 6px", flexShrink:0 }}>
+                          #{idx + 1}
+                        </span>
                         {p.profile_image_url ? (
-                          <img src={p.profile_image_url} alt={p.name} style={{ width:42, height:42, borderRadius:9, objectFit:"cover", flexShrink:0, border:"1px solid #FDE68A" }}/>
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid #FDE68A" }}/>
                         ) : (
-                          <div style={{ width:42, height:42, borderRadius:9, background:"#FEF3C7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#B45309", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                          <div style={{ width:40, height:40, borderRadius:10, background:"#FEF3C7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#B45309", flexShrink:0 }}>{(p.name||"?")[0]}</div>
                         )}
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
-                          <div style={{ fontSize:12, color:"#92400E", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</div>
+                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                          <div style={{ fontSize:11.5, color:"#92400E", display:"flex", alignItems:"center", gap:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop: 2 }}>
+                            <Phone size={11} style={{ flexShrink: 0 }}/>
+                            <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
+                          </div>
                         </div>
-                        <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                          ⏳ Waitlist
-                        </span>
-                        <ChevronRight size={16} color="#94A3B8"/>
-                        <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+                        <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                          <ChevronRight size={16} color="#94A3B8"/>
+                          <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Remove player"><Trash2 size={15}/></button>
+                        </div>
                       </div>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FDE68A" }}>
-                        <div style={{ fontSize:11, color:"#78350F" }}>
-                          Registered: {p.created_at ? new Date(p.created_at).toLocaleString("en-IN", { dateStyle:"short", timeStyle:"short" }) : "N/A"}
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FDE68A", gap: 8, flexWrap:"wrap" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "3px 7px", borderRadius: 6 }}>
+                            ⏳ Waitlist
+                          </span>
+                          <span style={{ fontSize:11, color:"#78350F" }}>
+                            {p.created_at ? new Date(p.created_at).toLocaleDateString("en-IN", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" }) : ""}
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -3038,7 +3075,7 @@ function AuctionPage({ isMobile, isFounder }) {
                               setAuctionPlayers(list => list.map(x => x.id === p.id ? { ...x, status: "registered", payment_status: "pending" } : x))
                             } catch(err) { alert(err.message) }
                           }}
-                          style={{ padding:"6px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}
+                          style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:11.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", gap:4, marginLeft: "auto" }}
                         >
                           Promote to Pool ➔
                         </button>
@@ -3050,15 +3087,15 @@ function AuctionPage({ isMobile, isFounder }) {
             </div>
           ) : (
           <>
-          <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
-            <div style={{ flex:1, minWidth:200, position:"relative" }}>
+          <div style={{ display:"flex", gap:10, marginBottom:14, flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ flex:1, position:"relative" }}>
               <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
               <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search players by name or role..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
             </div>
             <button
               type="button"
               onClick={() => setShowExportPoolModal(true)}
-              style={{ padding:"10px 18px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", boxShadow:"0 2px 6px rgba(22,101,52,0.06)" }}
+              style={{ padding:"10px 18px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent: "center", gap:6, whiteSpace:"nowrap", boxShadow:"0 2px 6px rgba(22,101,52,0.06)", width: isMobile ? "100%" : "auto" }}
             >
               <FileText size={15}/> Export Pool for Captains ({auctionPoolPlayers.length})
             </button>
@@ -3071,43 +3108,64 @@ function AuctionPage({ isMobile, isFounder }) {
           ) : (
             <div style={{ display:"grid", gap:10 }}>
               {filteredPool.map(p => (
-                <Card key={p.id} style={{ padding:"14px 16px" }}>
-                  <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
+                <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", borderRadius: 14 }}>
+                  <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap: 10, cursor:"pointer", marginBottom: 10 }}>
                     {p.profile_image_url ? (
-                      <img src={p.profile_image_url} alt={p.name} style={{ width:42, height:42, borderRadius:9, objectFit:"cover", flexShrink:0 }}/>
+                      <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid #E2E8F0" }}/>
                     ) : (
-                      <div style={{ width:42, height:42, borderRadius:9, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                      <div style={{ width:40, height:40, borderRadius:10, background:"#F1F5F9", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#475569", flexShrink:0 }}>{(p.name||"?")[0]}</div>
                     )}
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
-                      <div style={{ fontSize:12, color:"#94A3B8", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</div>
+                      <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {p.name}
+                      </div>
+                      <div style={{ fontSize:11.5, color:"#64748B", display:"flex", alignItems:"center", gap:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop: 2 }}>
+                        <Phone size={11} style={{ flexShrink: 0 }}/>
+                        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
+                      </div>
                     </div>
-                    {p.payment_screenshot_url && (
-                      <button onClick={(e)=>{ e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #166534", background:"rgba(34,197,94,0.08)", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
-                        🧾 Receipt
-                      </button>
-                    )}
-                    {p.payment_status === "pending" && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                        ⏳ Pending
-                      </span>
-                    )}
-                    {p.payment_status === "paid" && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                        ✓ Paid
-                      </span>
-                    )}
-                    {(p.status === "waitlist" || p.payment_status === "waitlist") && (
-                      <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
-                        ⏳ Waitlist
-                      </span>
-                    )}
-                    <ChevronRight size={16} color="#94A3B8"/>
-                    <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                      <ChevronRight size={16} color="#94A3B8"/>
+                      <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Remove player"><Trash2 size={15}/></button>
+                    </div>
                   </div>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <span style={{ fontSize:12, color:"#64748B", fontWeight:600 }}>Base Price 🪙</span>
-                    <input type="number" min="0" value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")} onChange={e=>setPriceDrafts({...priceDrafts, [p.id]: e.target.value})} onBlur={()=>savePrice(p.id)} placeholder="0" style={{ ...iS, flex:1, padding:"8px 10px" }}/>
+
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap: 8, paddingTop: 10, borderTop:"1px solid #F1F5F9", flexWrap: "wrap" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap: "wrap" }}>
+                      {p.payment_status === "paid" && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "3px 8px", borderRadius: 6, display:"inline-flex", alignItems:"center", gap:3 }}>
+                          ✓ Paid
+                        </span>
+                      )}
+                      {p.payment_status === "pending" && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "3px 8px", borderRadius: 6, display:"inline-flex", alignItems:"center", gap:3 }}>
+                          ⏳ Pending
+                        </span>
+                      )}
+                      {(p.status === "waitlist" || p.payment_status === "waitlist") && (
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "3px 8px", borderRadius: 6 }}>
+                          ⏳ Waitlist
+                        </span>
+                      )}
+                      {p.payment_screenshot_url && (
+                        <button onClick={(e)=>{ e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding:"3px 8px", borderRadius:6, border:"1px solid #166534", background:"rgba(34,197,94,0.08)", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:4 }}>
+                          🧾 Receipt
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginLeft: "auto" }}>
+                      <span style={{ fontSize:11.5, color:"#64748B", fontWeight:700, whiteSpace:"nowrap" }}>🪙 Base Price:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")}
+                        onChange={e=>setPriceDrafts({...priceDrafts, [p.id]: e.target.value})}
+                        onBlur={()=>savePrice(p.id)}
+                        placeholder="0"
+                        style={{ width: isMobile ? 85 : 110, padding: "5px 8px", borderRadius: 8, border: "1.5px solid #CBD5E1", fontSize: 13, fontWeight: 700, color: "#0F172A", textAlign: "right", outline: "none", background: "#FFFFFF" }}
+                      />
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -3126,28 +3184,39 @@ function AuctionPage({ isMobile, isFounder }) {
         const filteredTeams = auctionTeams.filter(t => !q || t.name.toLowerCase().includes(q) || (t.owner_name||"").toLowerCase().includes(q))
         return (
         <div>
-          <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "repeat(3, 1fr)" : "repeat(3, 1fr)",
+            gap: 1,
+            background: "#E2E8F0",
+            border: "1px solid #E2E8F0",
+            borderRadius: 16,
+            marginBottom: 16,
+            overflow: "hidden"
+          }}>
             {[
               { icon:UsersRound, v:auctionTeams.length, label:"Total Teams" },
-              { icon:Wallet, v:`🪙 ${totalPurse.toLocaleString("en-IN")}`, label:"Total Purse Pool" },
+              { icon:Wallet, v:`🪙 ${totalPurse.toLocaleString("en-IN")}`, label:"Purse Pool" },
               { icon:CheckCircle2, v:`🪙 ${totalRemaining.toLocaleString("en-IN")}`, label:"Remaining" },
             ].map((c,i)=>(
-              <div key={i} style={{ flex:"1 1 33%", minWidth:130, padding:"14px 16px", display:"flex", alignItems:"center", gap:10, borderRight:i<2?"1px solid #F1F5F9":"none" }}>
-                <c.icon size={17} color="#166534"/>
-                <div>
-                  <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1 }}>{c.v}</div>
-                  <div style={{ fontSize:10, color:"#64748B", marginTop:2 }}>{c.label}</div>
+              <div key={i} style={{ background: "#FFFFFF", padding: isMobile ? "10px 8px" : "14px 16px", display:"flex", alignItems:"center", gap: isMobile ? 6 : 10 }}>
+                <c.icon size={isMobile ? 15 : 17} color="#166534" style={{ flexShrink: 0 }}/>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: isMobile ? 13 : 16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.v}</div>
+                  <div style={{ fontSize: isMobile ? 9 : 10, color:"#64748B", marginTop:2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.label}</div>
                 </div>
               </div>
             ))}
           </div>
-          <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+          <div style={{ display:"flex", gap:10, marginBottom:14, flexDirection: isMobile ? "column" : "row" }}>
             <div style={{ flex:1, position:"relative" }}>
               <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
               <input value={teamSearch} onChange={e=>setTeamSearch(e.target.value)} placeholder="Search teams by name or owner..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
             </div>
-            <button onClick={doPrintTeamLists} style={{ padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><FileText size={15}/> Print / Export</button>
-            <button onClick={openAddTeam} style={{ padding:"10px 16px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap" }}><Plus size={15}/> Add Team</button>
+            <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+              <button onClick={doPrintTeamLists} style={{ flex: isMobile ? 1 : "none", padding:"10px 14px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent: "center", gap:5, whiteSpace:"nowrap" }}><FileText size={15}/> Print / Export</button>
+              <button onClick={openAddTeam} style={{ flex: isMobile ? 1 : "none", padding:"10px 14px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12.5, fontWeight:700, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent: "center", gap:5, whiteSpace:"nowrap" }}><Plus size={15}/> Add Team</button>
+            </div>
           </div>
           {filteredTeams.length === 0 ? (
             <Card style={{ padding:"32px 16px", textAlign:"center" }}>
@@ -3159,51 +3228,50 @@ function AuctionPage({ isMobile, isFounder }) {
               {filteredTeams.map(t => {
                 const teamSquad = auctionPlayers.filter(p => p.sold_team_id === t.id)
                 return (
-                <Card key={t.id} style={{ padding:"14px 16px" }}>
-                  <div onClick={()=>setViewingTeam(t)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" }}>
-                    <TeamAv name={t.name} logo={t.logo_url} size={38}/>
+                <Card key={t.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", borderRadius: 14 }}>
+                  <div onClick={()=>setViewingTeam(t)} style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}>
+                    <TeamAv name={t.name} logo={t.logo_url} size={isMobile ? 36 : 40}/>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{t.name}</div>
-                      <div style={{ fontSize:12, color:"#64748B", display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginTop:2 }}>
-                        {t.captain_name && <span>👑 Captain: <strong style={{ color:"#0F172A" }}>{t.captain_name}</strong></span>}
-                        {t.owner_name && t.owner_name !== t.captain_name && <span>· Owner: {t.owner_name}</span>}
+                      <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{t.name}</div>
+                      <div style={{ fontSize:11.5, color:"#64748B", display:"flex", alignItems:"center", gap:4, flexWrap:"wrap", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {t.captain_name && <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>👑 <strong style={{ color:"#0F172A" }}>{t.captain_name}</strong></span>}
                         <span style={{ color:"#94A3B8" }}>({teamSquad.length}/9 squad)</span>
                       </div>
                     </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ fontWeight:800, fontSize:15, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
-                      <div style={{ fontSize:10, color:"#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
+                    <div style={{ textAlign:"right", flexShrink: 0 }}>
+                      <div style={{ fontWeight:800, fontSize: isMobile ? 13.5 : 15, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
+                      <div style={{ fontSize:9.5, color:"#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                     </div>
-                    <ChevronRight size={16} color="#94A3B8"/>
+                    <ChevronRight size={16} color="#94A3B8" style={{ flexShrink: 0 }}/>
                   </div>
 
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, marginTop:10, paddingTop:10, borderTop:"1px solid #F1F5F9", flexWrap:"wrap" }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:6, marginTop:10, paddingTop:10, borderTop:"1px solid #F1F5F9", flexWrap:"wrap" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
                       <button
                         onClick={(e)=>{ e.stopPropagation(); copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${t.id}`, `team-${t.id}`) }}
-                        style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#475569", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        style={{ padding:"4px 8px", borderRadius:6, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color: copiedLink===`team-${t.id}` ? "#166534" : "#475569", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", gap:3 }}
                         title="Copy private squad link for captain/owner"
                       >
-                        <LinkIcon size={12}/> {copiedLink===`team-${t.id}` ? "Copied Link!" : "Team Link"}
+                        <LinkIcon size={11}/> {copiedLink===`team-${t.id}` ? "Copied!" : "Link"}
                       </button>
                       <button
                         onClick={(e)=>{ e.stopPropagation(); shareTeamOnWhatsApp(t, managingAuction) }}
-                        style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #22C55E", background:"#F0FDF4", cursor:"pointer", color:"#166534", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        style={{ padding:"4px 8px", borderRadius:6, border:"1px solid #22C55E", background:"#F0FDF4", cursor:"pointer", color:"#166534", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", gap:3 }}
                         title="Share squad link directly via WhatsApp to captain/owner"
                       >
                         <span>📱</span> WhatsApp
                       </button>
                       <button
                         onClick={(e)=>{ e.stopPropagation(); exportTeamRosterPdf(t, auctionPlayers, managingAuction?.name) }}
-                        style={{ padding:"5px 10px", borderRadius:7, border:"1.5px solid #166534", background:"#166534", cursor:"pointer", color:"#FFFFFF", fontSize:11, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}
+                        style={{ padding:"4px 8px", borderRadius:6, border:"1.5px solid #166534", background:"#166534", cursor:"pointer", color:"#FFFFFF", fontSize:11, fontWeight:700, display:"inline-flex", alignItems:"center", gap:3 }}
                         title="Export official team roster as print-ready PDF"
                       >
-                        <span>📄</span> Export PDF
+                        <span>📄</span> PDF
                       </button>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ padding:"5px 10px", borderRadius:7, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color:"#64748B", fontSize:11, fontWeight:700 }}>Edit</button>
-                      <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ padding:"5px 8px", borderRadius:7, border:"1px solid #FEE2E2", background:"#FEF2F2", cursor:"pointer", color:"#EF4444", fontSize:11, fontWeight:700 }} title="Delete team"><Trash2 size={13}/></button>
+                    <div style={{ display:"flex", alignItems:"center", gap:4, marginLeft: "auto" }}>
+                      <button onClick={(e)=>{ e.stopPropagation(); openEditTeam(t) }} style={{ padding:"4px 8px", borderRadius:6, border:"1px solid #E2E8F0", background:"#FFFFFF", cursor:"pointer", color:"#64748B", fontSize:11, fontWeight:700 }}>Edit</button>
+                      <button onClick={(e)=>{ e.stopPropagation(); setDelTeam(t) }} style={{ padding:"4px 6px", borderRadius:6, border:"1px solid #FEE2E2", background:"#FEF2F2", cursor:"pointer", color:"#EF4444", fontSize:11, fontWeight:700 }} title="Delete team"><Trash2 size={13}/></button>
                     </div>
                   </div>
                 </Card>
