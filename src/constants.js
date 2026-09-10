@@ -580,3 +580,605 @@ Official player registrations are now LIVE! All players must register before the
 🏆 *Selected Sports Cricket Platform*`
 }
 
+export function exportAuctionPoolCsv(auction, poolPlayers) {
+  if (!poolPlayers || poolPlayers.length === 0) {
+    alert("No players in the auction pool to export.")
+    return
+  }
+  const headers = ["Lot No", "Player Name", "Player Type / Role", "City", "Base Price (Coins)", "Category"]
+  const rows = poolPlayers.map((p, idx) => {
+    const clean = s => `"${String(s ?? "").replace(/"/g, '""')}"`
+    return [
+      idx + 1,
+      clean(p.name || ""),
+      clean(p.playing_role || "—"),
+      clean(p.city || "—"),
+      p.base_price ?? 0,
+      clean(p.category || "—")
+    ].join(",")
+  })
+  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(","), ...rows].join("\r\n")
+  const encodedUri = encodeURI(csvContent)
+  const link = document.createElement("a")
+  const fileName = `${(auction?.name || "Auction").replace(/[^a-zA-Z0-9_-]/g, "_")}_Player_Pool_${poolPlayers.length}_Players.csv`
+  link.setAttribute("href", encodedUri)
+  link.setAttribute("download", fileName)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+}
+
+export function generateAuctionPoolWhatsAppText(auction, poolPlayers) {
+  if (!poolPlayers || poolPlayers.length === 0) return ""
+  const tourName = auction?.name || "Cricket Tournament Auction"
+  const dateStr = auction?.auction_date ? fmtDate(auction.auction_date) : "Upcoming"
+  const timeStr = auction?.auction_time || "8:00 PM IST"
+  const locStr = auction?.location || "Venue TBD"
+
+  const roles = {
+    "All-rounder": [],
+    "Batsman": [],
+    "Bowler": [],
+    "Wicketkeeper": [],
+    "Other": []
+  }
+
+  poolPlayers.forEach(p => {
+    const role = (p.playing_role || "").toLowerCase()
+    if (role.includes("all")) roles["All-rounder"].push(p)
+    else if (role.includes("bat")) roles["Batsman"].push(p)
+    else if (role.includes("bowl")) roles["Bowler"].push(p)
+    else if (role.includes("keep") || role.includes("wk")) roles["Wicketkeeper"].push(p)
+    else roles["Other"].push(p)
+  })
+
+  let body = `🏏 *OFFICIAL AUCTION PLAYER POOL — FOR CAPTAINS*\n`
+  body += `🏆 *${tourName}*\n`
+  body += `👥 *Total Players in Pool:* ${poolPlayers.length} Players\n`
+  body += `📅 *Auction Date:* ${dateStr} · ${timeStr}\n`
+  body += `📍 *Venue:* ${locStr}\n\n`
+  body += `Dear Captains & Franchise Owners,\n`
+  body += `Here is the official list of ${poolPlayers.length} players available in the auction pool for your pre-bidding strategy & purse allocation:\n\n`
+
+  let globalIdx = 1
+  const renderGroup = (label, list) => {
+    if (list.length === 0) return ""
+    let s = `*${label.toUpperCase()} (${list.length}):*\n`
+    list.forEach(p => {
+      const cityStr = p.city ? ` · ${p.city}` : ""
+      const priceStr = ` · Base: 🪙 ${Number(p.base_price || 0).toLocaleString("en-IN")}`
+      s += `${globalIdx}. *${p.name}*${cityStr}${priceStr}\n`
+      globalIdx++
+    })
+    s += "\n"
+    return s
+  }
+
+  body += renderGroup("🏏 All-Rounders", roles["All-rounder"])
+  body += renderGroup("⚡ Batsmen", roles["Batsman"])
+  body += renderGroup("🎯 Bowlers", roles["Bowler"])
+  body += renderGroup("🧤 Wicketkeepers", roles["Wicketkeeper"])
+  if (roles["Other"].length > 0) body += renderGroup("👥 Other Players", roles["Other"])
+
+  body += `🎯 *Captains, analyze your squad composition & coin reserves before the live auction stage!*\n`
+  body += `🔒 _Note: Player contact numbers are strictly confidential and withheld for player privacy._\n`
+  body += `🏆 *Selected Sports Auction Platform*`
+
+  return body
+}
+
+export function shareAuctionPoolOnWhatsApp(auction, poolPlayers) {
+  const text = generateAuctionPoolWhatsAppText(auction, poolPlayers)
+  if (!text) return
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+  window.open(waUrl, "_blank")
+}
+
+export function exportAuctionPoolPdf(auction, poolPlayers) {
+  if (!poolPlayers || poolPlayers.length === 0) {
+    alert("No players found in the auction pool to export.")
+    return
+  }
+
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))
+  const dateStr = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
+  const tourName = auction?.name || "Selected Sports Cricket Auction"
+  const totalBase = poolPlayers.reduce((s, p) => s + (Number(p.base_price) || 0), 0)
+
+  let allRounders = 0, batsmen = 0, bowlers = 0, keepers = 0
+  poolPlayers.forEach(p => {
+    const r = (p.playing_role || "").toLowerCase()
+    if (r.includes("all")) allRounders++
+    else if (r.includes("bat")) batsmen++
+    else if (r.includes("bowl")) bowlers++
+    else if (r.includes("keep") || r.includes("wk")) keepers++
+  })
+
+  const cardsHtml = poolPlayers.map((p, idx) => {
+    const num = idx + 1
+    const role = p.playing_role || "Player"
+    const rLower = role.toLowerCase()
+    let roleClass = "role-other"
+    let roleIcon = "🏏"
+    if (rLower.includes("all")) { roleClass = "role-all"; roleIcon = "🏏" }
+    else if (rLower.includes("bat")) { roleClass = "role-bat"; roleIcon = "⚡" }
+    else if (rLower.includes("bowl")) { roleClass = "role-bowl"; roleIcon = "🎯" }
+    else if (rLower.includes("keep") || rLower.includes("wk")) { roleClass = "role-keep"; roleIcon = "🧤" }
+
+    const initial = (p.name || "?").slice(0, 1).toUpperCase()
+    const photoImg = p.profile_image_url
+      ? `<img src="${esc(p.profile_image_url)}" alt="${esc(p.name)}" class="player-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="player-initials-fallback" style="display:none;">${esc(initial)}</div>`
+      : `<div class="player-initials-fallback">${esc(initial)}</div>`
+
+    return `
+      <div class="player-card">
+        <div class="card-top">
+          <span class="lot-badge">#${num < 10 ? '0' + num : num}</span>
+          <span class="role-badge ${roleClass}">${roleIcon} ${esc(role)}</span>
+        </div>
+        <div class="photo-container">
+          ${photoImg}
+        </div>
+        <div class="player-name">${esc(p.name)}</div>
+        <div class="card-details">
+          <div class="detail-row">
+            <span class="detail-label">📍 City</span>
+            <span class="detail-val">${esc(p.city || "—")}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">🪙 Base Price</span>
+            <span class="detail-val base-price">🪙 ₹${Number(p.base_price || 0).toLocaleString("en-IN")}</span>
+          </div>
+          ${p.category ? `
+          <div class="detail-row">
+            <span class="detail-label">🏷️ Category</span>
+            <span class="detail-val">${esc(p.category)}</span>
+          </div>` : ""}
+        </div>
+      </div>
+    `
+  }).join("")
+
+  const tableRows = poolPlayers.map((p, idx) => {
+    const num = idx + 1
+    const initial = (p.name || "?").slice(0, 1).toUpperCase()
+    const thumb = p.profile_image_url
+      ? `<img src="${esc(p.profile_image_url)}" alt="${esc(p.name)}" class="table-thumb" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';" /><span class="table-thumb-fallback" style="display:none;">${esc(initial)}</span>`
+      : `<span class="table-thumb-fallback">${esc(initial)}</span>`
+
+    return `
+      <tr>
+        <td style="text-align:center;font-weight:800;color:#64748B;">#${num < 10 ? '0' + num : num}</td>
+        <td style="width:40px;text-align:center;">${thumb}</td>
+        <td><strong style="color:#0F172A;font-size:13px;">${esc(p.name)}</strong></td>
+        <td><span class="table-role">${esc(p.playing_role || "—")}</span></td>
+        <td>${esc(p.city || "—")}</td>
+        <td style="font-weight:800;color:#166534;text-align:right;">🪙 ₹${Number(p.base_price || 0).toLocaleString("en-IN")}</td>
+        <td>${esc(p.category || "—")}</td>
+      </tr>
+    `
+  }).join("")
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${esc(tourName)} — Official Auction Player Pool (${poolPlayers.length} Players)</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm 10mm 12mm 10mm;
+    }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0F172A;
+      background: #FFFFFF;
+      margin: 0;
+      padding: 16px;
+      font-size: 12px;
+    }
+    .no-print-bar {
+      background: #F0FDF4;
+      border: 1.5px solid #BBF7D0;
+      padding: 12px 18px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(22,101,52,0.06);
+    }
+    .no-print-btn {
+      background: #166534;
+      color: #FFFFFF;
+      padding: 9px 20px;
+      border-radius: 9px;
+      border: none;
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .close-btn {
+      background: #FFFFFF;
+      color: #64748B;
+      padding: 9px 16px;
+      border-radius: 9px;
+      border: 1.5px solid #CBD5E1;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .header {
+      border-bottom: 2.5px solid #166534;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .tour-tag {
+      font-size: 11px;
+      color: #B8860B;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .doc-title {
+      font-size: 22px;
+      font-weight: 900;
+      color: #166534;
+      margin: 2px 0 0;
+      letter-spacing: -0.5px;
+    }
+    .confidential-banner {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 11px;
+      color: #92400E;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      background: #F8FAF8;
+      border: 1px solid #E2E8F0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+      text-align: center;
+    }
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+    }
+    .stat-label {
+      font-size: 9.5px;
+      font-weight: 700;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-val {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0F172A;
+      margin-top: 2px;
+    }
+    .stat-val.green {
+      color: #166534;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: #0F172A;
+      margin: 20px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1.5px solid #E2E8F0;
+      padding-bottom: 6px;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .player-card {
+      border: 1.5px solid #E2E8F0;
+      border-radius: 12px;
+      padding: 12px;
+      background: #FFFFFF;
+      page-break-inside: avoid;
+      box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .card-top {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .lot-badge {
+      font-size: 10.5px;
+      font-weight: 900;
+      color: #64748B;
+      background: #F1F5F9;
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .role-badge {
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .role-all { background: #DCFCE7; color: #166534; }
+    .role-bat { background: #DBEAFE; color: #1E40AF; }
+    .role-bowl { background: #FFEDD5; color: #C2410C; }
+    .role-keep { background: #F3E8FF; color: #7E22CE; }
+    .role-other { background: #F1F5F9; color: #475569; }
+
+    .photo-container {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 8px;
+      border: 2px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #F8FAF8;
+    }
+    .player-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .player-initials-fallback {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #166534, #14532D);
+      color: #FFFFFF;
+      font-weight: 900;
+      font-size: 22px;
+    }
+    .player-name {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #0F172A;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+    .card-details {
+      width: 100%;
+      border-top: 1px dashed #E2E8F0;
+      padding-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+    }
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .detail-label {
+      color: #64748B;
+      font-weight: 600;
+    }
+    .detail-val {
+      color: #0F172A;
+      font-weight: 700;
+    }
+    .detail-val.base-price {
+      color: #166534;
+      font-weight: 800;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      margin-top: 8px;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #166534;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 7px 9px;
+      font-size: 10px;
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 6px 9px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    tr:nth-child(even) td {
+      background: #FAFCFA;
+    }
+    .table-thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      object-fit: cover;
+      vertical-align: middle;
+    }
+    .table-thumb-fallback {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #166534;
+      color: #FFFFFF;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+    .table-role {
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .footer {
+      margin-top: 24px;
+      padding-top: 12px;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 10px;
+      color: #64748B;
+    }
+
+    @media print {
+      .no-print-bar { display: none !important; }
+      body { padding: 0; }
+      .cards-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+      .player-card { border: 1px solid #CBD5E1; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print-bar">
+    <div>
+      <strong style="color:#166534;font-size:13.5px;">📄 Official Auction Player Pool (${poolPlayers.length} Players)</strong>
+      <div style="font-size:11.5px;color:#475569;margin-top:2px;">Shared for Captains &amp; Franchise Owners Pre-Bidding Analysis. Mobile numbers are withheld for privacy.</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="no-print-btn" onclick="window.print()">🖨️ Save as PDF / Print</button>
+      <button class="close-btn" onclick="window.close()">✕ Close</button>
+    </div>
+  </div>
+
+  <div class="header">
+    <div class="brand">
+      <img src="${window.location.origin}/logo-full.png?v=1" alt="Selected Sports" style="height:42px;width:auto;" onerror="this.style.display='none'"/>
+      <div>
+        <div class="tour-tag">${esc(tourName)}</div>
+        <h1 class="doc-title">Auction Player Pool Catalog</h1>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:11px;font-weight:900;color:#0F172A;letter-spacing:0.5px;">OFFICIAL SCOUTING DOSSIER</div>
+      <div style="font-size:10.5px;color:#64748B;margin-top:2px;">Pool Size: <strong>${poolPlayers.length} Players</strong></div>
+      <div style="font-size:10px;color:#64748B;margin-top:2px;">Generated: ${dateStr}</div>
+    </div>
+  </div>
+
+  <div class="confidential-banner">
+    <span>🔒</span>
+    <span><strong>CONFIDENTIAL FOR FRANCHISE CAPTAINS &amp; OWNERS:</strong> This roster is provided solely for pre-auction squad planning and bid strategy analysis. Player mobile numbers are strictly withheld for privacy.</span>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-box">
+      <span class="stat-label">Total in Pool</span>
+      <span class="stat-val green">${poolPlayers.length}</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Total Base Value</span>
+      <span class="stat-val green">🪙 ₹${totalBase.toLocaleString("en-IN")}</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">All-Rounders</span>
+      <span class="stat-val">${allRounders}</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Batsmen</span>
+      <span class="stat-val">${batsmen}</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Bowlers</span>
+      <span class="stat-val">${bowlers}</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Wicketkeepers</span>
+      <span class="stat-val">${keepers}</span>
+    </div>
+  </div>
+
+  <div class="section-title">
+    <span>📸</span> Player Scouting Cards (Visual Roster)
+  </div>
+  <div class="cards-grid">
+    ${cardsHtml}
+  </div>
+
+  <div class="section-title">
+    <span>📋</span> Master Player Roster Table
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:45px;text-align:center;">Lot #</th>
+        <th style="width:40px;text-align:center;">Photo</th>
+        <th>Player Name</th>
+        <th style="width:130px;">Playing Role</th>
+        <th style="width:110px;">City</th>
+        <th style="width:115px;text-align:right;">Base Price</th>
+        <th style="width:100px;">Category</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${tableRows}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <div>Selected Sports Auction Platform · Official Tournament Document</div>
+    <div>Strictly Confidential · For Team Captains &amp; Owners Bidding Analysis</div>
+  </div>
+</body>
+</html>`
+
+  const w = window.open("", "_blank")
+  if (!w) {
+    alert("Please allow pop-ups to open the PDF export.")
+    return
+  }
+  w.document.write(html)
+  w.document.close()
+  w.onload = () => {
+    setTimeout(() => {
+      try { w.print() } catch {}
+    }, 350)
+  }
+}
+
+

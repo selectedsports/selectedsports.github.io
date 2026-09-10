@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -2152,6 +2152,10 @@ function AuctionPage({ isMobile, isFounder }) {
   const [auctionSortOpen, setAuctionSortOpen] = useState(false)
   const [poolSearch, setPoolSearch] = useState("")
   const [poolView, setPoolView] = useState("registered") // "registered" | "pool"
+  const [showExportPoolModal, setShowExportPoolModal] = useState(false)
+  const [copiedPoolWa, setCopiedPoolWa] = useState(false)
+  const [exportPoolRoleFilter, setExportPoolRoleFilter] = useState("")
+  const [exportPoolSearch, setExportPoolSearch] = useState("")
   const [allPlatformPlayers, setAllPlatformPlayers] = useState([])
   const [loadingPlatformPlayers, setLoadingPlatformPlayers] = useState(false)
   const [selectedPlatformIds, setSelectedPlatformIds] = useState(new Set())
@@ -2893,8 +2897,20 @@ function AuctionPage({ isMobile, isFounder }) {
 
         return (
         <div>
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:8 }}>
-            <button onClick={load} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:0 }}><RotateCcw size={13}/> Refresh</button>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:8 }}>
+            <div style={{ fontSize:12, color:"#64748B" }}>
+              Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding
+            </div>
+            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+              <button
+                type="button"
+                onClick={() => setShowExportPoolModal(true)}
+                style={{ background:"rgba(22,101,52,0.08)", border:"1px solid #166534", borderRadius:8, color:"#166534", fontSize:12, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:"5px 12px" }}
+              >
+                <FileText size={13}/> Export Pool ({auctionPoolPlayers.length})
+              </button>
+              <button onClick={load} style={{ background:"none", border:"none", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, padding:0 }}><RotateCcw size={13}/> Refresh</button>
+            </div>
           </div>
           <div style={{ display:"flex", background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:16, marginBottom:16, overflow:"hidden", flexWrap:"wrap" }}>
             {(isFounder ? [
@@ -2969,9 +2985,18 @@ function AuctionPage({ isMobile, isFounder }) {
             </>
           ) : (
           <>
-          <div style={{ position:"relative", marginBottom:14 }}>
-            <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
-            <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search players by name or role..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+          <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
+            <div style={{ flex:1, minWidth:200, position:"relative" }}>
+              <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+              <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search players by name or role..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowExportPoolModal(true)}
+              style={{ padding:"10px 18px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", boxShadow:"0 2px 6px rgba(22,101,52,0.06)" }}
+            >
+              <FileText size={15}/> Export Pool for Captains ({auctionPoolPlayers.length})
+            </button>
           </div>
           {filteredPool.length === 0 ? (
             <Card style={{ padding:"32px 16px", textAlign:"center" }}>
@@ -3490,6 +3515,262 @@ function AuctionPage({ isMobile, isFounder }) {
             )}
           </div>
         </div>
+        )
+      })()}
+
+      {showExportPoolModal && (() => {
+        const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+        const q = exportPoolSearch.trim().toLowerCase()
+        const filtered = poolPlayers.filter(p => {
+          if (exportPoolRoleFilter && !((p.playing_role || "").toLowerCase().includes(exportPoolRoleFilter.toLowerCase()))) return false
+          if (q && !p.name.toLowerCase().includes(q) && !(p.city || "").toLowerCase().includes(q)) return false
+          return true
+        })
+
+        const rolesList = [
+          { key: "", label: `All (${poolPlayers.length})` },
+          { key: "all", label: "🏏 All-rounders" },
+          { key: "bat", label: "⚡ Batsmen" },
+          { key: "bowl", label: "🎯 Bowlers" },
+          { key: "keep", label: "🧤 Keepers" },
+        ]
+
+        return (
+          <div style={mStyle} onClick={() => setShowExportPoolModal(false)}>
+            <div style={{ ...mBox, maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14, borderBottom: "1.5px solid #F1F5F9", paddingBottom: 12 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                      Export Auction Player Pool for Captains
+                    </h3>
+                    <span style={{ fontSize: 11, fontWeight: 800, background: "#DCFCE7", color: "#166534", padding: "2px 8px", borderRadius: 999 }}>
+                      {poolPlayers.length} Players
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 4, lineHeight: 1.4 }}>
+                    Official dossier for franchise captains to analyze bidding targets before the auction. Mobile numbers are completely hidden for player privacy.
+                  </div>
+                </div>
+                <button onClick={() => setShowExportPoolModal(false)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8", padding: 0 }}>×</button>
+              </div>
+
+              <div style={{ background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: 10, padding: "8px 12px", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#92400E" }}>
+                <span>🔒</span>
+                <span><strong>Player Privacy Protected:</strong> Only Player Full Name, Photo, Playing Role, City, and Base Price are exported. Contact numbers are completely removed.</span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+                <button
+                  type="button"
+                  onClick={() => exportAuctionPoolPdf(managingAuction, poolPlayers)}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1.5px solid #166534",
+                    background: "#166534",
+                    color: "#FFFFFF",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    boxShadow: "0 2px 8px rgba(22,101,52,0.2)"
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>🖨️</span>
+                  <span>Print / Save PDF</span>
+                  <span style={{ fontSize: 10, opacity: 0.85, fontWeight: 600 }}>Includes Photos & Cards</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => exportAuctionPoolCsv(managingAuction, poolPlayers)}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1.5px solid #CBD5E1",
+                    background: "#FFFFFF",
+                    color: "#0F172A",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>📊</span>
+                  <span>Download Excel/CSV</span>
+                  <span style={{ fontSize: 10, color: "#64748B", fontWeight: 600 }}>Spreadsheet Roster</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => shareAuctionPoolOnWhatsApp(managingAuction, poolPlayers)}
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius: 12,
+                    border: "1.5px solid #22C55E",
+                    background: "#22C55E",
+                    color: "#FFFFFF",
+                    fontSize: 12.5,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 4,
+                    boxShadow: "0 2px 8px rgba(34,197,94,0.2)"
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>💬</span>
+                  <span>Share to WhatsApp</span>
+                  <span style={{ fontSize: 10, opacity: 0.9, fontWeight: 600 }}>Ready-to-send format</span>
+                </button>
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A" }}>
+                  Player Roster Preview ({filtered.length} of {poolPlayers.length})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = generateAuctionPoolWhatsAppText(managingAuction, poolPlayers)
+                    navigator.clipboard?.writeText(text)
+                    setCopiedPoolWa(true)
+                    setTimeout(() => setCopiedPoolWa(false), 2500)
+                  }}
+                  style={{
+                    background: "none",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: copiedPoolWa ? "#166534" : "#475569",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5
+                  }}
+                >
+                  {copiedPoolWa ? "✅ Copied WhatsApp Text!" : "📋 Copy WhatsApp Text"}
+                </button>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 160, position: "relative" }}>
+                  <SearchIcon size={14} color="#94A3B8" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }} />
+                  <input
+                    value={exportPoolSearch}
+                    onChange={e => setExportPoolSearch(e.target.value)}
+                    placeholder="Search by name or city..."
+                    style={{
+                      width: "100%",
+                      padding: "8px 10px 8px 30px",
+                      borderRadius: 8,
+                      border: "1px solid #CBD5E1",
+                      fontSize: 12,
+                      background: "#FFFFFF",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 4, overflowX: "auto", paddingBottom: 2 }}>
+                  {rolesList.map(r => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setExportPoolRoleFilter(r.key)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: exportPoolRoleFilter === r.key ? "1.5px solid #166534" : "1px solid #E2E8F0",
+                        background: exportPoolRoleFilter === r.key ? "#DCFCE7" : "#FFFFFF",
+                        color: exportPoolRoleFilter === r.key ? "#166534" : "#64748B",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 8, paddingRight: 4, maxHeight: 300 }}>
+                {filtered.map((p, idx) => (
+                  <div
+                    key={p.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: "8px 12px",
+                      background: "#F8FAF8",
+                      borderRadius: 10,
+                      border: "1px solid #E2E8F0"
+                    }}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#94A3B8", width: 24, textAlign: "center" }}>
+                      #{idx + 1}
+                    </span>
+                    {p.profile_image_url ? (
+                      <img
+                        src={p.profile_image_url}
+                        alt={p.name}
+                        style={{ width: 36, height: 36, borderRadius: 8, objectFit: "cover", flexShrink: 0, border: "1px solid #E2E8F0" }}
+                      />
+                    ) : (
+                      <div style={{ width: 36, height: 36, borderRadius: 8, background: "#166534", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+                        {(p.name || "?")[0]}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A" }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: "#64748B", display: "flex", alignItems: "center", gap: 6, marginTop: 1 }}>
+                        <span style={{ fontWeight: 700, color: "#166534" }}>{p.playing_role || "Player"}</span>
+                        <span>·</span>
+                        <span>📍 {p.city || "Pune"}</span>
+                        {p.category && (
+                          <>
+                            <span>·</span>
+                            <span>{p.category}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)" }}>
+                        🪙 {Number(p.base_price || 0).toLocaleString("en-IN")}
+                      </div>
+                      <div style={{ fontSize: 9.5, color: "#94A3B8" }}>Base Price</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowExportPoolModal(false)}
+                  style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#FFFFFF", color: "#475569", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
         )
       })()}
 

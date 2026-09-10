@@ -15,10 +15,10 @@ import {
   setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch,
   subscribeToChat, updatePlayer, fetchContributions, fetchStats, fetchPlayerStats,
   fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds,
-  updatePlayerRole, uploadProfilePhoto, fetchPlayerAuctionHistory
+  updatePlayerRole, uploadProfilePhoto, fetchPlayerAuctionHistory, fetchAuctionPlayers
 } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
-import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
+import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportAuctionPoolPdf } from "../constants.js"
 import { supabase } from "../supabase.js"
 import { useMobile } from "../hooks/useMobile.js"
 
@@ -162,6 +162,13 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
         .finally(() => setLoadingAuctions(false))
     }
   }, [player.phone])
+
+  // Captain Auction Pool Analysis State
+  const [captainPoolModal, setCaptainPoolModal] = useState(null)
+  const [captainPoolPlayers, setCaptainPoolPlayers] = useState([])
+  const [loadingCaptainPool, setLoadingCaptainPool] = useState(false)
+  const [captainPoolSearch, setCaptainPoolSearch] = useState("")
+  const [captainPoolRoleFilter, setCaptainPoolRoleFilter] = useState("")
 
   // Profile Edit Form State
   const nameParts = (player.name || "").trim().split(/\s+/)
@@ -1941,29 +1948,40 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               </a>
                             )}
 
-                            {auc.auction_code && (
-                              <a
-                                href={`/auction-register/${auc.auction_code}`}
-                                target="_blank"
-                                rel="noreferrer"
+                            {auc.id && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setCaptainPoolModal(auc)
+                                  setCaptainPoolSearch("")
+                                  setCaptainPoolRoleFilter("")
+                                  setLoadingCaptainPool(true)
+                                  try {
+                                    const all = await fetchAuctionPlayers(auc.id)
+                                    setCaptainPoolPlayers(all || [])
+                                  } catch (e) {
+                                    console.error(e)
+                                  }
+                                  setLoadingCaptainPool(false)
+                                }}
                                 style={{
                                   padding: "12px 14px",
                                   borderRadius: 12,
-                                  background: "rgba(255,255,255,0.1)",
+                                  background: "rgba(255,255,255,0.12)",
                                   color: "#FFFFFF",
                                   fontWeight: 800,
                                   fontSize: 13,
-                                  textDecoration: "none",
+                                  border: "1px solid rgba(255,255,255,0.25)",
+                                  cursor: "pointer",
                                   textAlign: "center",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  gap: 6,
-                                  border: "1px solid rgba(255,255,255,0.2)"
+                                  gap: 6
                                 }}
                               >
-                                📋 Pool &amp; Squads
-                              </a>
+                                📋 Analyze Pool
+                              </button>
                             )}
 
                             <button
@@ -2586,6 +2604,214 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
           )
         })}
       </nav>
+
+      {captainPoolModal && (() => {
+        const poolList = captainPoolPlayers.filter(p => !p.is_captain && p.status !== "captain")
+        const q = captainPoolSearch.trim().toLowerCase()
+        const filtered = poolList.filter(p => {
+          if (captainPoolRoleFilter && !((p.playing_role || "").toLowerCase().includes(captainPoolRoleFilter.toLowerCase()))) return false
+          if (q && !p.name.toLowerCase().includes(q) && !(p.city || "").toLowerCase().includes(q)) return false
+          return true
+        })
+
+        const roles = [
+          { key: "", label: `All (${poolList.length})` },
+          { key: "all", label: "🏏 All-rounders" },
+          { key: "bat", label: "⚡ Batsmen" },
+          { key: "bowl", label: "🎯 Bowlers" },
+          { key: "keep", label: "🧤 Keepers" },
+        ]
+
+        return (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(15,23,42,0.65)",
+              backdropFilter: "blur(4px)",
+              zIndex: 300,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 16
+            }}
+            onClick={() => setCaptainPoolModal(null)}
+          >
+            <div
+              style={{
+                background: "#FFFFFF",
+                borderRadius: 18,
+                maxWidth: 680,
+                width: "100%",
+                maxHeight: "90vh",
+                display: "flex",
+                flexDirection: "column",
+                padding: "20px 22px",
+                boxShadow: "0 20px 50px rgba(0,0,0,0.25)"
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, borderBottom: "1.5px solid #F1F5F9", paddingBottom: 10 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <h3 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                      Auction Player Pool Dossier
+                    </h3>
+                    <span style={{ fontSize: 11, fontWeight: 800, background: "#FEF3C7", color: "#B45309", padding: "2px 8px", borderRadius: 999 }}>
+                      👑 Captain Scouting View
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
+                    Analyze all {poolList.length} players available for bidding in <strong>{captainPoolModal.name || "the auction"}</strong>.
+                  </div>
+                </div>
+                <button onClick={() => setCaptainPoolModal(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8", padding: 0 }}>×</button>
+              </div>
+
+              {/* Top Controls */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: "#166534", fontWeight: 700, background: "#DCFCE7", padding: "4px 10px", borderRadius: 8 }}>
+                  🔒 Confidential: Mobile numbers withheld for privacy
+                </span>
+                <button
+                  type="button"
+                  onClick={() => exportAuctionPoolPdf(captainPoolModal, poolList)}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 9,
+                    background: "#166534",
+                    color: "#FFFFFF",
+                    border: "none",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6
+                  }}
+                >
+                  🖨️ Export PDF / Print
+                </button>
+              </div>
+
+              {/* Search & Filter */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+                <input
+                  value={captainPoolSearch}
+                  onChange={e => setCaptainPoolSearch(e.target.value)}
+                  placeholder="Search by player name or city..."
+                  style={{
+                    flex: 1,
+                    minWidth: 160,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #CBD5E1",
+                    fontSize: 12,
+                    background: "#FFFFFF",
+                    boxSizing: "border-box"
+                  }}
+                />
+                <div style={{ display: "flex", gap: 4, overflowX: "auto" }}>
+                  {roles.map(r => (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => setCaptainPoolRoleFilter(r.key)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: captainPoolRoleFilter === r.key ? "1.5px solid #166534" : "1px solid #E2E8F0",
+                        background: captainPoolRoleFilter === r.key ? "#DCFCE7" : "#FFFFFF",
+                        color: captainPoolRoleFilter === r.key ? "#166534" : "#64748B",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Player Cards */}
+              {loadingCaptainPool ? (
+                <div style={{ padding: "40px 0", textAlign: "center" }}><Spinner /></div>
+              ) : filtered.length === 0 ? (
+                <div style={{ padding: "32px 0", textAlign: "center", color: "#94A3B8", fontSize: 13 }}>
+                  No players match your search or filter.
+                </div>
+              ) : (
+                <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 8, maxHeight: 360, paddingRight: 4 }}>
+                  {filtered.map((p, idx) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "10px 12px",
+                        background: "#F8FAF8",
+                        borderRadius: 12,
+                        border: "1px solid #E2E8F0"
+                      }}
+                    >
+                      <span style={{ fontSize: 11, fontWeight: 900, color: "#94A3B8", width: 24, textAlign: "center" }}>
+                        #{idx + 1}
+                      </span>
+                      {p.profile_image_url ? (
+                        <img
+                          src={p.profile_image_url}
+                          alt={p.name}
+                          style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1.5px solid #E2E8F0" }}
+                        />
+                      ) : (
+                        <div style={{ width: 40, height: 40, borderRadius: 10, background: "#166534", color: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, flexShrink: 0 }}>
+                          {(p.name || "?")[0]}
+                        </div>
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13.5, fontWeight: 800, color: "#0F172A" }}>{p.name}</div>
+                        <div style={{ fontSize: 11.5, color: "#64748B", display: "flex", alignItems: "center", gap: 6, marginTop: 1, flexWrap: "wrap" }}>
+                          <span style={{ fontWeight: 700, color: "#166534" }}>{p.playing_role || "Player"}</span>
+                          <span>·</span>
+                          <span>📍 {p.city || "Pune"}</span>
+                          {p.category && (
+                            <>
+                              <span>·</span>
+                              <span style={{ background: "#F1F5F9", padding: "1px 6px", borderRadius: 4 }}>{p.category}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)" }}>
+                          🪙 {Number(p.base_price || 0).toLocaleString("en-IN")}
+                        </div>
+                        <div style={{ fontSize: 9.5, color: "#94A3B8" }}>Base Price</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid #F1F5F9", display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setCaptainPoolModal(null)}
+                  style={{ padding: "8px 18px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#FFFFFF", color: "#475569", fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
