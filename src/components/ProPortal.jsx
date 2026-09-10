@@ -901,13 +901,71 @@ export default function ProPortal({ player, onLogout }) {
     )
   }
 
+  const proDesktopNavItems = [
+    ["dashboard","Home",Home],
+    ["matches","Matches",Swords],
+    ["players","Players",Users],
+    ["leaderboard","Leaderboard",Trophy],
+  ]
+
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAF8", fontFamily: "var(--font-body)", paddingBottom:70 }}>
+    <div style={{ minHeight: "100vh", background: "#F8FAF8", fontFamily: "var(--font-body)", paddingBottom: isMobile ? 120 : 40 }}>
       {/* PRO_HEADER_V1 */}
-      <div style={{ background:"#FFFFFF", height:56, borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", padding:"0 16px", gap:12, position:"sticky", top:0, zIndex:200 }}>
-        <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
-        <div onClick={()=>{ setDetail(null); setInvDetail(null); setProView("dashboard") }} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
-        <div onClick={()=>setProView("profile")} style={{ cursor:"pointer" }}><Av name={player.name} id={player.id} sz={28}/></div>
+      <div style={{ background:"#FFFFFF", height: isMobile ? 56 : 60, borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", padding: isMobile ? "0 16px" : "0 24px", gap:12, position:"sticky", top:0, zIndex:200, boxShadow:"0 1px 4px rgba(15,23,42,0.04)" }}>
+        {isMobile && (
+          <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
+        )}
+        <div onClick={()=>{ setDetail(null); setInvDetail(null); setProView("dashboard") }} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flexShrink:0 }}>
+          <div style={{ fontWeight:900, fontSize: isMobile ? 16 : 18, color:"#166534", fontFamily:"var(--font-head)", letterSpacing:"-0.3px" }}>Selected Sports</div>
+        </div>
+
+        {/* Desktop Navigation Links */}
+        {!isMobile && (
+          <div style={{ display:"flex", alignItems:"center", gap:4, margin:"0 auto", flexWrap:"wrap" }}>
+            {proDesktopNavItems.map(([k, label, Icon]) => {
+              const active = proView === k
+              return (
+                <button
+                  key={k}
+                  onClick={()=>{ setDetail(null); setInvDetail(null); setProView(k) }}
+                  style={{
+                    display:"flex",
+                    alignItems:"center",
+                    gap:6,
+                    padding:"7px 14px",
+                    borderRadius:8,
+                    border:"none",
+                    background: active ? "rgba(22,101,52,0.09)" : "transparent",
+                    color: active ? "#166534" : "#64748B",
+                    fontSize:13,
+                    fontWeight: active ? 800 : 600,
+                    cursor:"pointer",
+                    fontFamily:"var(--font-body)",
+                    transition:"all 0.15s ease"
+                  }}
+                >
+                  <Icon size={16} color={active ? "#166534" : "#94A3B8"}/>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {isMobile && <div style={{ flex: 1 }} />}
+
+        {/* Right action icons */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+          <div onClick={()=>setProView("profile")} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", padding:"5px 10px", borderRadius:8, background: proView==="profile" ? "rgba(22,101,52,0.09)" : "transparent" }}>
+            <Av name={player.name} id={player.id} sz={28}/>
+            {!isMobile && <span style={{ fontSize:13, fontWeight:700, color: proView==="profile" ? "#166534" : "#0F172A" }}>{player.name?.split(" ")[0] || "PRO"}</span>}
+          </div>
+          {!isMobile && (
+            <button onClick={onLogout} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:7, display:"flex", alignItems:"center", borderRadius:8 }} title="Logout">
+              <LogOut size={17}/>
+            </button>
+          )}
+        </div>
       </div>
 
       {menuOpen && (
@@ -2148,14 +2206,16 @@ export default function ProPortal({ player, onLogout }) {
       )}
 
       {/* PRO_BOTTOM_NAV_BAR_V1 */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
-        {[["dashboard","Home",Home],["matches","Matches",Swords],["players","Players",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",User]].map(([k,v,Icon]) => (
-          <button key={k} onClick={()=>setProView(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:proView===k?"#166534":"#94A3B8" }}>
-            <Icon size={20}/>
-            <span style={{ fontSize:10, fontWeight:proView===k?700:500 }}>{v}</span>
-          </button>
-        ))}
-      </div>
+      {isMobile && (
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
+          {[["dashboard","Home",Home],["matches","Matches",Swords],["players","Players",Users],["leaderboard","Leaderboard",Trophy],["profile","Profile",User]].map(([k,v,Icon]) => (
+            <button key={k} onClick={()=>setProView(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:proView===k?"#166534":"#94A3B8" }}>
+              <Icon size={20}/>
+              <span style={{ fontSize:10, fontWeight:proView===k?700:500 }}>{v}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

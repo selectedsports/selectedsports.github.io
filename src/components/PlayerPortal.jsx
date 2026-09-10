@@ -718,7 +718,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
       )}
 
       {/* ── MAIN PORTAL CONTENT WRAPPER ── */}
-      <main style={{ maxWidth: isMobile ? "100%" : 860, margin: "0 auto", padding: isMobile ? "16px 12px" : "28px 18px" }}>
+      <main style={{ maxWidth: isMobile ? "100%" : 860, margin: "0 auto", padding: isMobile ? "16px 12px 110px" : "28px 18px 40px" }}>
         
         {/* TAB 1: DASHBOARD */}
         {tab === "dashboard" && (() => {
@@ -2592,76 +2592,75 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
         })()}
       </main>
 
-      {/* ── FIXED BOTTOM NAVIGATION BAR ── */}
-      <nav style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: "#FFFFFF",
-        borderTop: "1px solid #E2E8F0",
-        display: "flex",
-        zIndex: 200,
-        boxShadow: "0 -4px 16px rgba(15,23,42,0.05)",
-        height: 62
-      }}>
-        {[
-          { key: "dashboard", label: "Home", icon: Home },
-          { key: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
-          { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") ? "👑" : null },
-          { key: "leaderboard", label: "Rankings", icon: Award },
-          { key: "profile", label: "Pass", icon: UserIcon },
-        ].map(({ key, label, icon: Icon, badge }) => {
-          const isActive = tab === key
-          return (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 3,
-                border: "none",
-                background: "transparent",
-                cursor: "pointer",
-                color: isActive ? "#166534" : "#94A3B8",
-                position: "relative",
-                transition: "color 150ms"
-              }}
-            >
-              {isActive && (
-                <div style={{ position: "absolute", top: 0, width: 32, height: 3, background: "#166534", borderRadius: "0 0 3px 3px" }}/>
-              )}
-              <div style={{ position: "relative" }}>
-                <Icon size={20} />
-                {badge && (
-                  <span style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -7,
-                    background: badge === "👑" ? "linear-gradient(135deg, #F59E0B, #D97706)" : "#EF4444",
-                    color: badge === "👑" ? "#0F172A" : "#FFFFFF",
-                    fontSize: badge === "👑" ? 10 : 9,
-                    fontWeight: 900,
-                    width: 16,
-                    height: 16,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}>
-                    {badge}
-                  </span>
+      {/* ── FIXED BOTTOM NAVIGATION BAR (Mobile Only) ── */}
+      {isMobile && (
+        <nav style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: "#FFFFFF",
+          borderTop: "1px solid #E2E8F0",
+          display: "flex",
+          zIndex: 200,
+          boxShadow: "0 -4px 16px rgba(15,23,42,0.05)",
+          height: 62
+        }}>
+          {[
+            { key: "dashboard", label: "Home", icon: Home },
+            { key: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
+            { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") ? "👑" : null },
+            { key: "leaderboard", label: "Rankings", icon: Award },
+            { key: "profile", label: "Pass", icon: UserIcon },
+          ].map(({ key, label, icon: Icon, badge }) => {
+            const isActive = tab === key
+            return (
+              <button
+                key={key}
+                onClick={() => setTab(key)}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 3,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  color: isActive ? "#166534" : "#94A3B8",
+                  position: "relative",
+                  transition: "color 150ms"
+                }}
+              >
+                {isActive && (
+                  <div style={{ position: "absolute", top: 0, width: 32, height: 3, background: "#166534", borderRadius: "0 0 3px 3px" }}/>
                 )}
-              </div>
-              <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600 }}>{label}</span>
-            </button>
-          )
-        })}
-      </nav>
+                <div style={{ position: "relative" }}>
+                  <Icon size={20} />
+                  {badge && (
+                    <span style={{
+                      position: "absolute",
+                      top: -4,
+                      right: -7,
+                      background: badge === "👑" ? "linear-gradient(135deg, #F59E0B, #D97706)" : "#EF4444",
+                      color: "#FFFFFF",
+                      fontSize: 9,
+                      fontWeight: 900,
+                      padding: "1px 5px",
+                      borderRadius: 999,
+                      border: "1.5px solid #FFFFFF"
+                    }}>
+                      {badge}
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 10, fontWeight: isActive ? 800 : 600 }}>{label}</span>
+              </button>
+            )
+          })}
+        </nav>
+      )}
 
       {captainPoolModal && (() => {
         const poolList = captainPoolPlayers.filter(p => !p.is_captain && p.status !== "captain")

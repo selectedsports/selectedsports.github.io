@@ -238,21 +238,84 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
     ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],
     ["leaderboard","Leaderboard",Trophy],["profile","Profile",UserIcon],
   ]
+  const desktopNavItems = [
+    ["dashboard","Home",LayoutDashboard],
+    ["matches","Matches",Swords],
+    ["players","Players",Users],
+    ["teams","Teams",ShieldCheck],
+    ["auction","Auction",Wallet],
+    ["grounds","Grounds",MapPin],
+    ["leaderboard","Leaderboard",Trophy],
+  ]
   const drawerItems = [
-    ["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds",MapPin],["auction","Auction",Wallet],
+    ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds",MapPin],["auction","Auction",Wallet],["leaderboard","Leaderboard",Trophy]
   ]
 
   return (
-    <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)", paddingBottom: isMobile ? 120 : 80 }}>
+    <div style={{ minHeight:"100vh", background:"#F8FAF8", fontFamily:"var(--font-body)", paddingBottom: isMobile ? 120 : 40 }}>
       {/* Top bar */}
-      <div style={{ background:"#FFFFFF", height:56, borderBottom:"1px solid #F1F5F9", display:"flex", alignItems:"center", padding:"0 16px", gap:12, position:"sticky", top:0, zIndex:200 }}>
-        <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
-        <div onClick={()=>navigate("dashboard")} style={{ flex:1, textAlign:"center", cursor:"pointer", fontWeight:800, fontSize:16, color:"#0F172A", fontFamily:"var(--font-head)" }}>Selected Sports</div>
-        <button onClick={()=>setSearchOpen(true)} style={{ background:"transparent", border:"none", color:"#166534", cursor:"pointer", padding:6, display:"flex", alignItems:"center" }} title="Search"><SearchIcon size={19}/></button>
-        <button onClick={openNotifications} style={{ background:"transparent", border:"none", color:"#166534", cursor:"pointer", padding:6, display:"flex", alignItems:"center", position:"relative" }} title="Notifications">
-          <Bell size={19}/>
-          {unreadCount > 0 && <span style={{ position:"absolute", top:2, right:2, background:"#EF4444", color:"#FFFFFF", fontSize:9, fontWeight:800, borderRadius:999, minWidth:15, height:15, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
-        </button>
+      <div style={{ background:"#FFFFFF", height: isMobile ? 56 : 60, borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", padding: isMobile ? "0 16px" : "0 24px", gap:12, position:"sticky", top:0, zIndex:200, boxShadow:"0 1px 4px rgba(15,23,42,0.04)" }}>
+        {isMobile && (
+          <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
+        )}
+        <div onClick={()=>navigate("dashboard")} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flexShrink:0 }}>
+          <div style={{ fontWeight:900, fontSize: isMobile ? 16 : 18, color:"#166534", fontFamily:"var(--font-head)", letterSpacing:"-0.3px" }}>Selected Sports</div>
+        </div>
+
+        {/* Desktop Navigation Links */}
+        {!isMobile && (
+          <div style={{ display:"flex", alignItems:"center", gap:4, margin:"0 auto", flexWrap:"wrap" }}>
+            {desktopNavItems.map(([k, label, Icon]) => {
+              const active = page === k
+              return (
+                <button
+                  key={k}
+                  onClick={()=>navigate(k)}
+                  style={{
+                    display:"flex",
+                    alignItems:"center",
+                    gap:6,
+                    padding:"7px 13px",
+                    borderRadius:8,
+                    border:"none",
+                    background: active ? "rgba(22,101,52,0.09)" : "transparent",
+                    color: active ? "#166534" : "#64748B",
+                    fontSize:13,
+                    fontWeight: active ? 800 : 600,
+                    cursor:"pointer",
+                    fontFamily:"var(--font-body)",
+                    transition:"all 0.15s ease"
+                  }}
+                >
+                  <Icon size={16} color={active ? "#166534" : "#94A3B8"}/>
+                  {label}
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {isMobile && <div style={{ flex: 1 }} />}
+
+        {/* Right action icons */}
+        <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+          <button onClick={()=>setSearchOpen(true)} style={{ background:"transparent", border:"none", color:"#166534", cursor:"pointer", padding:7, display:"flex", alignItems:"center", borderRadius:8 }} title="Search"><SearchIcon size={18}/></button>
+          <button onClick={openNotifications} style={{ background:"transparent", border:"none", color:"#166534", cursor:"pointer", padding:7, display:"flex", alignItems:"center", position:"relative", borderRadius:8 }} title="Notifications">
+            <Bell size={18}/>
+            {unreadCount > 0 && <span style={{ position:"absolute", top:2, right:2, background:"#EF4444", color:"#FFFFFF", fontSize:9, fontWeight:800, borderRadius:999, minWidth:15, height:15, display:"flex", alignItems:"center", justifyContent:"center", padding:"0 3px" }}>{unreadCount > 9 ? "9+" : unreadCount}</span>}
+          </button>
+          {!isMobile && (
+            <>
+              <div onClick={()=>navigate("profile")} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", padding:"5px 10px", borderRadius:8, background: page==="profile" ? "rgba(22,101,52,0.09)" : "transparent", marginLeft:4 }}>
+                <Av name={loggedPlayer?.name || "Admin"} id={loggedPlayer?.id} sz={28}/>
+                <span style={{ fontSize:13, fontWeight:700, color: page==="profile" ? "#166534" : "#0F172A" }}>{loggedPlayer?.name?.split(" ")[0] || "Admin"}</span>
+              </div>
+              <button onClick={onLogout} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:7, display:"flex", alignItems:"center", borderRadius:8, marginLeft:2 }} title="Logout">
+                <LogOut size={17}/>
+              </button>
+            </>
+          )}
+        </div>
       </div>
       {searchOpen && <GlobalSearchOverlay onClose={()=>setSearchOpen(false)} onNavigate={navigate}/>}
 
@@ -275,7 +338,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
         </div>
       )}
 
-      {/* Hamburger drawer */}
+      {/* Hamburger drawer (Mobile) */}
       {menuOpen && (
         <div onClick={()=>setMenuOpen(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:299 }}>
           <div onClick={e=>e.stopPropagation()} style={{ background:"#FFFFFF", width:260, height:"100%", padding:"20px 14px", boxShadow:"4px 0 24px rgba(0,0,0,0.15)" }}>
@@ -312,15 +375,17 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
         {page==="leaderboard" && <><BackBtn onBack={()=>navigate("dashboard")}/><LeaderboardPage isMobile={isMobile} myId={loggedPlayer?.id}/></>}
       </div>
 
-      {/* Bottom navigation */}
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
-        {bottomNavItems.map(([k,v,Icon]) => (
-          <button key={k} onClick={()=>navigate(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:page===k?"#166534":"#94A3B8" }}>
-            <Icon size={20}/>
-            <span style={{ fontSize:10, fontWeight:page===k?700:500 }}>{v}</span>
-          </button>
-        ))}
-      </div>
+      {/* Bottom navigation - Mobile only */}
+      {isMobile && (
+        <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#FFFFFF", borderTop:"1px solid #E2E8F0", display:"flex", zIndex:200, boxShadow:"0 -4px 16px rgba(15,23,42,0.06)" }}>
+          {bottomNavItems.map(([k,v,Icon]) => (
+            <button key={k} onClick={()=>navigate(k)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:2, padding:"9px 4px 8px", border:"none", background:"transparent", cursor:"pointer", color:page===k?"#166534":"#94A3B8" }}>
+              <Icon size={20}/>
+              <span style={{ fontSize:10, fontWeight:page===k?700:500 }}>{v}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1271,9 +1336,9 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
   const handleToggleLink = async ()=>{ setToggling(true);await toggleMatchLink(m.id,!linkActive);setLinkActive(l=>!l);setToggling(false) }
   const inviteUrl = `${BASE_URL}/join/${m.invite_token}`
   return (
-    <div>
+    <div style={{ paddingBottom: isMobile ? 40 : 28 }}>
       <button onClick={onBack} style={{ background:"none",border:"none",color:"#166534",fontSize:13,cursor:"pointer",fontWeight:700,marginBottom:14,padding:0,fontFamily:"var(--font-body)" }}>← All Matches</button>
-      <Card style={{ overflow:"hidden" }}>
+      <Card style={{ overflow:"hidden", marginBottom: 20 }}>
         <div style={{ background:"linear-gradient(135deg,rgba(22,101,52,0.08),rgba(22,101,52,0.02))",padding:isMobile?"18px 16px":"24px 26px" }}>
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12 }}>
             <div style={{ display:"flex",gap:14,alignItems:"flex-start",flex:1,minWidth:0 }}>
@@ -4652,7 +4717,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
           <div style={{color:"#6b7280",fontSize:13}}>No players match your search or filters.</div>
         </Card>
       ) : (
-        <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E2E8F0"}}>
+        <div style={{borderRadius:14,overflow:"hidden",border:"1px solid #E2E8F0", marginBottom: isMobile ? 32 : 24}}>
           {!isMobile && (
             <div style={{display:"flex",alignItems:"center",padding:"12px 16px",background:"#F8FAF8",borderBottom:"1px solid #E2E8F0",fontSize:11,fontWeight:700,color:"#64748B",textTransform:"uppercase",letterSpacing:0.4}}>
               <div style={{flex:1}}>Player</div>
