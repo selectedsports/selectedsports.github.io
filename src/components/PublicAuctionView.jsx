@@ -660,18 +660,29 @@ export default function PublicAuctionView({ auctionCode }) {
         )}
 
         {/* State: Setup */}
-        {(!state || state.status === "setup") && (
-          <div style={{ background:"#131E30", borderRadius:20, padding:"40px 24px", textAlign:"center", border:"1px solid rgba(255,255,255,0.08)", color:"#FFFFFF", boxShadow:"0 10px 30px rgba(0,0,0,0.4)" }}>
-            <div style={{ fontSize:44, marginBottom:12 }}>🏏</div>
-            <div style={{ fontWeight:900, fontSize:22, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>Auction Hasn't Started Yet</div>
-            <div style={{ fontSize:14, color:"#94A3B8", marginTop:6, maxWidth:500, margin:"6px auto 0" }}>The tournament organizer will begin live bidding soon. This screen updates in real time automatically.</div>
-            <div style={{ marginTop:24, display:"inline-flex", gap:18, background:"rgba(255,255,255,0.05)", padding:"10px 24px", borderRadius:999, fontSize:13, color:"#CBD5E1", border:"1px solid rgba(255,255,255,0.08)" }}>
-              <span>👥 <strong>{players.length}</strong> Players in Pool</span>
-              <span>·</span>
-              <span>🏆 <strong>{teams.length}</strong> Teams Registered</span>
+        {(!state || state.status === "setup") && (() => {
+          const poolPlayers = players.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist")
+          const waitlistPlayers = players.filter(p => p.status === "waitlist" || p.payment_status === "waitlist")
+
+          return (
+            <div style={{ background:"#131E30", borderRadius:20, padding:"40px 24px", textAlign:"center", border:"1px solid rgba(255,255,255,0.08)", color:"#FFFFFF", boxShadow:"0 10px 30px rgba(0,0,0,0.4)" }}>
+              <div style={{ fontSize:44, marginBottom:12 }}>🏏</div>
+              <div style={{ fontWeight:900, fontSize:22, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>Auction Hasn't Started Yet</div>
+              <div style={{ fontSize:14, color:"#94A3B8", marginTop:6, maxWidth:500, margin:"6px auto 0" }}>The tournament organizer will begin live bidding soon. This screen updates in real time automatically.</div>
+              <div style={{ marginTop:24, display:"inline-flex", gap:16, background:"rgba(255,255,255,0.05)", padding:"10px 24px", borderRadius:999, fontSize:13, color:"#CBD5E1", border:"1px solid rgba(255,255,255,0.08)", flexWrap:"wrap", justifyContent:"center" }}>
+                <span>👥 <strong>{poolPlayers.length}</strong> Players in Pool</span>
+                {waitlistPlayers.length > 0 && (
+                  <>
+                    <span>·</span>
+                    <span style={{ color:"#FCD34D" }}>⏳ <strong>{waitlistPlayers.length}</strong> on Waitlist</span>
+                  </>
+                )}
+                <span>·</span>
+                <span>🏆 <strong>{teams.length}</strong> Teams Registered</span>
+              </div>
             </div>
-          </div>
-        )}
+          )
+        })()}
 
         {/* State: Live */}
         {state?.status === "live" && (

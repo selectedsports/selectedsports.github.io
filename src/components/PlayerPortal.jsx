@@ -403,7 +403,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
             {[
               { id: "dashboard", label: "Dashboard", icon: Home },
               { id: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
-              { id: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => a.is_captain || a.status === "captain") ? "👑 Captain" : (auctionHistory.length > 0 ? auctionHistory.length : null) },
+              { id: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") ? "👑 Captain" : (auctionHistory.length > 0 ? auctionHistory.length : null) },
               { id: "leaderboard", label: "Rankings", icon: Award },
               { id: "profile", label: "Pass & Profile", icon: UserIcon },
             ].map(item => {
@@ -725,7 +725,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
           const hour = new Date().getHours()
           const greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
           const firstNameD = (player.name || "Player").split(" ")[0]
-          const capTournament = auctionHistory.find(ap => ap.status === "captain" || ap.is_captain)
+          const capTournament = auctionHistory.find(ap => (ap.status === "captain" || ap.is_captain) && ap.status !== "waitlist" && ap.payment_status !== "waitlist")
           const hasCaptainRole = !!capTournament
           const rawCapTeam = capTournament?.auction_teams?.name || ""
           const captainTeamDisplay = rawCapTeam ? (/^team\s+/i.test(rawCapTeam) ? rawCapTeam : `Team ${rawCapTeam}`) : "Your Franchise"
@@ -1280,23 +1280,28 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                     const latest = auctionHistory[0]
                     const auc = latest.auctions || {}
                     const team = latest.auction_teams || {}
-                    const isCaptain = latest.is_captain || latest.status === "captain"
+                    const isWaitlist = latest.status === "waitlist" || latest.payment_status === "waitlist"
+                    const isCaptain = (latest.is_captain || latest.status === "captain") && !isWaitlist
 
                     return (
                       <Card style={{
                         padding: "16px",
-                        border: isCaptain ? "1.5px solid rgba(245,158,11,0.4)" : "1.5px solid #E2E8F0",
-                        background: isCaptain ? "linear-gradient(135deg, rgba(245,158,11,0.06), #FFFFFF)" : "#FFFFFF",
+                        border: isWaitlist ? "1.5px solid #FCD34D" : isCaptain ? "1.5px solid rgba(245,158,11,0.4)" : "1.5px solid #E2E8F0",
+                        background: isWaitlist ? "linear-gradient(135deg, rgba(254,243,199,0.35), #FFFFFF)" : isCaptain ? "linear-gradient(135deg, rgba(245,158,11,0.06), #FFFFFF)" : "#FFFFFF",
                         boxShadow: "0 2px 8px rgba(15,23,42,0.04)"
                       }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
                           <div>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                              {isCaptain && (
+                              {isWaitlist ? (
+                                <span style={{ background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                  <Clock size={11}/> WAITING LIST
+                                </span>
+                              ) : isCaptain ? (
                                 <span style={{ background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", fontSize: 10, fontWeight: 900, padding: "2px 7px", borderRadius: 4 }}>
                                   👑 CAPTAIN
                                 </span>
-                              )}
+                              ) : null}
                               <div style={{ fontWeight: 800, fontSize: 15, color: "#0F172A", fontFamily: "var(--font-head)" }}>
                                 {auc.name || "Battle of Champions - Season 3"}
                               </div>
@@ -1305,12 +1310,17 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               <span><Calendar size={12}/> {auc.auction_date ? fmtDate(auc.auction_date) : "12 Sep 2026"}</span>
                               <span>·</span>
                               <span><Clock size={12}/> {auc.auction_time || "8:00 PM"}</span>
-                              {team.name && (
+                              {isWaitlist ? (
+                                <>
+                                  <span>·</span>
+                                  <span style={{ color: "#B45309", fontWeight: 700 }}>⏳ Spot Pending</span>
+                                </>
+                              ) : team.name ? (
                                 <>
                                   <span>·</span>
                                   <span style={{ color: "#166534", fontWeight: 800 }}>Team {team.name}</span>
                                 </>
-                              )}
+                              ) : null}
                             </div>
                           </div>
 
@@ -1319,7 +1329,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                             style={{
                               padding: "7px 14px",
                               borderRadius: 9,
-                              background: "#166534",
+                              background: isWaitlist ? "#D97706" : "#166534",
                               color: "#FFFFFF",
                               border: "none",
                               fontSize: 12,
@@ -1327,7 +1337,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                               cursor: "pointer"
                             }}
                           >
-                            Open Tournament Hub →
+                            {isWaitlist ? "View Waitlist Details →" : "Open Tournament Hub →"}
                           </button>
                         </div>
                       </Card>
@@ -1588,7 +1598,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                   ) : (
                     <Av name={player.name} id={player.id} sz={50} />
                   )}
-                  {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
+                  {auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") && (
                     <div style={{ position: "absolute", bottom: -3, right: -3, background: "#F59E0B", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, border: "2px solid #FFFFFF" }}>
                       👑
                     </div>
@@ -1597,7 +1607,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <div style={{ fontSize: 16, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>{player.name}</div>
-                    {auctionHistory.some(a => a.is_captain || a.status === "captain") && (
+                    {auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") && (
                       <span style={{ fontSize: 10, fontWeight: 900, background: "linear-gradient(135deg, #F59E0B, #D97706)", color: "#0F172A", padding: "1px 7px", borderRadius: 4 }}>
                         OFFICIAL CAPTAIN
                       </span>
@@ -1665,10 +1675,11 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 {auctionHistory.map((ap) => {
                   const auc = ap.auctions || {}
                   const team = ap.auction_teams || {}
-                  const isCaptain = ap.is_captain || ap.status === "captain"
+                  const isWaitlist = ap.status === "waitlist" || ap.payment_status === "waitlist"
+                  const isCaptain = (ap.is_captain || ap.status === "captain") && !isWaitlist
                   const isSold = ap.status === "sold"
                   const isUnsold = ap.status === "unsold"
-                  const teamName = team.name || (isSold ? "Drafted Team" : null)
+                  const teamName = !isWaitlist ? (team.name || (isSold ? "Drafted Team" : null)) : null
                   const isPaid = ap.payment_status === "paid"
 
                   const shareCaptaincy = () => {
@@ -2012,7 +2023,14 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
 
                   // Non-captain card
                   return (
-                    <Card key={ap.id} style={{ padding: "20px", border: "1.5px solid #E2E8F0" }}>
+                    <Card
+                      key={ap.id}
+                      style={{
+                        padding: "20px",
+                        border: isWaitlist ? "1.5px solid #FCD34D" : "1.5px solid #E2E8F0",
+                        background: isWaitlist ? "linear-gradient(180deg, #FFFDF5 0%, #FFFFFF 100%)" : "#FFFFFF"
+                      }}
+                    >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, flexWrap: "wrap" }}>
                         <div>
                           <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)" }}>
@@ -2045,6 +2063,10 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                             <span style={{ background: "#64748B", color: "#FFFFFF", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999 }}>
                               UNSOLD
                             </span>
+                          ) : isWaitlist ? (
+                            <span style={{ background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                              <Clock size={13}/> WAITING LIST
+                            </span>
                           ) : (
                             <span style={{ background: "rgba(37,99,235,0.12)", color: "#2563EB", fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 999 }}>
                               IN POOL
@@ -2054,25 +2076,61 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                       </div>
 
                       {/* Details Box */}
-                      <div style={{ background: "#F8FAF8", borderRadius: 12, padding: "14px", marginTop: 14, border: "1px solid #E2E8F0", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, textAlign: "center" }}>
+                      <div style={{
+                        background: isWaitlist ? "rgba(245,158,11,0.06)" : "#F8FAF8",
+                        borderRadius: 12,
+                        padding: "14px",
+                        marginTop: 14,
+                        border: isWaitlist ? "1px solid rgba(245,158,11,0.22)" : "1px solid #E2E8F0",
+                        display: "grid",
+                        gridTemplateColumns: "repeat(3, 1fr)",
+                        gap: 10,
+                        textAlign: "center"
+                      }}>
                         <div>
-                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Playing Role</div>
+                          <div style={{ fontSize: 10.5, color: isWaitlist ? "#92400E" : "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Playing Role</div>
                           <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>{ap.playing_role || player.playing_role || "Player"}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Base Price</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: "#0F172A", marginTop: 2 }}>₹{ap.base_price || 0}</div>
+                          <div style={{ fontSize: 10.5, color: isWaitlist ? "#92400E" : "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>
+                            {isWaitlist ? "Waitlist Status" : "Base Price"}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: isWaitlist ? "#B45309" : "#0F172A", marginTop: 2 }}>
+                            {isWaitlist ? "⏳ In Queue" : `₹${ap.base_price || 0}`}
+                          </div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 10.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Sold Price</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: isSold ? "#166534" : "#64748B", marginTop: 2 }}>
-                            {isSold ? `₹${ap.sold_price || ap.bid_price || "—"}` : "—"}
+                          <div style={{ fontSize: 10.5, color: isWaitlist ? "#92400E" : "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>
+                            {isWaitlist ? "Registration Fee" : "Sold Price"}
+                          </div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: isWaitlist ? "#166534" : isSold ? "#166534" : "#64748B", marginTop: 2 }}>
+                            {isWaitlist ? "Free (Spot Pending)" : isSold ? `₹${ap.sold_price || ap.bid_price || "—"}` : "—"}
                           </div>
                         </div>
                       </div>
 
+                      {/* Waiting List Notice Banner */}
+                      {isWaitlist && (
+                        <div style={{
+                          marginTop: 14,
+                          padding: "14px 16px",
+                          borderRadius: 12,
+                          background: "linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)",
+                          border: "1px solid #FCD34D",
+                          color: "#78350F"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 7, fontWeight: 800, fontSize: 13, color: "#92400E", marginBottom: 6 }}>
+                            <Clock size={16} color="#B45309"/>
+                            <span>Official Waiting List Entry</span>
+                          </div>
+                          <p style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: "#92400E" }}>
+                            All 45 player spots for <strong>{auc.name || "this tournament"}</strong> are currently full. You have been placed on the official waiting list. <strong>No registration fee has been charged.</strong> If a spot opens up due to a cancellation or withdrawal, tournament management will contact you directly to complete payment and confirm your auction entry.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Team Assignment Banner */}
-                      {teamName && (
+                      {!isWaitlist && teamName && (
                         <div style={{ marginTop: 12, padding: "12px 14px", background: "rgba(22,101,52,0.06)", borderRadius: 10, border: "1px solid rgba(22,101,52,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <Award size={16} color="#166534"/>
@@ -2227,7 +2285,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
 
                 {/* Official Captaincy Badge on Pass */}
                 {(() => {
-                  const capRow = auctionHistory.find(a => a.is_captain || a.status === "captain")
+                  const capRow = auctionHistory.find(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist")
                   if (!capRow) return null
                   const cTeam = capRow.auction_teams?.name || ""
                   const cTeamDisplay = cTeam ? (/^team\s+/i.test(cTeam) ? cTeam : `Team ${cTeam}`) : "Franchise Team"
@@ -2550,7 +2608,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
         {[
           { key: "dashboard", label: "Home", icon: Home },
           { key: "matches", label: "Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
-          { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => a.is_captain || a.status === "captain") ? "👑" : null },
+          { key: "tournaments", label: "Tournaments", icon: Trophy, badge: auctionHistory.some(a => (a.is_captain || a.status === "captain") && a.status !== "waitlist" && a.payment_status !== "waitlist") ? "👑" : null },
           { key: "leaderboard", label: "Rankings", icon: Award },
           { key: "profile", label: "Pass", icon: UserIcon },
         ].map(({ key, label, icon: Icon, badge }) => {
