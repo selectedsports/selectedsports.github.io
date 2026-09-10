@@ -766,7 +766,7 @@ export async function registerAuctionPlayer(name, phone, playingRole, birthDate 
   const category = computeAgeCategory(birthDate)
   const basePrice = await computeAuctionBasePrice(auctionId)
   const payload = {
-    name, phone, playing_role: playingRole, status: "registered", birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, auction_id: auctionId || null,
+    name, phone, playing_role: playingRole, status: extra.status || "registered", birth_date: birthDate || null, profile_image_url: profileImageUrl || null, category, auction_id: auctionId || null,
     city: extra.city || null, jersey_number: extra.jerseyNumber || null, jersey_size: extra.jerseySize || null, base_price: basePrice
   }
   if (extra.paymentScreenshotUrl) payload.payment_screenshot_url = extra.paymentScreenshotUrl
@@ -783,7 +783,8 @@ export async function registerAuctionPlayer(name, phone, playingRole, birthDate 
   } else if (error) {
     throw error
   }
-  await createNotification("auction_registration", `${name} registered for the auction`)
+  const notifMsg = extra.status === "waitlist" ? `${name} joined the waiting list for auction` : `${name} registered for the auction`
+  await createNotification("auction_registration", notifMsg)
   // Also create a full (pending-approval) player account if this phone isn't one already,
   // so auction registrants count toward the main player roster too.
   try { await addPlayer(name, phone, "1234", null, birthDate, profileImageUrl, { ...extra, source: "auction" }) } catch(e) { console.error("Failed to sync auction registrant into main player roster:", e) }
@@ -792,6 +793,13 @@ export async function registerAuctionPlayer(name, phone, playingRole, birthDate 
 
 export async function updateAuctionPlayerPaymentStatus(playerId, status) {
   const { error } = await supabase.from("auction_players").update({ payment_status: status }).eq("id", playerId)
+  if (error) throw error
+}
+
+export async function updateAuctionPlayerStatus(playerId, status, paymentStatus = null) {
+  const patch = { status }
+  if (paymentStatus) patch.payment_status = paymentStatus
+  const { error } = await supabase.from("auction_players").update(patch).eq("id", playerId)
   if (error) throw error
 }
 

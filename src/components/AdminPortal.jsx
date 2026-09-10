@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp } from "../constants.js"
@@ -2875,13 +2875,15 @@ function AuctionPage({ isMobile, isFounder }) {
       )}
 
       {subTab === "players" && (() => {
-        const auctionPoolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+        const auctionPoolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist")
+        const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && (p.status === "waitlist" || p.payment_status === "waitlist"))
         const soldCount = auctionPoolPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
         const totalBase = auctionPoolPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
         const inPoolPhones = new Set(auctionPoolPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
         const notAddedCount = allPlatformPlayers.filter(p => !inPoolPhones.has((p.phone||"").replace(/[^0-9]/g,"").slice(-10))).length
         const q = poolSearch.trim().toLowerCase()
         const filteredPool = auctionPoolPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+        const filteredWaitlist = waitlistPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
 
         const pq = platformSearch.trim().toLowerCase()
         const filteredPlatform = allPlatformPlayers.filter(p => {
@@ -2899,7 +2901,7 @@ function AuctionPage({ isMobile, isFounder }) {
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:8 }}>
             <div style={{ fontSize:12, color:"#64748B" }}>
-              Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding
+              Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding {waitlistPlayers.length > 0 && <span>· ⏳ <strong>{waitlistPlayers.length}</strong> on Waiting List</span>}
             </div>
             <div style={{ display:"flex", gap:10, alignItems:"center" }}>
               <button
@@ -2916,10 +2918,11 @@ function AuctionPage({ isMobile, isFounder }) {
             {(isFounder ? [
               { icon:Users, v:allPlatformPlayers.length, label:"Total Players" },
               { icon:Gavel, v:auctionPoolPlayers.length, label:"In Auction Pool" },
-              { icon:UserPlus, v:notAddedCount, label:"Not Added to Auction" },
+              { icon:Clock, v:waitlistPlayers.length, label:"Waiting List" },
               { icon:Wallet, v:`🪙 ${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
             ] : [
               { icon:Gavel, v:auctionPoolPlayers.length, label:"In Auction Pool" },
+              { icon:Clock, v:waitlistPlayers.length, label:"Waiting List" },
               { icon:CheckCircle2, v:soldCount, label:"Sold" },
               { icon:Wallet, v:`🪙 ${totalBase.toLocaleString("en-IN")}`, label:"Total Base Value" },
             ]).map((c,i,arr)=>(
@@ -2933,13 +2936,15 @@ function AuctionPage({ isMobile, isFounder }) {
             ))}
           </div>
 
-          {isFounder && (
-          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-            {[["registered",`Registered Players`],["pool",`Auction Pool (${auctionPoolPlayers.length})`]].map(([k,label])=>(
-              <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:poolView===k?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:poolView===k?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer" }}>{label}</button>
+          <div style={{ display:"flex", gap:8, marginBottom:16, overflowX:"auto" }}>
+            {[
+              ...(isFounder ? [["registered",`Registered Players`]] : []),
+              ["pool",`Auction Pool (${auctionPoolPlayers.length})`],
+              ["waitlist",`⏳ Waiting List (${waitlistPlayers.length})`]
+            ].map(([k,label])=>(
+              <button key={k} onClick={()=>setPoolView(k)} style={{ padding:"9px 16px", borderRadius:10, border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize:13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>{label}</button>
             ))}
           </div>
-          )}
 
           {poolView === "registered" && isFounder ? (
             <>
@@ -2983,6 +2988,66 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               )}
             </>
+          ) : poolView === "waitlist" ? (
+            <div>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>
+                Players who registered after the 45-player auction cap was reached. No payment was collected from them. If a confirmed player withdraws, promote them to the pool and collect the entry fee.
+              </div>
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                <div style={{ flex:1, position:"relative" }}>
+                  <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                  <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search waitlisted players..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+                </div>
+              </div>
+              {filteredWaitlist.length === 0 ? (
+                <Card style={{ padding:"32px 16px", textAlign:"center" }}>
+                  <div style={{ fontSize:14, color:"#64748B" }}>{waitlistPlayers.length === 0 ? "No players currently on the waiting list." : "No waitlisted players match your search."}</div>
+                </Card>
+              ) : (
+                <div style={{ display:"grid", gap:10 }}>
+                  {filteredWaitlist.map((p, idx) => (
+                    <Card key={p.id} style={{ padding:"14px 16px", background:"#FFFBEB", border:"1px solid #FDE68A" }}>
+                      <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap:12, marginBottom:10, cursor:"pointer" }}>
+                        <div style={{ width:24, fontSize:12, fontWeight:800, color:"#B45309", textAlign:"center" }}>#{idx + 1}</div>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:42, height:42, borderRadius:9, objectFit:"cover", flexShrink:0, border:"1px solid #FDE68A" }}/>
+                        ) : (
+                          <div style={{ width:42, height:42, borderRadius:9, background:"#FEF3C7", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#B45309", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)" }}>{p.name}</div>
+                          <div style={{ fontSize:12, color:"#92400E", display:"flex", alignItems:"center", gap:4 }}><Phone size={11}/> {p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</div>
+                        </div>
+                        <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                          ⏳ Waitlist
+                        </span>
+                        <ChevronRight size={16} color="#94A3B8"/>
+                        <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:4 }}><Trash2 size={16}/></button>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FDE68A" }}>
+                        <div style={{ fontSize:11, color:"#78350F" }}>
+                          Registered: {p.created_at ? new Date(p.created_at).toLocaleString("en-IN", { dateStyle:"short", timeStyle:"short" }) : "N/A"}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            if (!confirm(`Promote ${p.name} to the Confirmed Auction Pool? You will need to collect the registration fee.`)) return
+                            try {
+                              await updateAuctionPlayerStatus(p.id, "registered", "pending")
+                              setAuctionPlayers(list => list.map(x => x.id === p.id ? { ...x, status: "registered", payment_status: "pending" } : x))
+                            } catch(err) { alert(err.message) }
+                          }}
+                          style={{ padding:"6px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)" }}
+                        >
+                          Promote to Pool ➔
+                        </button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
           <>
           <div style={{ display:"flex", gap:10, marginBottom:14, flexWrap:"wrap" }}>
@@ -3030,6 +3095,11 @@ function AuctionPage({ isMobile, isFounder }) {
                     {p.payment_status === "paid" && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
                         ✓ Paid
+                      </span>
+                    )}
+                    {(p.status === "waitlist" || p.payment_status === "waitlist") && (
+                      <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border:"1px solid #FDE68A", padding: "4px 8px", borderRadius: 6, flexShrink: 0 }}>
+                        ⏳ Waitlist
                       </span>
                     )}
                     <ChevronRight size={16} color="#94A3B8"/>
@@ -3519,7 +3589,7 @@ function AuctionPage({ isMobile, isFounder }) {
       })()}
 
       {showExportPoolModal && (() => {
-        const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+        const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist")
         const q = exportPoolSearch.trim().toLowerCase()
         const filtered = poolPlayers.filter(p => {
           if (exportPoolRoleFilter && !((p.playing_role || "").toLowerCase().includes(exportPoolRoleFilter.toLowerCase()))) return false
@@ -3833,7 +3903,31 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
             )}
 
-            {(viewingPlayer.payment_status || viewingPlayer.payment_screenshot_url) && (
+            {(viewingPlayer.status === "waitlist" || viewingPlayer.payment_status === "waitlist") ? (
+              <div style={{ marginBottom:16, padding:"12px 14px", background:"#FFFBEB", border:"1.5px solid #F59E0B", borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#92400E", fontWeight:700, textTransform:"uppercase" }}>Player Status</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:"#B45309" }}>
+                    ⏳ Waiting List (No Payment Taken)
+                  </div>
+                  <div style={{ fontSize:11, color:"#78350F", marginTop:2 }}>Registered when 45-player auction cap was reached.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!confirm(`Promote ${viewingPlayer.name} to the Confirmed Auction Pool? You will need to collect the registration fee.`)) return
+                    try {
+                      await updateAuctionPlayerStatus(viewingPlayer.id, "registered", "pending")
+                      setViewingPlayer(p => ({ ...p, status: "registered", payment_status: "pending" }))
+                      setAuctionPlayers(list => list.map(x => x.id === viewingPlayer.id ? { ...x, status: "registered", payment_status: "pending" } : x))
+                    } catch(err) { alert(err.message) }
+                  }}
+                  style={{ padding:"8px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", whiteSpace:"nowrap" }}
+                >
+                  Promote to Pool ➔
+                </button>
+              </div>
+            ) : (viewingPlayer.payment_status || viewingPlayer.payment_screenshot_url) && (
               <div style={{ marginBottom:16, padding:"12px 14px", background:viewingPlayer.payment_status === "paid" ? "rgba(34,197,94,0.08)" : (viewingPlayer.payment_status === "pending" ? "rgba(245,158,11,0.08)" : "#F8FAF8"), border:viewingPlayer.payment_status === "paid" ? "1.5px solid #166534" : (viewingPlayer.payment_status === "pending" ? "1.5px solid #F59E0B" : "1px solid #E2E8F0"), borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
                 <div>
                   <div style={{ fontSize:10, color:"#64748B", fontWeight:700, textTransform:"uppercase" }}>Payment Status</div>

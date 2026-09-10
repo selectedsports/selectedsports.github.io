@@ -70,8 +70,11 @@ function RegisteredPlayersList({ auctionId }) {
       .finally(() => setLoading(false))
   }, [auctionId])
 
+  const confirmedPool = players.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist")
+  const waitlistPool = players.filter(p => p.status === "waitlist" || p.payment_status === "waitlist")
+
   const q = search.trim().toLowerCase()
-  const filtered = players.filter(p => {
+  const filtered = confirmedPool.filter(p => {
     if (roleFilter && p.playing_role !== roleFilter) return false
     if (!q) return true
     return (
@@ -86,7 +89,7 @@ function RegisteredPlayersList({ auctionId }) {
     <div style={{ background:"#FFFFFF", borderRadius:16, padding:"18px", border:"1px solid #E2E8F0" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12, flexWrap:"wrap", gap:6 }}>
         <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>
-          Registered Players ({loading ? "…" : players.length})
+          Registered Players ({loading ? "…" : confirmedPool.length})
         </div>
         <div style={{ fontSize:10, color:"#166534", background:"rgba(34,197,94,0.1)", padding:"3px 8px", borderRadius:6, fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>
           <ShieldCheck size={12}/> Confidential: Mobile # Hidden
@@ -161,6 +164,47 @@ function RegisteredPlayersList({ auctionId }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {waitlistPool.length > 0 && (
+        <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px dashed #E2E8F0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ fontSize: 11, color: "#B45309", fontWeight: 800, textTransform: "uppercase", display: "flex", alignItems: "center", gap: 5 }}>
+              <span>⏳</span> Waiting List ({waitlistPool.length})
+            </div>
+            <div style={{ fontSize: 10, color: "#94A3B8" }}>
+              Next in line if confirmed slots open
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            {waitlistPool.map((p, idx) => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#FFFBEB", borderRadius: 8, border: "1px solid #FDE68A" }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#B45309", width: 22, textAlign: "center" }}>#{idx + 1}</div>
+                {p.profile_image_url ? (
+                  <img src={p.profile_image_url} alt={p.name} style={{ width: 34, height: 34, borderRadius: 7, objectFit: "cover", flexShrink: 0, border: "1px solid #FDE68A" }}/>
+                ) : (
+                  <div style={{ width: 34, height: 34, borderRadius: 7, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800, color: "#B45309", flexShrink: 0 }}>
+                    {(p.name || "?")[0]}
+                  </div>
+                )}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.name}
+                  </div>
+                  <div style={{ fontSize: 11, color: "#92400E", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                    {p.playing_role && <span style={{ fontWeight: 600 }}>{p.playing_role}</span>}
+                    {p.city && <span>· 📍 {p.city}</span>}
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "#B45309", background: "#FEF3C7", padding: "3px 7px", borderRadius: 6 }}>
+                    ⏳ Waitlist
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -521,6 +565,8 @@ export default function PublicAuctionRegister({ auctionCode }) {
   const [done, setDone] = useState(false)
   const [infoTab, setInfoTab] = useState("register") // "register" | "details" | "players"
   const [registeredCount, setRegisteredCount] = useState(0)
+  const [allAuctionPlayers, setAllAuctionPlayers] = useState([])
+  const [submittedAsWaitlist, setSubmittedAsWaitlist] = useState(false)
 
   useEffect(() => {
     if (!auctionCode) { setChecking(false); return } // legacy/unscoped fallback
@@ -536,8 +582,17 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
   useEffect(() => {
     if (!auctionId) return
-    fetchAuctionPlayers(auctionId).then(plist => setRegisteredCount((plist || []).length)).catch(() => {})
+    fetchAuctionPlayers(auctionId).then(plist => {
+      const list = plist || []
+      setAllAuctionPlayers(list)
+      const confirmed = list.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist")
+      setRegisteredCount(confirmed.length)
+    }).catch(() => {})
   }, [auctionId])
+
+  const confirmedPlayers = allAuctionPlayers.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist")
+  const auctionCap = Number(auction?.max_players) > 0 ? Number(auction.max_players) : 45
+  const isWaitlist = confirmedPlayers.length >= auctionCap
 
   useEffect(() => {
     const cleaned = phone.replace(/[^0-9]/g, "")
@@ -584,9 +639,13 @@ export default function PublicAuctionRegister({ auctionCode }) {
     if (!jerseyNumber.trim()) { setError("Please enter your jersey number."); return }
     if (!jerseySize) { setError("Please select your jersey size."); return }
     if (!photoFile && !photoPreview) { setError("Please upload a profile photo."); return }
-    const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
-    if (!receiptFile && !receiptPreview) {
-      setError(`Please transfer the registration fee of ₹${fee} and upload your payment screenshot.`); return
+    
+    // Only require registration fee if NOT on waitlist
+    if (!isWaitlist) {
+      const fee = Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180
+      if (!receiptFile && !receiptPreview) {
+        setError(`Please transfer the registration fee of ₹${fee} and upload your payment screenshot.`); return
+      }
     }
     setBusy(true)
     try {
@@ -595,12 +654,14 @@ export default function PublicAuctionRegister({ auctionCode }) {
       let photoUrl = photoPreview
       if (photoFile) photoUrl = await uploadProfilePhoto(photoFile, cleaned)
       let receiptUrl = receiptPreview || null
-      if (receiptFile) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
+      if (receiptFile && !isWaitlist) receiptUrl = await uploadPaymentReceipt(receiptFile, auctionId, cleaned)
       await registerAuctionPlayer(`${firstName.trim()} ${lastName.trim()}`, cleaned, role, birthDate, photoUrl, auctionId, {
         city: city.trim(), jerseyNumber: jerseyNumber.trim(), jerseySize,
-        paymentScreenshotUrl: receiptUrl,
-        paymentStatus: "pending"
+        paymentScreenshotUrl: isWaitlist ? null : receiptUrl,
+        paymentStatus: isWaitlist ? "waitlist" : "pending",
+        status: isWaitlist ? "waitlist" : "registered"
       })
+      setSubmittedAsWaitlist(isWaitlist)
       setDone(true)
     } catch(e) { setError(e.message) }
     setBusy(false)
@@ -675,15 +736,28 @@ export default function PublicAuctionRegister({ auctionCode }) {
       <Header auctionName={auction?.name} organizedBy={auction?.organized_by}/>
       <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 20px 40px" }}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>✅</div>
-          <div style={{ fontWeight:800, fontSize:18, color:"#0F172A", fontFamily:"var(--font-head)" }}>
-            You're registered!
+          <div style={{ fontSize:40, marginBottom:10 }}>{submittedAsWaitlist ? "⏳" : "✅"}</div>
+          <div style={{ fontWeight:800, fontSize:19, color:"#0F172A", fontFamily:"var(--font-head)" }}>
+            {submittedAsWaitlist ? "You are on the Waiting List!" : "You're registered!"}
           </div>
-          <div style={{ fontSize:13, color:"#64748B", marginTop:8, lineHeight:1.5 }}>
-            <span>
-              {firstName}, you've been added to the auction pool. The organizer will verify your payment and set your base price before the auction starts.
-            </span>
-          </div>
+          {submittedAsWaitlist ? (
+            <div style={{ background:"#FFFBEB", border:"1.5px solid #F59E0B", borderRadius:14, padding:"16px 18px", color:"#78350F", textAlign:"left", marginTop:14, boxShadow:"0 4px 12px rgba(245,158,11,0.08)" }}>
+              <div style={{ fontWeight:800, fontSize:14, color:"#B45309", marginBottom:8, display:"flex", alignItems:"center", gap:6 }}>
+                <span>📋</span> Waiting List Confirmation
+              </div>
+              <div style={{ fontSize:13, lineHeight:1.6, color:"#92400E" }}>
+                <div>• <strong>No Payment Taken:</strong> The auction has reached its capacity of 45 players. No entry fee was collected.</div>
+                <div style={{ marginTop:8 }}>• <strong>Spot Availability:</strong> You are on the waiting list! If a player drops out or an extra spot becomes available, the organizers will contact you immediately.</div>
+                <div style={{ marginTop:8 }}>• <strong>Confirmation:</strong> Once a spot is available, you will receive payment details to make the payment and confirm your auction spot.</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize:13, color:"#64748B", marginTop:8, lineHeight:1.5 }}>
+              <span>
+                {firstName}, you've been added to the auction pool. The organizer will verify your payment and set your base price before the auction starts.
+              </span>
+            </div>
+          )}
         </div>
 
         <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>
@@ -730,7 +804,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
         <div style={{ display:"flex", gap:6, marginBottom:16, overflowX:"auto", paddingBottom:4, scrollbarWidth:"none" }}>
           {[
-            ["register", `📝 Register (₹${Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180})`],
+            ["register", isWaitlist ? "⏳ Waiting List (Free)" : `📝 Register (₹${Number(auction?.player_entry_fee) > 0 ? Number(auction.player_entry_fee) : 180})`],
             ["details", "📋 Details"],
             ["players", `🏏 Players (${registeredCount})`],
             ["teams", "🛡️ Teams & Squads"],
@@ -743,7 +817,7 @@ export default function PublicAuctionRegister({ auctionCode }) {
                 padding: "8px 12px",
                 borderRadius: 10,
                 border: infoTab === k ? "none" : "1.5px solid #E2E8F0",
-                background: infoTab === k ? "#166534" : "#FFFFFF",
+                background: infoTab === k ? (isWaitlist && k === "register" ? "#D97706" : "#166534") : "#FFFFFF",
                 color: infoTab === k ? "#FFFFFF" : "#64748B",
                 fontSize: 12,
                 fontWeight: 700,
@@ -764,6 +838,25 @@ export default function PublicAuctionRegister({ auctionCode }) {
 
         {infoTab === "register" && (
         <div style={{ background:"#FFFFFF", borderRadius:16, padding:"20px 18px", border:"1px solid #E2E8F0" }}>
+
+          {isWaitlist && (
+            <div style={{ background:"linear-gradient(135deg, #FFFBEB, #FEF3C7)", border:"1.5px solid #F59E0B", borderRadius:14, padding:"16px", marginBottom:20, boxShadow:"0 2px 8px rgba(245,158,11,0.08)" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                <span style={{ fontSize:22 }}>⏳</span>
+                <div>
+                  <div style={{ fontWeight:800, fontSize:14, color:"#92400E", fontFamily:"var(--font-head)" }}>
+                    Auction Cap Reached (45 Players) — Waiting List Open
+                  </div>
+                  <div style={{ fontSize:11, color:"#B45309", fontWeight:600 }}>
+                    Registration is open • No payment required right now
+                  </div>
+                </div>
+              </div>
+              <div style={{ fontSize:12.5, color:"#78350F", lineHeight:1.5, marginTop:8, borderTop:"1px dashed rgba(217,119,6,0.3)", paddingTop:8 }}>
+                All 45 player spots for <strong>{auction?.name || "this auction"}</strong> are currently full. You can register below to join the <strong>waiting list</strong> at <strong>no cost</strong>. If a spot becomes available, the organizers will contact you to make payment and confirm your spot.
+              </div>
+            </div>
+          )}
 
           <label style={lS}>Phone Number</label>
           <input value={phone} onChange={e => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="10-digit mobile number" style={{ ...iS, marginBottom: lookedUp ? 8 : 16 }}/>
@@ -834,22 +927,55 @@ export default function PublicAuctionRegister({ auctionCode }) {
             ))}
           </div>
 
-          {/* Mandatory Payment Section */}
-          <PaymentSection
-            auction={auction}
-            firstName={firstName}
-            receiptFile={receiptFile}
-            receiptPreview={receiptPreview}
-            setReceiptFile={setReceiptFile}
-            setReceiptPreview={setReceiptPreview}
-            copiedText={copiedText}
-            setCopiedText={setCopiedText}
-          />
+          {/* Payment Section: Hidden when in Waitlist mode */}
+          {!isWaitlist ? (
+            <PaymentSection
+              auction={auction}
+              firstName={firstName}
+              receiptFile={receiptFile}
+              receiptPreview={receiptPreview}
+              setReceiptFile={setReceiptFile}
+              setReceiptPreview={setReceiptPreview}
+              copiedText={copiedText}
+              setCopiedText={setCopiedText}
+            />
+          ) : (
+            <div style={{ padding:"16px", background:"#FFFBEB", border:"1.5px dashed #F59E0B", borderRadius:14, marginBottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+                <div style={{ fontWeight:800, fontSize:13, color:"#92400E", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6 }}>
+                  <span>⏳</span> Payment Details Hidden (Waitlist Mode)
+                </div>
+                <span style={{ background:"#FEF3C7", color:"#B45309", fontSize:11, fontWeight:800, padding:"3px 8px", borderRadius:6, border:"1px solid rgba(245,158,11,0.2)" }}>
+                  Free Entry
+                </span>
+              </div>
+              <div style={{ fontSize:12, color:"#78350F", lineHeight:1.5 }}>
+                No entry fee is required to join the waiting list. If a spot becomes available, the organizers will contact you with payment details to confirm your spot.
+              </div>
+            </div>
+          )}
 
           {error && <div style={{ padding:"10px 12px", background:"rgba(231,76,60,0.08)", borderRadius:9, color:"#EF4444", fontSize:12, marginBottom:16 }}>{error}</div>}
 
-          <button onClick={submit} disabled={busy} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:busy?"not-allowed":"pointer", opacity:busy?0.6:1, fontFamily:"var(--font-head)" }}>
-            {busy ? "Registering..." : "Register for Auction"}
+          <button
+            onClick={submit}
+            disabled={busy}
+            style={{
+              width:"100%",
+              padding:"14px",
+              borderRadius:10,
+              background: isWaitlist ? "linear-gradient(135deg, #D97706, #B45309)" : "#166534",
+              border:"none",
+              color:"#FFFFFF",
+              fontSize:14,
+              fontWeight:800,
+              cursor:busy?"not-allowed":"pointer",
+              opacity:busy?0.6:1,
+              fontFamily:"var(--font-head)",
+              boxShadow: isWaitlist ? "0 4px 12px rgba(217,119,6,0.25)" : "0 4px 12px rgba(22,101,52,0.25)"
+            }}
+          >
+            {busy ? "Submitting..." : (isWaitlist ? "Join Auction Waiting List (No Payment)" : "Register for Auction")}
           </button>
         </div>
         )}
