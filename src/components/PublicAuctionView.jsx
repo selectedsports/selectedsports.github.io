@@ -145,6 +145,66 @@ function Header({ auctionMeta }) {
   )
 }
 
+function SpecialThanksMarquee({ auctionMeta, isWide }) {
+  const tournamentName = auctionMeta?.name || "Battle of Champions - Season 3"
+  return (
+    <div style={{
+      background: "linear-gradient(90deg, #052014 0%, #0B1320 50%, #052014 100%)",
+      borderTop: "1px solid rgba(245,158,11,0.35)",
+      borderBottom: "2px solid #F59E0B",
+      boxShadow: "0 4px 18px rgba(0,0,0,0.4)",
+      overflow: "hidden",
+      position: "relative",
+      display: "flex",
+      alignItems: "center",
+      height: isWide ? 42 : 38,
+      fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    }}>
+      {/* Left Station Badge */}
+      <div style={{
+        background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+        color: "#0F172A",
+        padding: isWide ? "0 16px" : "0 10px",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        fontSize: isWide ? 12 : 10.5,
+        fontWeight: 900,
+        letterSpacing: "0.8px",
+        textTransform: "uppercase",
+        zIndex: 5,
+        boxShadow: "4px 0 12px rgba(0,0,0,0.45)",
+        flexShrink: 0
+      }}>
+        <span style={{ fontSize: isWide ? 14 : 12 }}>⭐</span>
+        <span>SPECIAL THANKS</span>
+      </div>
+
+      {/* Marquee Ticker Track */}
+      <div style={{ flex: 1, overflow: "hidden", position: "relative", height: "100%", display: "flex", alignItems: "center" }}>
+        <marquee
+          behavior="scroll"
+          direction="left"
+          scrollamount={5}
+          onMouseEnter={e => e.currentTarget.stop()}
+          onMouseLeave={e => e.currentTarget.start()}
+          style={{
+            color: "#FEF08A",
+            fontSize: isWide ? 13.5 : 12,
+            fontWeight: 700,
+            letterSpacing: "0.4px",
+            display: "flex",
+            alignItems: "center"
+          }}
+        >
+          ✨ Special thanks and support to <strong style={{ color: "#FFFFFF", fontWeight: 900, textDecoration: "underline", textUnderlineOffset: "3px", textDecorationColor: "#F59E0B" }}>Abdul Muiz</strong> for his tremendous support and contribution! ✨ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 🏏 Welcome to {tournamentName} — Official Live Player Auction &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 🌟 Special thanks and support to <strong style={{ color: "#FFFFFF", fontWeight: 900 }}>Abdul Muiz</strong> 🌟 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 🏆 Best of luck to all captains, franchise owners, and players! &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </marquee>
+      </div>
+    </div>
+  )
+}
+
 function PlayerOnTheBlockCard({ currentPlayer, state, leadingTeam, isWide }) {
   if (!currentPlayer) {
     return (
@@ -506,6 +566,9 @@ export default function PublicAuctionView({ auctionCode }) {
 
       {/* Main Broadcast Header */}
       <Header auctionMeta={auctionMeta}/>
+
+      {/* Special Thanks Marquee Ticker */}
+      <SpecialThanksMarquee auctionMeta={auctionMeta} isWide={isWide}/>
 
       <div style={{ maxWidth: 1240, margin: "0 auto", padding: isWide ? "24px 24px 60px" : "16px 14px 40px" }}>
 
