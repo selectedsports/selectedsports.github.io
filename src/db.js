@@ -1635,3 +1635,113 @@ export async function setPlayerAccountRole(id, role) {
   const { error } = await supabase.from("players").update({ role }).eq("id", id)
   if (error) throw error
 }
+
+// ── Ground Bookings & Diary (Online Slot Diary for Ground Owners) ────────────
+const GROUND_BOOKINGS_STORAGE_KEY = "selected_ground_bookings_cache"
+
+export async function fetchGroundBookings() {
+  try {
+    const { data, error } = await supabase.from("settings").select("value").eq("key", "ground_bookings").maybeSingle()
+    if (!error && data?.value) {
+      const parsed = JSON.parse(data.value)
+      if (Array.isArray(parsed)) {
+        try { localStorage.setItem(GROUND_BOOKINGS_STORAGE_KEY, data.value) } catch {}
+        return parsed
+      }
+    }
+  } catch (err) {
+    console.warn("fetchGroundBookings error:", err)
+  }
+  try {
+    const cached = localStorage.getItem(GROUND_BOOKINGS_STORAGE_KEY)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch {}
+  return []
+}
+
+export async function saveGroundBooking(booking) {
+  const currentList = await fetchGroundBookings()
+  const now = new Date().toISOString()
+  const id = booking.id || ("gb_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7))
+  const rate = Number(booking.rate || 0)
+  const advance = Number(booking.advance_paid || 0)
+  const balance = Math.max(0, rate - advance)
+  
+  let payment_status = booking.payment_status
+  if (!payment_status || payment_status === "auto") {
+    if (rate > 0 && advance >= rate) payment_status = "paid"
+    else if (advance > 0) payment_status = "advance"
+    else payment_status = "pending"
+  }
+
+  const record = {
+    ...booking,
+    id,
+    rate,
+    advance_paid: advance,
+    balance_due: balance,
+    payment_status,
+    status: booking.status || "confirmed",
+    updated_at: now,
+    created_at: booking.created_at || now,
+  }
+
+  const idx = currentList.findIndex(b => b.id === id)
+  let updatedList
+  if (idx >= 0) {
+    updatedList = [...currentList]
+    updatedList[idx] = record
+  } else {
+    updatedList = [record, ...currentList]
+  }
+
+  // Sort by date ascending
+  updatedList.sort((a, b) => (a.date || "").localeCompare(b.date || ""))
+
+  const jsonStr = JSON.stringify(updatedList)
+  try { localStorage.setItem(GROUND_BOOKINGS_STORAGE_KEY, jsonStr) } catch {}
+
+  const { error } = await supabase.from("settings").upsert({ key: "ground_bookings", value: jsonStr })
+  if (error) {
+    console.warn("Supabase ground_bookings upsert error, cached locally:", error)
+  }
+  return record
+}
+
+export async function deleteGroundBooking(bookingId) {
+  const currentList = await fetchGroundBookings()
+  const updatedList = currentList.filter(b => b.id !== bookingId)
+  const jsonStr = JSON.stringify(updatedList)
+  try { localStorage.setItem(GROUND_BOOKINGS_STORAGE_KEY, jsonStr) } catch {}
+  const { error } = await supabase.from("settings").upsert({ key: "ground_bookings", value: jsonStr })
+  if (error) {
+    console.warn("Supabase ground_bookings delete error, cached locally:", error)
+  }
+  return true
+}
+
+export async function updateBookingPaymentStatus(bookingId, { advance_paid, payment_status, payment_method }) {
+  const currentList = await fetchGroundBookings()
+  const booking = currentList.find(b => b.id === bookingId)
+  if (!booking) throw new Error("Booking not found")
+  
+  const updatedBooking = { ...booking }
+  if (advance_paid !== undefined) {
+    updatedBooking.advance_paid = Number(advance_paid)
+    updatedBooking.balance_due = Math.max(0, Number(updatedBooking.rate || 0) - Number(advance_paid))
+    if (updatedBooking.balance_due === 0 && updatedBooking.rate > 0) {
+      updatedBooking.payment_status = "paid"
+    } else if (updatedBooking.advance_paid > 0) {
+      updatedBooking.payment_status = "advance"
+    } else {
+      updatedBooking.payment_status = "pending"
+    }
+  }
+  if (payment_status) updatedBooking.payment_status = payment_status
+  if (payment_method) updatedBooking.payment_method = payment_method
+
+  return await saveGroundBooking(updatedBooking)
+}

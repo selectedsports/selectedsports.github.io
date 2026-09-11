@@ -38,13 +38,15 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   }
   useEffect(() => { load() }, [auctionId])
 
-  // Automatically adapt default bid increment: 1,000 when under 20k, 2,000 once 20k or above
+  // Automatically adapt default bid increment: 1k (<20k), 2k (20k-60k), 3k (>=60k)
   useEffect(() => {
     const cur = state?.current_bid || 0
-    if (cur >= 20000) {
-      if (bidStep === 1000) setBidStep(2000)
+    if (cur >= 60000) {
+      if (bidStep === 1000 || bidStep === 2000) setBidStep(3000)
+    } else if (cur >= 20000) {
+      if (bidStep === 1000 || bidStep === 3000) setBidStep(2000)
     } else {
-      if (bidStep === 2000) setBidStep(1000)
+      if (bidStep === 2000 || bidStep === 3000) setBidStep(1000)
     }
   }, [state?.current_bid])
 
@@ -212,7 +214,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           </button>
         </div>
         <div style={{ fontSize:10.5, color:"#64748B", marginBottom:16, textAlign:"center" }}>
-          Increments: <strong>🪙 1,000</strong> (under 20k) · <strong>🪙 2,000</strong> (above 20k)
+          Increments: <strong>🪙 1,000</strong> (&lt;20k) · <strong>🪙 2,000</strong> (20k-60k) · <strong>🪙 3,000</strong> (&ge;60k)
         </div>
         <button onClick={doStart} disabled={busy || auctionTeams.length < 2 || tooEarly} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:(busy||auctionTeams.length<2||tooEarly)?"not-allowed":"pointer", opacity:(busy||auctionTeams.length<2||tooEarly)?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
       </Card>
@@ -432,7 +434,7 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
               </button>
             </div>
             <div style={{ fontSize:10.5, color:"#64748B", marginTop:4, textAlign:"right" }}>
-              Rule: <strong>+🪙 1,000</strong> (under 20k) · <strong>+🪙 2,000</strong> (above 20k)
+              Rule: <strong>+🪙 1,000</strong> (&lt;20k) · <strong>+🪙 2,000</strong> (20k-60k) · <strong>+🪙 3,000</strong> (&ge;60k)
             </div>
           </div>
 

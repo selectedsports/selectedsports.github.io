@@ -5,6 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
+import GroundBookingsSection from "./GroundBookingsSection.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp, stepBidPointsUp, stepBidPointsDown } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
@@ -244,11 +245,11 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
     ["players","Players",Users],
     ["teams","Teams",ShieldCheck],
     ["auction","Auction",Wallet],
-    ["grounds","Grounds",MapPin],
+    ["grounds","Grounds & Bookings",MapPin],
     ["leaderboard","Leaderboard",Trophy],
   ]
   const drawerItems = [
-    ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds",MapPin],["auction","Auction",Wallet],["leaderboard","Leaderboard",Trophy]
+    ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds & Bookings",MapPin],["auction","Auction",Wallet],["leaderboard","Leaderboard",Trophy]
   ]
 
   return (
@@ -2156,7 +2157,7 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
               </button>
             </div>
             <div style={{ fontSize: 10.5, color: "#64748B", marginTop: 4 }}>
-              Increments: <strong>🪙 1,000</strong> (under 20k) · <strong>🪙 2,000</strong> (above 20k)
+              Increments: <strong>🪙 1,000</strong> (&lt;20k) · <strong>🪙 2,000</strong> (20k-60k) · <strong>🪙 3,000</strong> (&ge;60k)
             </div>
           </div>
 
@@ -4437,6 +4438,8 @@ function AuctionPage({ isMobile, isFounder }) {
 }
 
 function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
+  const [activeTab, setActiveTab] = useState("venues") // "venues" | "bookings"
+  const [selectedGroundForBooking, setSelectedGroundForBooking] = useState(null)
   const [showAdd,setShowAdd]=useState(false)
   const [editG,setEditG]=useState(null)
   const [delG,setDelG]=useState(null)
@@ -4492,13 +4495,62 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
 
   return (
     <div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
-        <div>
-          <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Grounds</h2>
-          <div style={{fontSize:13,color:"#64748B",marginTop:4}}>Manage all grounds and venues</div>
-        </div>
-        <button onClick={()=>{setForm(empty);setShowAdd(true)}} style={{padding:"10px 16px",borderRadius:12,background:"#166534",border:"none",color:"#FFFFFF",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}><Plus size={15}/> Add Ground</button>
+      {/* Top Grounds Navigation Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: "1px solid #E2E8F0", paddingBottom: 10 }}>
+        <button
+          type="button"
+          onClick={() => { setActiveTab("venues"); setSelectedGroundForBooking(null) }}
+          style={{
+            padding: "9px 18px",
+            borderRadius: 10,
+            border: activeTab === "venues" ? "1.5px solid #166534" : "1.5px solid #E2E8F0",
+            background: activeTab === "venues" ? "#DCFCE7" : "#FFFFFF",
+            color: activeTab === "venues" ? "#166534" : "#64748B",
+            fontSize: 13,
+            fontWeight: activeTab === "venues" ? 800 : 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 150ms ease"
+          }}
+        >
+          <MapPin size={15} /> Venues &amp; Grounds ({grounds.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("bookings")}
+          style={{
+            padding: "9px 18px",
+            borderRadius: 10,
+            border: activeTab === "bookings" ? "1.5px solid #166534" : "1.5px solid #E2E8F0",
+            background: activeTab === "bookings" ? "#DCFCE7" : "#FFFFFF",
+            color: activeTab === "bookings" ? "#166534" : "#64748B",
+            fontSize: 13,
+            fontWeight: activeTab === "bookings" ? 800 : 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 150ms ease"
+          }}
+        >
+          <Calendar size={15} /> 📅 Slot Diary &amp; Bookings
+        </button>
       </div>
+
+      {activeTab === "bookings" ? (
+        <GroundBookingsSection grounds={grounds} initialGroundId={selectedGroundForBooking} isMobile={isMobile} />
+      ) : (
+        <>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
+            <div>
+              <h2 style={{color:"#0F172A",fontSize:isMobile?20:26,fontWeight:900,margin:0,fontFamily:"var(--font-head)"}}>Grounds</h2>
+              <div style={{fontSize:13,color:"#64748B",marginTop:4}}>Manage all grounds and venues</div>
+            </div>
+            <button onClick={()=>{setForm(empty);setShowAdd(true)}} style={{padding:"10px 16px",borderRadius:12,background:"#166534",border:"none",color:"#FFFFFF",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"var(--font-head)",display:"flex",alignItems:"center",gap:6,flexShrink:0,whiteSpace:"nowrap"}}><Plus size={15}/> Add Ground</button>
+          </div>
 
       {/* Search + Sort */}
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
@@ -4570,7 +4622,8 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
                 {openMenuId===g.id && (
                   <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
                     {g.maps_link && <a href={g.maps_link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{display:"block",width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",textDecoration:"none"}}>View on Map</a>}
-                    <button onClick={()=>{setEditG(g);setEditForm({name:g.name,location:g.location,maps_link:g.maps_link||"",notes:g.notes||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",borderTop:g.maps_link?"1px solid #F1F5F9":"none"}}>Edit</button>
+                    <button onClick={()=>{setSelectedGroundForBooking(g.id);setActiveTab("bookings");setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#166534",cursor:"pointer",fontWeight:700,display:"flex",alignItems:"center",gap:6,borderTop:"1px solid #F1F5F9"}}>📅 Slot Diary</button>
+                    <button onClick={()=>{setEditG(g);setEditForm({name:g.name,location:g.location,maps_link:g.maps_link||"",notes:g.notes||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",borderTop:"1px solid #F1F5F9"}}>Edit</button>
                     <button onClick={()=>{setDelG(g);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",borderTop:"1px solid #F1F5F9"}}>Delete</button>
                   </div>
                 )}
@@ -4606,7 +4659,8 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
             {!selectedGround.maps_link&&!selectedGround.notes&&(
               <div style={{fontSize:12,color:"#9ca3af",marginBottom:14}}>No map link or notes added yet.</div>
             )}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+              <button onClick={()=>{setSelectedGroundForBooking(selectedGround.id);setActiveTab("bookings")}} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #86efac",background:"#DCFCE7",color:"#166534",fontSize:13,cursor:"pointer",fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>📅 Bookings</button>
               <button onClick={()=>{setEditG(selectedGround);setEditForm({name:selectedGround.name,location:selectedGround.location,maps_link:selectedGround.maps_link||"",notes:selectedGround.notes||""})}} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #dbeafe",background:"#F5E6C8",color:"#7A4F13",fontSize:13,cursor:"pointer",fontWeight:700}}>✏️ Edit</button>
               <button onClick={()=>setDelG(selectedGround)} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff5f5",color:"#991b1b",fontSize:13,cursor:"pointer",fontWeight:700}}>🗑️ Delete</button>
             </div>
@@ -4616,6 +4670,8 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
       {showAdd&&<div style={mStyle}><div style={mBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{margin:0,fontSize:16,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Add Ground</h3><button onClick={()=>setShowAdd(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>×</button></div><GForm f={form} setF={setForm}/><div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setShowAdd(false)} style={{flex:1,padding:"12px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={addSubmit} disabled={busy} style={{flex:2,padding:"12px",borderRadius:9,background:"#FFFFFF",border:"none",color:"#0F172A",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"Adding...":"Add Ground"}</button></div></div></div>}
       {editG&&<div style={mStyle}><div style={mBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{margin:0,fontSize:16,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Edit Ground</h3><button onClick={()=>setEditG(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>×</button></div><GForm f={editForm} setF={setEditForm}/><div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setEditG(null)} style={{flex:1,padding:"12px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={editSubmit} disabled={busy} style={{flex:2,padding:"12px",borderRadius:9,background:"#FFFFFF",border:"none",color:"#0F172A",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"Saving...":"Save"}</button></div></div></div>}
       {delG&&<div style={mStyle}><div style={{...mBox,maxWidth:360}}><div style={{textAlign:"center",padding:"10px 0 18px"}}><div style={{fontSize:40,marginBottom:12}}>⚠️</div><h3 style={{margin:"0 0 8px",fontSize:17,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Delete Ground?</h3><p style={{color:"#6b7280",fontSize:13,margin:0}}>Delete <strong>{delG.name}</strong>?</p></div><div style={{display:"flex",gap:10}}><button onClick={()=>setDelG(null)} style={{flex:1,padding:"13px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={delSubmit} disabled={busy} style={{flex:1,padding:"13px",borderRadius:9,background:"#fee2e2",border:"1.5px solid #fecaca",color:"#991b1b",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"...":"Yes, Delete"}</button></div></div></div>}
+        </>
+      )}
     </div>
   )
 }
