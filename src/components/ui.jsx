@@ -1,5 +1,5 @@
 import { aColor, initials, birthDateError, maxBirthDateForMinAge } from "../constants.js"
-import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye, ChevronRight, ChevronDown, Calendar, BarChart3, Zap as SixesIcon, Ban, Target } from "lucide-react"
+import { Swords, Users as UsersIcon, MapPin, MessageCircle, Inbox, Trophy, Lightbulb, CheckCircle2, CalendarPlus, ArrowLeft, Crown, Shield, Star, Eye, ChevronRight, ChevronDown, Calendar, BarChart3, Zap as SixesIcon, Ban, Target, Search as SearchIcon, Sparkles, Award } from "lucide-react"
 export function Logo({ size = 36 }) {
   return (
     <img src="/logo-icon-v4.png" alt="Selected Sports" style={{ height: size, width: "auto", display: "block" }}/>
@@ -237,7 +237,7 @@ import { useState, useEffect } from "react"
 import { fetchLeaderboard } from "../db.js"
 
 export function LeaderboardPage({ isMobile, myId }) {
-  const POINTS_PER_MATCH = 20 // Simple points formula: matches played x 20. No performance stats (runs/wickets) exist yet — that needs the live scoring feature.
+  const POINTS_PER_MATCH = 20
   const [rawRows, setRawRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
@@ -248,6 +248,8 @@ export function LeaderboardPage({ isMobile, myId }) {
   const [seasonOpen, setSeasonOpen] = useState(false)
   const [roleFilter, setRoleFilter] = useState("all")
   const [roleOpen, setRoleOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedPlayer, setSelectedPlayer] = useState(null)
 
   useEffect(() => {
     fetchLeaderboard().then(r => {
@@ -255,14 +257,13 @@ export function LeaderboardPage({ isMobile, myId }) {
       setTimeout(() => setRevealed(true), 50)
       if (r.length > 0) {
         setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 2000)
+        setTimeout(() => setShowConfetti(false), 2200)
       }
     }).catch(e => setLoadError(e.message || String(e))).finally(()=>setLoading(false))
   }, [])
 
   if (loading) return <Spinner/>
 
-  // Seasons derived from real match dates — no season field exists in the DB, so this groups by year.
   const seasons = Array.from(new Set(rawRows.map(r => (r.matches?.date || "").slice(0,4)).filter(Boolean))).sort().reverse()
 
   const filteredRaw = rawRows.filter(r => {
@@ -275,199 +276,678 @@ export function LeaderboardPage({ isMobile, myId }) {
   filteredRaw.forEach(r => {
     const p = r.players
     if (!p) return
-    if (!map[p.id]) map[p.id] = { id: p.id, name: p.name, city: p.city, role: p.role, matchesPlayed: 0, earliestConfirmedAt: r.created_at }
+    if (!map[p.id]) {
+      map[p.id] = {
+        id: p.id,
+        name: p.name,
+        city: p.city,
+        role: p.role,
+        profile_image_url: p.profile_image_url,
+        matchesPlayed: 0,
+        matches: [],
+        earliestConfirmedAt: r.created_at
+      }
+    }
     map[p.id].matchesPlayed++
+    if (r.matches) map[p.id].matches.push({ ...r.matches, confirmedAt: r.created_at })
     if (r.created_at && (!map[p.id].earliestConfirmedAt || r.created_at < map[p.id].earliestConfirmedAt)) {
       map[p.id].earliestConfirmedAt = r.created_at
     }
   })
-  const rows = Object.values(map).map(p => ({ ...p, points: p.matchesPlayed * POINTS_PER_MATCH })).sort((a, b) => {
+
+  const allRankedRows = Object.values(map).map(p => ({ ...p, points: p.matchesPlayed * POINTS_PER_MATCH })).sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points
     if (!a.earliestConfirmedAt) return 1
     if (!b.earliestConfirmedAt) return -1
     return new Date(a.earliestConfirmedAt) - new Date(b.earliestConfirmedAt)
   })
 
-  const top3 = rows.slice(0, 3)
-  const rest = rows.slice(3)
-  const myIndex = myId ? rows.findIndex(p => p.id === myId) : -1
-  const medalColors = ["#FBBF24", "#94A3B8", "#B45309"]
-  const podiumHeights = [64, 46, 34]
-  const revealDelay = { 1: 200, 2: 100, 3: 0 }
+  const q = searchQuery.trim().toLowerCase()
+  const rows = allRankedRows.filter(p => !q || p.name.toLowerCase().includes(q) || (p.city||"").toLowerCase().includes(q))
+
+  const top3 = allRankedRows.slice(0, 3)
+  const rest = q ? rows : allRankedRows.slice(3)
+  const myIndex = myId ? allRankedRows.findIndex(p => p.id === myId) : -1
+
+  const medalConfig = {
+    1: {
+      title: "👑 MVP · CHAMPION",
+      border: "2px solid #F59E0B",
+      bg: "linear-gradient(180deg, rgba(245,158,11,0.18) 0%, rgba(245,158,11,0.03) 100%)",
+      badgeBg: "linear-gradient(135deg, #F59E0B, #D97706)",
+      glow: "0 10px 28px rgba(245,158,11,0.28)",
+      avatarBorder: "#F59E0B",
+      avatarGlow: "0 0 20px rgba(245,158,11,0.4)"
+    },
+    2: {
+      title: "🥈 2ND PLACE",
+      border: "1.5px solid #CBD5E1",
+      bg: "linear-gradient(180deg, rgba(241,245,249,0.9) 0%, rgba(255,255,255,0.8) 100%)",
+      badgeBg: "linear-gradient(135deg, #94A3B8, #64748B)",
+      glow: "0 8px 20px rgba(100,116,139,0.15)",
+      avatarBorder: "#94A3B8",
+      avatarGlow: "none"
+    },
+    3: {
+      title: "🥉 3RD PLACE",
+      border: "1.5px solid #FDE68A",
+      bg: "linear-gradient(180deg, rgba(254,243,199,0.5) 0%, rgba(255,255,255,0.8) 100%)",
+      badgeBg: "linear-gradient(135deg, #D97706, #B45309)",
+      glow: "0 8px 20px rgba(180,83,9,0.15)",
+      avatarBorder: "#D97706",
+      avatarGlow: "none"
+    }
+  }
 
   const PodiumSpot = ({ p, rank }) => {
-    if (!p) return <div style={{ flex:1 }} />
-    const idx = rank - 1
+    if (!p) return <div style={{ flex: 1 }} />
+    const conf = medalConfig[rank]
     const isWinner = rank === 1
+
     return (
-      <div style={{
-        flex:1, display:"flex", flexDirection:"column", alignItems:"center",
-        opacity: revealed ? 1 : 0,
-        transform: revealed ? "translateY(0) scale(1)" : "translateY(20px) scale(0.95)",
-        transition: `opacity 300ms ease-in-out ${revealDelay[rank]}ms, transform 300ms ease-in-out ${revealDelay[rank]}ms`,
-      }}>
+      <div
+        onClick={() => setSelectedPlayer(p)}
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          cursor: "pointer",
+          opacity: revealed ? 1 : 0,
+          transform: revealed ? (isWinner ? "translateY(-6px) scale(1.02)" : "translateY(0) scale(1)") : "translateY(24px) scale(0.95)",
+          transition: `all 350ms cubic-bezier(0.16, 1, 0.3, 1) ${rank === 1 ? 200 : rank === 2 ? 100 : 0}ms`,
+          zIndex: isWinner ? 3 : 2
+        }}
+      >
         {isWinner && (
-          <div style={{ background:"linear-gradient(135deg,#FBBF24,#F59E0B)", color:"#FFFFFF", fontSize:9, fontWeight:800, padding:"3px 10px", borderRadius:20, display:"flex", alignItems:"center", gap:3, marginBottom:8, boxShadow:"0 4px 10px rgba(212,160,23,0.4)" }} title="Most Valuable Player">
-            <Star size={10} fill="#FFFFFF"/> MVP
+          <div style={{
+            background: conf.badgeBg,
+            color: "#FFFFFF",
+            fontSize: 10,
+            fontWeight: 900,
+            padding: "4px 12px",
+            borderRadius: 999,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            marginBottom: 8,
+            boxShadow: "0 4px 12px rgba(245,158,11,0.4)",
+            letterSpacing: 0.5,
+            fontFamily: "var(--font-head)"
+          }}>
+            <Crown size={12} fill="#FFFFFF"/> MVP · RANK 1
           </div>
         )}
-        <div style={{ position:"relative", padding: isWinner ? "18px 14px 14px" : "14px 10px", borderRadius:20, background: isWinner ? "linear-gradient(180deg,rgba(251,191,36,0.14),rgba(251,191,36,0.04))" : "#FFFFFF", border: isWinner ? "1.5px solid rgba(251,191,36,0.35)" : "1.5px solid #E2E8F0", width:"100%", textAlign:"center" }}>
-          <div style={{ position:"relative", display:"inline-block", marginBottom:8 }}>
-            <div style={{ borderRadius:"50%", boxShadow: isWinner ? "0 0 30px rgba(251,191,36,0.25)" : "none" }}>
-              <Av name={p.name} id={p.id} sz={rank===1?(isMobile?52:60):(isMobile?40:46)}/>
+
+        <div style={{
+          position: "relative",
+          padding: isWinner ? (isMobile ? "18px 10px 16px" : "24px 16px 20px") : (isMobile ? "14px 8px 12px" : "18px 12px 16px"),
+          borderRadius: 20,
+          background: conf.bg,
+          border: conf.border,
+          width: "100%",
+          textAlign: "center",
+          boxShadow: conf.glow,
+          boxSizing: "border-box"
+        }}>
+          <div style={{ position: "relative", display: "inline-block", marginBottom: 10 }}>
+            <div style={{
+              borderRadius: "50%",
+              boxShadow: conf.avatarGlow,
+              padding: 2,
+              background: "#FFFFFF",
+              border: `2px solid ${conf.avatarBorder}`
+            }}>
+              {p.profile_image_url ? (
+                <img
+                  src={p.profile_image_url}
+                  alt={p.name}
+                  style={{
+                    width: isWinner ? (isMobile ? 54 : 68) : (isMobile ? 42 : 52),
+                    height: isWinner ? (isMobile ? 54 : 68) : (isMobile ? 42 : 52),
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    display: "block"
+                  }}
+                />
+              ) : (
+                <Av name={p.name} id={p.id} sz={isWinner ? (isMobile ? 54 : 68) : (isMobile ? 42 : 52)} />
+              )}
             </div>
-            <div style={{ position:"absolute", bottom:-4, right:-4, width:20, height:20, borderRadius:"50%", background:medalColors[idx], color:"#FFFFFF", fontSize:10, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", border:"2px solid #FFFFFF" }}>{rank}</div>
+            <div style={{
+              position: "absolute",
+              bottom: -4,
+              right: -4,
+              width: isWinner ? 24 : 20,
+              height: isWinner ? 24 : 20,
+              borderRadius: "50%",
+              background: conf.badgeBg,
+              color: "#FFFFFF",
+              fontSize: isWinner ? 12 : 10,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "2px solid #FFFFFF",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
+            }}>
+              {rank}
+            </div>
           </div>
-          <div style={{ fontWeight:700, fontSize:rank===1?13:12, color:"#0F172A", fontFamily:"var(--font-head)", lineHeight:1.2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
-          {p.role && p.role !== "player" && <div style={{ marginTop:4, display:"flex", justifyContent:"center" }}><RoleBadge role={p.role} size="sm"/></div>}
-          <div style={{ fontSize:11, color:"#94A3B8", marginTop:3 }}>{p.matchesPlayed} Matches</div>
-          <div style={{ fontSize:isWinner?20:16, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)", marginTop:2 }}>{p.points} <span style={{ fontSize:10, fontWeight:700, color:"#94A3B8" }}>PTS</span></div>
+
+          <div style={{
+            fontWeight: 800,
+            fontSize: isWinner ? (isMobile ? 13 : 15) : (isMobile ? 12 : 13),
+            color: "#0F172A",
+            fontFamily: "var(--font-head)",
+            lineHeight: 1.2,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap"
+          }}>
+            {p.name}
+          </div>
+
+          <div style={{ marginTop: 4, display: "flex", justifyContent: "center", alignItems: "center", gap: 4 }}>
+            {p.role && p.role !== "player" ? (
+              <RoleBadge role={p.role} size="sm"/>
+            ) : (
+              <span style={{ fontSize: 9.5, fontWeight: 800, background: "rgba(22,101,52,0.1)", color: "#166534", padding: "1px 6px", borderRadius: 4 }}>PLAYER</span>
+            )}
+            {p.city && !isMobile && (
+              <span style={{ fontSize: 10, color: "#94A3B8" }}>· {p.city}</span>
+            )}
+          </div>
+
+          <div style={{ fontSize: 11, color: "#64748B", marginTop: 4, fontWeight: 600 }}>
+            {p.matchesPlayed} Matches
+          </div>
+
+          <div style={{
+            fontSize: isWinner ? (isMobile ? 18 : 22) : (isMobile ? 15 : 18),
+            fontWeight: 900,
+            color: "#166534",
+            fontFamily: "var(--font-head)",
+            marginTop: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 3
+          }}>
+            <span>{p.points}</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8" }}>PTS</span>
+          </div>
         </div>
       </div>
     )
   }
 
   const ConfettiPiece = ({ i }) => {
-    const colors = ["#FBBF24", "#14532D", "#22C55E", "#FBBF24"]
+    const colors = ["#F59E0B", "#166534", "#22C55E", "#FBBF24", "#3B82F6"]
     const left = Math.random() * 100
     const delay = Math.random() * 300
-    const duration = 1200 + Math.random() * 500
+    const duration = 1200 + Math.random() * 600
     const rotate = Math.random() * 360
     const color = colors[i % colors.length]
     return (
       <div style={{
-        position:"absolute", top:-10, left: left + "%", width:7, height:7,
-        background:color, borderRadius: i % 2 === 0 ? "50%" : 2,
+        position: "absolute", top: -10, left: left + "%", width: 8, height: 8,
+        background: color, borderRadius: i % 2 === 0 ? "50%" : 2,
         animation: `confettiFall ${duration}ms ease-in ${delay}ms forwards`,
         transform: `rotate(${rotate}deg)`,
       }}/>
     )
   }
 
-  const NotYetTracked = ({ label }) => (
-    <Card style={{ padding:"40px 20px", textAlign:"center" }}>
-      <div style={{ marginBottom:12, display:"flex", justifyContent:"center" }}><Ban size={32} color="#E2E8F0"/></div>
-      <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", marginBottom:6, fontFamily:"var(--font-head)" }}>{label} isn't tracked yet</div>
-      <div style={{ color:"#64748B", fontSize:12, maxWidth:280, margin:"0 auto" }}>This needs ball-by-ball match scoring, which hasn't been built yet. Once live scoring is added, this tab will populate automatically.</div>
+  const NotYetTracked = ({ label, desc }) => (
+    <Card style={{ padding: "44px 20px", textAlign: "center", borderRadius: 16 }}>
+      <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#F8FAF8", border: "1.5px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+        <Target size={26} color="#94A3B8"/>
+      </div>
+      <div style={{ fontWeight: 900, fontSize: 16, color: "#0F172A", marginBottom: 6, fontFamily: "var(--font-head)" }}>
+        {label} Leaderboard Coming Soon
+      </div>
+      <div style={{ color: "#64748B", fontSize: 13, maxWidth: 360, margin: "0 auto", lineHeight: 1.5 }}>
+        {desc || "Individual batting and bowling statistics will populate automatically once ball-by-ball live match scoring is active."}
+      </div>
     </Card>
   )
 
   return (
-    <div style={{ position:"relative" }}>
+    <div style={{ position: "relative" }}>
       <style>{`
         @keyframes confettiFall {
           0% { opacity: 1; transform: translateY(0) rotate(0deg); }
-          100% { opacity: 0; transform: translateY(220px) rotate(280deg); }
+          100% { opacity: 0; transform: translateY(260px) rotate(320deg); }
         }
       `}</style>
       {showConfetti && (
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:240, overflow:"hidden", pointerEvents:"none", zIndex:5 }}>
-          {Array.from({length:30}).map((_,i) => <ConfettiPiece key={i} i={i}/>)}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 260, overflow: "hidden", pointerEvents: "none", zIndex: 10 }}>
+          {Array.from({ length: 36 }).map((_, i) => <ConfettiPiece key={i} i={i} />)}
         </div>
       )}
 
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14, gap:10, flexWrap:"wrap" }}>
-        <h2 style={{ fontFamily:"var(--font-head)", color:"#0F172A", fontSize:isMobile?18:20, margin:0, display:"flex", alignItems:"center", gap:8 }}><Trophy size={isMobile?20:22} color="#B8860B"/> Leaderboard</h2>
-        <div style={{ position:"relative" }}>
-          <button onClick={()=>setRoleOpen(o=>!o)} style={{ padding:"8px 14px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", color:"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-            {roleFilter==="all"?"All Players":roleFilter==="pro"?"Pro Only":"Players Only"} <ChevronDown size={13}/>
-          </button>
-          {roleOpen && (
-            <div style={{ position:"absolute", top:"100%", right:0, marginTop:4, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:140, overflow:"hidden" }}>
-              {[["all","All Players"],["player","Players Only"],["pro","Pro Only"]].map(([k,label]) => (
-                <button key={k} onClick={()=>{ setRoleFilter(k); setRoleOpen(false) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:roleFilter===k?"rgba(34,197,94,0.08)":"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", fontWeight:roleFilter===k?700:500 }}>{label}</button>
-              ))}
+      {/* Modern Header Strip */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom: 16, gap: 12, flexDirection: isMobile ? "column" : "row", flexWrap: "wrap" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(22,101,52,0.1))", border: "1px solid rgba(245,158,11,0.3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <Trophy size={20} color="#D97706" />
             </div>
-          )}
+            <div>
+              <h2 style={{ fontFamily: "var(--font-head)", color: "#0F172A", fontSize: isMobile ? 19 : 22, margin: 0, fontWeight: 900, letterSpacing: "-0.4px" }}>
+                Player Leaderboard
+              </h2>
+              <div style={{ fontSize: 11.5, color: "#64748B", marginTop: 2 }}>
+                Official community rankings calculated from verified match appearances (20 PTS / Match)
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Filter Controls (Role & Season) */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, width: isMobile ? "100%" : "auto", flexWrap: "wrap" }}>
+          {/* Season Filter Dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => { setSeasonOpen(o => !o); setRoleOpen(false) }}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1.5px solid #E2E8F0",
+                background: "#FFFFFF",
+                color: "#0F172A",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}
+            >
+              <Calendar size={13} color="#166534"/>
+              <span>{season === "all" ? "All Seasons" : `Season ${season}`}</span>
+              <ChevronDown size={13} color="#94A3B8"/>
+            </button>
+            {seasonOpen && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 10, boxShadow: "0 10px 30px rgba(15,23,42,0.15)", zIndex: 30, minWidth: 140, overflow: "hidden" }}>
+                <button type="button" onClick={() => { setSeason("all"); setSeasonOpen(false) }} style={{ width: "100%", padding: "10px 14px", border: "none", background: season === "all" ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: season === "all" ? 800 : 500 }}>All Seasons</button>
+                {seasons.map(s => (
+                  <button key={s} type="button" onClick={() => { setSeason(s); setSeasonOpen(false) }} style={{ width: "100%", padding: "10px 14px", border: "none", background: season === s ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: season === s ? 800 : 500 }}>Season {s}</button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Role Filter Dropdown */}
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => { setRoleOpen(o => !o); setSeasonOpen(false) }}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1.5px solid #E2E8F0",
+                background: "#FFFFFF",
+                color: "#0F172A",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}
+            >
+              <span>{roleFilter === "all" ? "All Players" : roleFilter === "pro" ? "PRO Only" : "Players Only"}</span>
+              <ChevronDown size={13} color="#94A3B8"/>
+            </button>
+            {roleOpen && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 10, boxShadow: "0 10px 30px rgba(15,23,42,0.15)", zIndex: 30, minWidth: 140, overflow: "hidden" }}>
+                {[["all","All Players"],["player","Players Only"],["pro","PRO Only"]].map(([k,label]) => (
+                  <button key={k} type="button" onClick={() => { setRoleFilter(k); setRoleOpen(false) }} style={{ width: "100%", padding: "10px 14px", border: "none", background: roleFilter === k ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: roleFilter === k ? 800 : 500 }}>{label}</button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      <div style={{ position:"relative", marginBottom:14 }}>
-        <button onClick={()=>setSeasonOpen(o=>!o)} style={{ padding:"8px 14px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", color:"#0F172A", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-          <Calendar size={13}/> {season==="all"?"All Seasons":`Season ${season}`} <ChevronDown size={13}/>
-        </button>
-        {seasonOpen && (
-          <div style={{ position:"absolute", top:"100%", left:0, marginTop:4, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:140, overflow:"hidden" }}>
-            <button onClick={()=>{ setSeason("all"); setSeasonOpen(false) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:season==="all"?"rgba(34,197,94,0.08)":"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", fontWeight:season==="all"?700:500 }}>All Seasons</button>
-            {seasons.map(s => (
-              <button key={s} onClick={()=>{ setSeason(s); setSeasonOpen(false) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:season===s?"rgba(34,197,94,0.08)":"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", fontWeight:season===s?700:500 }}>Season {s}</button>
-            ))}
+      {/* Tabs Row + Live Search */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 18, flexDirection: isMobile ? "column" : "row" }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", width: isMobile ? "100%" : "auto", paddingBottom: 2 }}>
+          {[
+            ["points", "Points Table", BarChart3],
+            ["runs", "Most Runs", Target],
+            ["wickets", "Most Wickets", Ban],
+            ["sixes", "Most 6s", SixesIcon]
+          ].map(([k, label, Icon]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setActiveTab(k)}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 999,
+                border: activeTab === k ? "none" : "1.5px solid #E2E8F0",
+                background: activeTab === k ? "#166534" : "#FFFFFF",
+                color: activeTab === k ? "#FFFFFF" : "#64748B",
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                boxShadow: activeTab === k ? "0 2px 8px rgba(22,101,52,0.25)" : "none",
+                transition: "all 150ms ease"
+              }}
+            >
+              <Icon size={13}/>
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Player Search Bar */}
+        {activeTab === "points" && (
+          <div style={{ width: isMobile ? "100%" : 240, position: "relative" }}>
+            <SearchIcon size={14} color="#94A3B8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search ranked player..."
+              style={{
+                width: "100%",
+                padding: "8px 12px 8px 32px",
+                borderRadius: 999,
+                border: "1.5px solid #E2E8F0",
+                fontSize: 12,
+                outline: "none",
+                background: "#FFFFFF",
+                boxSizing: "border-box",
+                fontFamily: "var(--font-body)"
+              }}
+            />
           </div>
         )}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display:"flex", gap:8, marginBottom:18, overflowX:"auto" }}>
-        {[["points","Points Table",BarChart3],["runs","Most Runs",Target],["wickets","Most Wickets",Ban],["sixes","Most 6s",SixesIcon]].map(([k,label,Icon]) => (
-          <button key={k} onClick={()=>setActiveTab(k)} style={{ padding:"9px 14px", borderRadius:999, border:activeTab===k?"none":"1.5px solid #E2E8F0", background:activeTab===k?"#166534":"#FFFFFF", color:activeTab===k?"#FFFFFF":"#64748B", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", flexShrink:0 }}>
-            <Icon size={13}/> {label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "runs" && <NotYetTracked label="Most Runs"/>}
-      {activeTab === "wickets" && <NotYetTracked label="Most Wickets"/>}
-      {activeTab === "sixes" && <NotYetTracked label="Most 6s"/>}
+      {activeTab === "runs" && <NotYetTracked label="Most Runs" desc="Track top batsmen across tournaments once live match scoring is recorded."/>}
+      {activeTab === "wickets" && <NotYetTracked label="Most Wickets" desc="Track top wicket-takers across matches once match scorecards are submitted."/>}
+      {activeTab === "sixes" && <NotYetTracked label="Most 6s" desc="Track maximum sixes hit per season once live innings balls are captured."/>}
 
       {activeTab === "points" && (
         loadError ? (
-          <div style={{ color:"#EF4444", fontSize:13, textAlign:"center", padding:"30px 0", background:"rgba(239,68,68,0.06)", borderRadius:12, border:"1px solid rgba(239,68,68,0.25)" }}>⚠️ Couldn't load the leaderboard: {loadError}</div>
-        ) : rows.length === 0 ? (
-          <div style={{ color:"#475569", fontSize:13, textAlign:"center", padding:"30px 0" }}>No matches played yet{season!=="all"?` in Season ${season}`:""}.</div>
+          <div style={{ color: "#EF4444", fontSize: 13, textAlign: "center", padding: "30px 0", background: "rgba(239,68,68,0.06)", borderRadius: 12, border: "1px solid rgba(239,68,68,0.25)" }}>
+            ⚠️ Couldn't load the leaderboard: {loadError}
+          </div>
+        ) : allRankedRows.length === 0 ? (
+          <Card style={{ padding: "40px 20px", textAlign: "center", borderRadius: 16 }}>
+            <div style={{ fontSize: 14, color: "#64748B" }}>No completed matches recorded yet{season !== "all" ? ` for Season ${season}` : ""}.</div>
+          </Card>
         ) : (
           <>
-            {top3.length > 0 && (
-              <div style={{ display:"flex", alignItems:"stretch", gap:8, marginBottom:20, padding:"0 4px" }}>
+            {/* ── TOP 3 PODIUM (Visible when not actively searching) ── */}
+            {!q && top3.length > 0 && (
+              <div style={{ display: "flex", alignItems: "stretch", gap: isMobile ? 8 : 14, marginBottom: 22, padding: "0 2px" }}>
                 <PodiumSpot p={top3[1]} rank={2}/>
                 <PodiumSpot p={top3[0]} rank={1}/>
                 <PodiumSpot p={top3[2]} rank={3}/>
               </div>
             )}
 
-            {rest.length > 0 && (
-              <div style={{ borderRadius:14, overflow:"hidden", border:"1px solid #E2E8F0", marginBottom:16 }}>
-                <div style={{ display:"flex", alignItems:"center", padding:"12px 16px", background:"#166534", color:"#FFFFFF", fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.4 }}>
-                  <div style={{ width:26 }}>#</div>
-                  <div style={{ flex:1 }}>Player</div>
-                  <div style={{ width:70, textAlign:"center" }}>Type</div>
-                  <div style={{ width:60, textAlign:"center" }}>Matches</div>
-                  <div style={{ width:70, textAlign:"right" }}>Points</div>
-                  <div style={{ width:18 }}/>
+            {/* ── RANKINGS LIST / TABLE (Ranks 4+) ── */}
+            {rest.length > 0 ? (
+              <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid #E2E8F0", background: "#FFFFFF", marginBottom: 20, boxShadow: "0 4px 16px rgba(15,23,42,0.03)" }}>
+                {/* Table Header Bar */}
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  padding: isMobile ? "12px 14px" : "12px 20px",
+                  background: "#F8FAF8",
+                  borderBottom: "1px solid #E2E8F0",
+                  color: "#64748B",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5
+                }}>
+                  <div style={{ width: 34 }}>#</div>
+                  <div style={{ flex: 1 }}>Player</div>
+                  <div style={{ width: 80, textAlign: "center" }}>Role</div>
+                  <div style={{ width: 70, textAlign: "center" }}>Matches</div>
+                  <div style={{ width: 80, textAlign: "right" }}>Points</div>
+                  <div style={{ width: 24 }}/>
                 </div>
+
+                {/* Table Rows */}
                 {rest.map((p, i) => {
-                  const rank = i + 4
+                  const rank = q ? (allRankedRows.findIndex(x => x.id === p.id) + 1) : (i + 4)
                   const isMe = p.id === myId
+                  const isTopTen = rank <= 10
+
                   return (
-                    <div key={p.id} style={{ display:"flex", alignItems:"center", padding:"12px 16px", background:isMe?"rgba(34,197,94,0.05)":"#FFFFFF", borderTop:"1px solid #F1F5F9" }}>
-                      <div style={{ width:26, fontSize:13, fontWeight:800, color:"#475569", fontFamily:"var(--font-head)" }}>{rank}</div>
-                      <div style={{ flex:1, display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
-                        <Av name={p.name} id={p.id} sz={30}/>
-                        <div style={{ minWidth:0 }}>
-                          <div style={{ fontWeight:700, fontSize:13, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}{isMe && <span style={{ marginLeft:6, background:"#166534", color:"#FFFFFF", fontSize:9, fontWeight:800, padding:"1px 6px", borderRadius:6 }}>YOU</span>}</div>
+                    <div
+                      key={p.id}
+                      onClick={() => setSelectedPlayer(p)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: isMobile ? "11px 14px" : "12px 20px",
+                        background: isMe ? "rgba(34,197,94,0.07)" : "#FFFFFF",
+                        borderTop: "1px solid #F1F5F9",
+                        cursor: "pointer",
+                        transition: "background 150ms ease",
+                        position: "relative"
+                      }}
+                      onMouseEnter={e => { if (!isMe) e.currentTarget.style.background = "#F8FAF8" }}
+                      onMouseLeave={e => { if (!isMe) e.currentTarget.style.background = "#FFFFFF" }}
+                    >
+                      {/* Rank Indicator */}
+                      <div style={{ width: 34, flexShrink: 0 }}>
+                        {isTopTen ? (
+                          <span style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: 22,
+                            height: 22,
+                            borderRadius: 6,
+                            background: "#F1F5F9",
+                            color: "#0F172A",
+                            fontSize: 11,
+                            fontWeight: 900,
+                            fontFamily: "var(--font-head)"
+                          }}>
+                            {rank}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 13, fontWeight: 700, color: "#94A3B8", fontFamily: "var(--font-head)" }}>
+                            {rank}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Player Identity (Photo + Name) */}
+                      <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                        {p.profile_image_url ? (
+                          <img
+                            src={p.profile_image_url}
+                            alt={p.name}
+                            style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "1.5px solid #E2E8F0" }}
+                          />
+                        ) : (
+                          <Av name={p.name} id={p.id} sz={34}/>
+                        )}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, fontSize: 13.5, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span>{p.name}</span>
+                            {isMe && (
+                              <span style={{ background: "#166534", color: "#FFFFFF", fontSize: 9, fontWeight: 900, padding: "1px 6px", borderRadius: 4 }}>
+                                YOU
+                              </span>
+                            )}
+                          </div>
+                          {p.city && (
+                            <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 1 }}>
+                              📍 {p.city}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      <div style={{ width:70, textAlign:"center" }}>{p.role && p.role !== "player" && <RoleBadge role={p.role} size="sm"/>}{(!p.role || p.role==="player") && <RoleBadge role="player" size="sm"/>}</div>
-                      <div style={{ width:60, textAlign:"center", fontSize:13, fontWeight:700, color:"#0F172A" }}>{p.matchesPlayed}</div>
-                      <div style={{ width:70, textAlign:"right", fontSize:13, fontWeight:800, color:"#166534", fontFamily:"var(--font-head)" }}>{p.points} <span style={{ fontSize:9, fontWeight:600, color:"#94A3B8" }}>PTS</span></div>
-                      <div style={{ width:18, display:"flex", justifyContent:"flex-end" }}><ChevronRight size={15} color="#94A3B8"/></div>
+
+                      {/* Role Badge */}
+                      <div style={{ width: 80, textAlign: "center", flexShrink: 0 }}>
+                        {p.role && p.role !== "player" ? (
+                          <RoleBadge role={p.role} size="sm"/>
+                        ) : (
+                          <span style={{ fontSize: 10, fontWeight: 800, background: "rgba(22,101,52,0.08)", color: "#166534", padding: "2px 7px", borderRadius: 4 }}>
+                            Player
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Matches Count */}
+                      <div style={{ width: 70, textAlign: "center", fontSize: 13, fontWeight: 800, color: "#0F172A", flexShrink: 0 }}>
+                        {p.matchesPlayed}
+                      </div>
+
+                      {/* Points */}
+                      <div style={{ width: 80, textAlign: "right", fontSize: 14, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)", flexShrink: 0 }}>
+                        {p.points} <span style={{ fontSize: 9.5, fontWeight: 700, color: "#94A3B8" }}>PTS</span>
+                      </div>
+
+                      {/* Chevron */}
+                      <div style={{ width: 24, display: "flex", justifyContent: "flex-end", flexShrink: 0 }}>
+                        <ChevronRight size={15} color="#CBD5E1"/>
+                      </div>
                     </div>
                   )
                 })}
               </div>
-            )}
-
-            {myIndex >= 0 && (
-              <Card style={{ padding:"14px 16px", display:"flex", alignItems:"center", gap:14, background:"rgba(34,197,94,0.06)", border:"1.5px solid rgba(34,197,94,0.25)" }}>
-                <div style={{ width:40, height:40, borderRadius:"50%", background:"#166534", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Star size={18} color="#FFFFFF" fill="#FFFFFF"/></div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:16, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>#{myIndex+1}</div>
-                  <div style={{ fontSize:12, color:"#64748B" }}>{rows[myIndex].matchesPlayed} Matches Played</div>
-                </div>
-                <div style={{ fontSize:22, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>{rows[myIndex].points} <span style={{ fontSize:11, fontWeight:700, color:"#94A3B8" }}>PTS</span></div>
+            ) : q ? (
+              <Card style={{ padding: "32px 16px", textAlign: "center", borderRadius: 14 }}>
+                <div style={{ fontSize: 13.5, color: "#64748B" }}>No ranked players match "{searchQuery}".</div>
               </Card>
+            ) : null}
+
+            {/* ── LOGGED-IN PLAYER HIGHLIGHT CARD ── */}
+            {myIndex >= 0 && (
+              <div style={{
+                padding: "14px 18px",
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                background: "linear-gradient(135deg, rgba(22,101,52,0.08), rgba(22,101,52,0.02))",
+                border: "1.5px solid rgba(22,101,52,0.3)",
+                borderRadius: 16,
+                boxShadow: "0 4px 14px rgba(22,101,52,0.08)"
+              }}>
+                <div style={{ width: 42, height: 42, borderRadius: "50%", background: "#166534", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 8px rgba(22,101,52,0.3)" }}>
+                  <Award size={20} color="#FFFFFF"/>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: "#166534", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5 }}>
+                    Your Season Ranking
+                  </div>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", marginTop: 2 }}>
+                    Rank #{myIndex + 1} <span style={{ fontSize: 12, fontWeight: 600, color: "#64748B" }}>of {allRankedRows.length} players</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)" }}>
+                    {allRankedRows[myIndex].points} <span style={{ fontSize: 11, fontWeight: 700, color: "#94A3B8" }}>PTS</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>
+                    {allRankedRows[myIndex].matchesPlayed} matches played
+                  </div>
+                </div>
+              </div>
             )}
           </>
         )
+      )}
+
+      {/* ── PLAYER MATCH DETAILS MODAL ── */}
+      {selectedPlayer && (
+        <div onClick={() => setSelectedPlayer(null)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", backdropFilter: "blur(4px)", zIndex: 400, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 20, maxWidth: 440, width: "100%", padding: 22, boxShadow: "0 24px 60px rgba(15,23,42,0.3)", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {selectedPlayer.profile_image_url ? (
+                  <img src={selectedPlayer.profile_image_url} alt={selectedPlayer.name} style={{ width: 50, height: 50, borderRadius: "50%", objectFit: "cover", border: "2px solid #166534" }}/>
+                ) : (
+                  <Av name={selectedPlayer.name} id={selectedPlayer.id} sz={50}/>
+                )}
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                    {selectedPlayer.name}
+                  </h3>
+                  <div style={{ fontSize: 12, color: "#64748B", display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                    <span>{selectedPlayer.city || "Pune"}</span>
+                    <span>·</span>
+                    <span style={{ fontWeight: 700, color: "#166534" }}>{selectedPlayer.role || "Player"}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedPlayer(null)} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#94A3B8", padding: 0 }}>×</button>
+            </div>
+
+            {/* Metric Summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16, background: "#F8FAF8", padding: 12, borderRadius: 12, border: "1px solid #E2E8F0", textAlign: "center" }}>
+              <div>
+                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Rank</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", marginTop: 2 }}>
+                  #{allRankedRows.findIndex(x => x.id === selectedPlayer.id) + 1}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Matches</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", marginTop: 2 }}>
+                  {selectedPlayer.matchesPlayed}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Points</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)", marginTop: 2 }}>
+                  {selectedPlayer.points}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.3 }}>
+              Verified Completed Matches ({selectedPlayer.matches?.length || 0})
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", display: "grid", gap: 8, paddingRight: 2, maxHeight: 240 }}>
+              {(selectedPlayer.matches || []).map((m, idx) => (
+                <div key={idx} style={{ padding: "9px 12px", background: "#F8FAF8", borderRadius: 10, border: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 12.5, fontWeight: 800, color: "#0F172A", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {m.our_team || "Team"} vs {m.team || "Opponent"}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>
+                      📅 {m.date || "Completed"}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: "#166534", background: "#DCFCE7", padding: "2px 7px", borderRadius: 6, flexShrink: 0 }}>
+                    +20 PTS
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setSelectedPlayer(null)}
+              style={{ width: "100%", padding: "11px", borderRadius: 10, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 13, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", marginTop: 16 }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

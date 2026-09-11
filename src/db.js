@@ -96,6 +96,25 @@ export async function updatePlayer(id, name, phone, pin, city, extra = {}) {
   if (extra.jerseySize !== undefined) fields.jersey_size = extra.jerseySize || null
   const { error } = await supabase.from("players").update(fields).eq("id", id)
   if (error) throw error
+
+  // Auto-sync matching auction_players rows
+  try {
+    const cleanPhone = (phone || "").replace(/[^0-9]/g, "").slice(-10)
+    if (cleanPhone) {
+      const aucPatch = {}
+      if (name) aucPatch.name = name
+      if (city) aucPatch.city = city
+      if (extra.birthDate !== undefined) aucPatch.birth_date = extra.birthDate || null
+      if (extra.profileImageUrl !== undefined) aucPatch.profile_image_url = extra.profileImageUrl || null
+      if (extra.jerseyNumber !== undefined) aucPatch.jersey_number = extra.jerseyNumber || null
+      if (extra.jerseySize !== undefined) aucPatch.jersey_size = extra.jerseySize || null
+      if (Object.keys(aucPatch).length > 0) {
+        await supabase.from("auction_players").update(aucPatch).ilike("phone", `%${cleanPhone}`)
+      }
+    }
+  } catch (syncErr) {
+    console.warn("Could not sync auction_players:", syncErr)
+  }
 }
 export async function deletePlayer(id) {
   const { error } = await supabase.from("players").delete().eq("id", id)
@@ -553,7 +572,7 @@ export async function fetchLeaderboard() {
   // so the UI can filter by season/role and recompute rankings without refetching.
   // Only completed matches count, so confirming into a future/never-played
   // match can't inflate rank. Ties are broken by who confirmed earliest overall.
-  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role), matches!inner(status, date, team, our_team)").eq("status", "confirmed").eq("matches.status", "completed")
+  const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role, profile_image_url), matches!inner(status, date, team, our_team)").eq("status", "confirmed").eq("matches.status", "completed")
   if (error) throw error
   return data || []
 }
@@ -852,6 +871,15 @@ export async function setAuctionRegistrationOpen(isOpenOrAuctionId, maybeIsOpen)
 export async function updatePlayerRole(id, playingRole) {
   const { error } = await supabase.from("players").update({ playing_role: playingRole }).eq("id", id)
   if (error) throw error
+  try {
+    const { data: p } = await supabase.from("players").select("phone").eq("id", id).maybeSingle()
+    const cleanPhone = (p?.phone || "").replace(/[^0-9]/g, "").slice(-10)
+    if (cleanPhone) {
+      await supabase.from("auction_players").update({ playing_role: playingRole }).ilike("phone", `%${cleanPhone}`)
+    }
+  } catch (err) {
+    console.warn("Could not sync auction_players role:", err)
+  }
 }
 
 // ── Auction Tournament — admin control panel (base price, teams, purses) ─────
@@ -865,6 +893,14 @@ export async function updateAuctionPlayerCategory(id, category) {
 }
 export async function deleteAuctionPlayer(id) {
   const { error } = await supabase.from("auction_players").delete().eq("id", id)
+  if (error) throw error
+}
+export async function tagAuctionPlayerDropped(id) {
+  const { error } = await supabase.from("auction_players").update({ status: "dropped" }).eq("id", id)
+  if (error) throw error
+}
+export async function restoreAuctionPlayer(id) {
+  const { error } = await supabase.from("auction_players").update({ status: "registered" }).eq("id", id)
   if (error) throw error
 }
 export async function fetchAuctionTeams(auctionId = null) {

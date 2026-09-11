@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Search as SearchIcon } from "lucide-react"
-import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check } from "lucide-react"
+import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check, Ban } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp } from "../constants.js"
@@ -2365,8 +2365,30 @@ function AuctionPage({ isMobile, isFounder }) {
   }
 
   const removePlayer = async (p) => {
-    if (!window.confirm(`Remove ${p.name} from the auction pool?`)) return
-    try { await deleteAuctionPlayer(p.id); await load() } catch(e) { alert(e.message) }
+    if (!window.confirm(`Permanently delete ${p.name} from the auction? This removes their registration and receipt records.`)) return
+    try {
+      await deleteAuctionPlayer(p.id)
+      if (viewingPlayer?.id === p.id) setViewingPlayer(null)
+      await load()
+    } catch(e) { alert(e.message) }
+  }
+
+  const tagDropped = async (p) => {
+    if (!window.confirm(`Mark ${p.name} as dropped / withdrawn from the auction? They will be removed from the auction pool and captains' export list, but their payment record will remain safely on file.`)) return
+    try {
+      await tagAuctionPlayerDropped(p.id)
+      if (viewingPlayer?.id === p.id) setViewingPlayer(null)
+      await load()
+    } catch(e) { alert(e.message) }
+  }
+
+  const restorePlayer = async (p) => {
+    if (!window.confirm(`Restore ${p.name} back to the active auction pool?`)) return
+    try {
+      await restoreAuctionPlayer(p.id)
+      if (viewingPlayer?.id === p.id) setViewingPlayer(null)
+      await load()
+    } catch(e) { alert(e.message) }
   }
 
   const openAddTeam = () => {
@@ -2949,8 +2971,9 @@ function AuctionPage({ isMobile, isFounder }) {
       )}
 
       {subTab === "players" && (() => {
-        const auctionPoolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist")
-        const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && (p.status === "waitlist" || p.payment_status === "waitlist"))
+        const auctionPoolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
+        const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "dropped" && (p.status === "waitlist" || p.payment_status === "waitlist"))
+        const droppedPlayers = auctionPlayers.filter(p => p.status === "dropped")
         const soldCount = auctionPoolPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
         const totalBase = auctionPoolPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
         const inPoolPhones = new Set(auctionPoolPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
@@ -2958,6 +2981,7 @@ function AuctionPage({ isMobile, isFounder }) {
         const q = poolSearch.trim().toLowerCase()
         const filteredPool = auctionPoolPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
         const filteredWaitlist = waitlistPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+        const filteredDropped = droppedPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
 
         const pq = platformSearch.trim().toLowerCase()
         const filteredPlatform = allPlatformPlayers.filter(p => {
@@ -2975,7 +2999,7 @@ function AuctionPage({ isMobile, isFounder }) {
         <div>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems: isMobile ? "flex-start" : "center", marginBottom:10, flexDirection: isMobile ? "column" : "row", gap: 10 }}>
             <div style={{ fontSize:12, color:"#64748B" }}>
-              Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding {waitlistPlayers.length > 0 && <span>· ⏳ <strong>{waitlistPlayers.length}</strong> on Waiting List</span>}
+              Pool: <strong>{auctionPoolPlayers.length}</strong> players available for bidding {waitlistPlayers.length > 0 && <span>· ⏳ <strong>{waitlistPlayers.length}</strong> on Waiting List</span>} {droppedPlayers.length > 0 && <span>· 🚫 <strong>{droppedPlayers.length}</strong> Dropped</span>}
             </div>
             <div style={{ display:"flex", gap:10, alignItems:"center", width: isMobile ? "100%" : "auto", justifyContent: isMobile ? "space-between" : "flex-end" }}>
               <button
@@ -3023,7 +3047,8 @@ function AuctionPage({ isMobile, isFounder }) {
             {[
               ...(isFounder ? [["registered",`Registered Players`]] : []),
               ["pool",`Auction Pool (${auctionPoolPlayers.length})`],
-              ["waitlist",`⏳ Waiting List (${waitlistPlayers.length})`]
+              ["waitlist",`⏳ Waiting List (${waitlistPlayers.length})`],
+              ...(droppedPlayers.length > 0 ? [["dropped",`🚫 Dropped (${droppedPlayers.length})`]] : [])
             ].map(([k,label])=>(
               <button key={k} onClick={()=>setPoolView(k)} style={{ padding: isMobile ? "8px 12px" : "9px 16px", borderRadius:"8px 8px 0 0", border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize: isMobile ? 12 : 13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink: 0 }}>{label}</button>
             ))}
@@ -3150,6 +3175,75 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               )}
             </div>
+          ) : poolView === "dropped" ? (
+            <div>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>
+                Players who have withdrawn or been dropped from the auction. They are excluded from bidding and the captain export dossier, but their registration and payment records remain safely stored.
+              </div>
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                <div style={{ flex:1, position:"relative" }}>
+                  <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                  <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search dropped players..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+                </div>
+              </div>
+              {filteredDropped.length === 0 ? (
+                <Card style={{ padding:"32px 16px", textAlign:"center" }}>
+                  <div style={{ fontSize:14, color:"#64748B" }}>{droppedPlayers.length === 0 ? "No players currently marked as dropped." : "No dropped players match your search."}</div>
+                </Card>
+              ) : (
+                <div style={{ display:"grid", gap:10 }}>
+                  {filteredDropped.map((p, idx) => (
+                    <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background:"#FEF2F2", border:"1px solid #FECACA", borderRadius: 14 }}>
+                      <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap: 10, marginBottom: 10, cursor:"pointer" }}>
+                        <span style={{ background:"#FEE2E2", color:"#DC2626", border:"1px solid #FCA5A5", borderRadius:6, fontSize:11, fontWeight:800, padding:"2px 6px", flexShrink:0 }}>
+                          #{idx + 1}
+                        </span>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid #FECACA" }}/>
+                        ) : (
+                          <div style={{ width:40, height:40, borderRadius:10, background:"#FEE2E2", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#DC2626", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                          <div style={{ fontSize:11.5, color:"#991B1B", display:"flex", alignItems:"center", gap:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop: 2 }}>
+                            <Phone size={11} style={{ flexShrink: 0 }}/>
+                            <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                          <ChevronRight size={16} color="#94A3B8"/>
+                          <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Delete permanently"><Trash2 size={15}/></button>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FECACA", gap: 8, flexWrap:"wrap" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: "#DC2626", background: "#FEE2E2", border:"1px solid #FCA5A5", padding: "3px 7px", borderRadius: 6 }}>
+                            🚫 Dropped
+                          </span>
+                          {p.payment_status === "paid" && (
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: "#166534", background: "#DCFCE7", padding: "3px 7px", borderRadius: 6 }}>
+                              ✓ Fee Paid
+                            </span>
+                          )}
+                          {p.payment_screenshot_url && (
+                            <button onClick={(e)=>{ e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding:"2px 7px", borderRadius:6, border:"1px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+                              🧾 Receipt
+                            </button>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); restorePlayer(p) }}
+                          style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:11.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", gap:4, marginLeft: "auto" }}
+                        >
+                          Restore to Pool ➔
+                        </button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
           <>
           <div style={{ display:"flex", gap:10, marginBottom:14, flexDirection: isMobile ? "column" : "row" }}>
@@ -3191,7 +3285,8 @@ function AuctionPage({ isMobile, isFounder }) {
                     </div>
                     <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
                       <ChevronRight size={16} color="#94A3B8"/>
-                      <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Remove player"><Trash2 size={15}/></button>
+                      <button onClick={(e)=>{ e.stopPropagation(); tagDropped(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#D97706", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Tag as Dropped / Withdrawn"><Ban size={15}/></button>
+                      <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Delete player"><Trash2 size={15}/></button>
                     </div>
                   </div>
 
@@ -3722,7 +3817,7 @@ function AuctionPage({ isMobile, isFounder }) {
       })()}
 
       {showExportPoolModal && (() => {
-        const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist")
+        const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
         const q = exportPoolSearch.trim().toLowerCase()
         const filtered = poolPlayers.filter(p => {
           if (exportPoolRoleFilter && !((p.playing_role || "").toLowerCase().includes(exportPoolRoleFilter.toLowerCase()))) return false
@@ -4036,7 +4131,24 @@ function AuctionPage({ isMobile, isFounder }) {
               </div>
             )}
 
-            {(viewingPlayer.status === "waitlist" || viewingPlayer.payment_status === "waitlist") ? (
+            {viewingPlayer.status === "dropped" ? (
+              <div style={{ marginBottom:16, padding:"12px 14px", background:"#FEF2F2", border:"1.5px solid #FCA5A5", borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+                <div>
+                  <div style={{ fontSize:10, color:"#991B1B", fontWeight:700, textTransform:"uppercase" }}>Player Status</div>
+                  <div style={{ fontSize:13, fontWeight:800, color:"#DC2626" }}>
+                    🚫 Dropped from Auction
+                  </div>
+                  <div style={{ fontSize:11, color:"#7F1D1D", marginTop:2 }}>Removed from active bidding pool and captains' export dossier.</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => restorePlayer(viewingPlayer)}
+                  style={{ padding:"8px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", whiteSpace:"nowrap" }}
+                >
+                  Restore to Pool ➔
+                </button>
+              </div>
+            ) : (viewingPlayer.status === "waitlist" || viewingPlayer.payment_status === "waitlist") ? (
               <div style={{ marginBottom:16, padding:"12px 14px", background:"#FFFBEB", border:"1.5px solid #F59E0B", borderRadius:10, display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
                 <div>
                   <div style={{ fontSize:10, color:"#92400E", fontWeight:700, textTransform:"uppercase" }}>Player Status</div>
@@ -4140,6 +4252,33 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               )
             })()}
+
+            <div style={{ display:"flex", gap:10, marginTop:18, paddingTop:14, borderTop:"1px solid #E2E8F0" }}>
+              {viewingPlayer.status !== "dropped" ? (
+                <button
+                  type="button"
+                  onClick={()=>tagDropped(viewingPlayer)}
+                  style={{ flex:1, padding:"10px", borderRadius:8, background:"#FEF3C7", border:"1.5px solid #FDE68A", color:"#B45309", fontSize:12.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}
+                >
+                  <Ban size={14}/> Tag as Dropped
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={()=>restorePlayer(viewingPlayer)}
+                  style={{ flex:1, padding:"10px", borderRadius:8, background:"#DCFCE7", border:"1.5px solid #86EFAC", color:"#166534", fontSize:12.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}
+                >
+                  <CheckCircle2 size={14}/> Restore to Pool
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={()=>removePlayer(viewingPlayer)}
+                style={{ padding:"10px 14px", borderRadius:8, background:"rgba(239,68,68,0.08)", border:"1.5px solid rgba(239,68,68,0.3)", color:"#EF4444", fontSize:12.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6 }}
+              >
+                <Trash2 size={14}/> Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

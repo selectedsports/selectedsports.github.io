@@ -1401,7 +1401,7 @@ export default function ProPortal({ player, onLogout }) {
             </div>
 
             {auctionSubTab === "players" && (() => {
-              const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain")
+              const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
               return poolPlayers.length === 0 ? (
                 <Card style={{ padding: "32px 16px", textAlign: "center" }}>
                   <div style={{ fontSize: 14, color: "#64748B" }}>No players have registered yet.</div>
