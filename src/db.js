@@ -896,11 +896,11 @@ export async function deleteAuctionPlayer(id) {
   if (error) throw error
 }
 export async function tagAuctionPlayerDropped(id) {
-  const { error } = await supabase.from("auction_players").update({ status: "dropped" }).eq("id", id)
+  const { error } = await supabase.from("auction_players").update({ status: "dropped", payment_status: "refunded" }).eq("id", id)
   if (error) throw error
 }
 export async function restoreAuctionPlayer(id) {
-  const { error } = await supabase.from("auction_players").update({ status: "registered" }).eq("id", id)
+  const { error } = await supabase.from("auction_players").update({ status: "registered", payment_status: "paid" }).eq("id", id)
   if (error) throw error
 }
 export async function fetchAuctionTeams(auctionId = null) {

@@ -661,7 +661,7 @@ export default function PublicAuctionView({ auctionCode }) {
 
         {/* State: Setup */}
         {(!state || state.status === "setup") && (() => {
-          const poolPlayers = players.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist")
+          const poolPlayers = players.filter(p => p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped" && !p.is_captain && p.status !== "captain")
           const waitlistPlayers = players.filter(p => p.status === "waitlist" || p.payment_status === "waitlist")
 
           return (
