@@ -86,7 +86,7 @@ export function Spinner() {
   )
 }
 export function Card({ children, style:sx = {}, onClick }) {
-  return <div onClick={onClick} style={{ background:"#FFFFFF", borderRadius:16, border:"1.5px solid #E2E8F0", boxShadow:"0 1px 4px rgba(37,95,184,0.06)", ...sx }}>{children}</div>
+  return <div onClick={onClick} style={{ background:"#FFFFFF", borderRadius:16, border:"1px solid #E2E8F0", boxShadow:"0 1px 3px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03)", ...sx }}>{children}</div>
 }
 
 // Rounds a number down to a clean threshold and adds "+" (e.g. 187 -> "150+", 43 -> "40+")

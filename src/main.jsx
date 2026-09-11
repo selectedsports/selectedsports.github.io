@@ -3,10 +3,7 @@ import ReactDOM from "react-dom/client"
 import App from "./App.jsx"
 import "./index.css"
 
-// Defensive: force dark background directly via inline style, which
-// takes precedence over any stylesheet regardless of specificity/order.
-document.documentElement.style.setProperty("background", "#F8FAF8", "important")
-document.body.style.setProperty("background", "#F8FAF8", "important")
+// Styles are loaded via index.css
 
 // Unregister any legacy service workers and clear cache storage
 if ("serviceWorker" in navigator) {

@@ -30,10 +30,20 @@ export default function GroundOwnerPortal({ owner, onLogout }) {
   const displayGroundName = assignedGround?.name || owner?.ground_name || "Assigned Ground"
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAF8", fontFamily: "var(--font-body)", paddingBottom: isMobile ? 60 : 40 }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#F1F5F9",
+      backgroundImage: "radial-gradient(at 0% 0%, rgba(22, 101, 52, 0.06) 0px, transparent 450px), radial-gradient(at 100% 0%, rgba(184, 134, 11, 0.04) 0px, transparent 400px), radial-gradient(#CBD5E1 0.75px, transparent 0.75px)",
+      backgroundSize: "100% 100%, 100% 100%, 24px 24px",
+      backgroundAttachment: "fixed",
+      fontFamily: "var(--font-body)",
+      paddingBottom: isMobile ? 60 : 40
+    }}>
       {/* Top Navigation Bar */}
       <div style={{
-        background: "#FFFFFF",
+        background: "rgba(255, 255, 255, 0.96)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         height: isMobile ? 56 : 64,
         borderBottom: "1px solid #E2E8F0",
         display: "flex",

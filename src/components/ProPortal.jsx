@@ -928,9 +928,17 @@ export default function ProPortal({ player, onLogout }) {
   ]
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAF8", fontFamily: "var(--font-body)", paddingBottom: isMobile ? 120 : 40 }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#F1F5F9",
+      backgroundImage: "radial-gradient(at 0% 0%, rgba(22, 101, 52, 0.06) 0px, transparent 450px), radial-gradient(at 100% 0%, rgba(184, 134, 11, 0.04) 0px, transparent 400px), radial-gradient(#CBD5E1 0.75px, transparent 0.75px)",
+      backgroundSize: "100% 100%, 100% 100%, 24px 24px",
+      backgroundAttachment: "fixed",
+      fontFamily: "var(--font-body)",
+      paddingBottom: isMobile ? 120 : 40
+    }}>
       {/* PRO_HEADER_V1 */}
-      <div style={{ background:"#FFFFFF", height: isMobile ? 56 : 60, borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", padding: isMobile ? "0 16px" : "0 24px", gap:12, position:"sticky", top:0, zIndex:200, boxShadow:"0 1px 4px rgba(15,23,42,0.04)" }}>
+      <div style={{ background:"rgba(255,255,255,0.96)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", height: isMobile ? 56 : 60, borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", padding: isMobile ? "0 16px" : "0 24px", gap:12, position:"sticky", top:0, zIndex:200, boxShadow:"0 1px 4px rgba(15,23,42,0.05)" }}>
         {isMobile && (
           <button onClick={()=>setMenuOpen(o=>!o)} style={{ background:"transparent", border:"none", color:"#0F172A", fontSize:20, cursor:"pointer", padding:6 }}>☰</button>
         )}

@@ -344,11 +344,22 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F8FAF8", fontFamily: "var(--font-body)", paddingBottom: 84, color: "#0F172A" }}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#F1F5F9",
+      backgroundImage: "radial-gradient(at 0% 0%, rgba(22, 101, 52, 0.06) 0px, transparent 450px), radial-gradient(at 100% 0%, rgba(184, 134, 11, 0.04) 0px, transparent 400px), radial-gradient(#CBD5E1 0.75px, transparent 0.75px)",
+      backgroundSize: "100% 100%, 100% 100%, 24px 24px",
+      backgroundAttachment: "fixed",
+      fontFamily: "var(--font-body)",
+      paddingBottom: 84,
+      color: "#0F172A"
+    }}>
       
       {/* ── STICKY TOP APP HEADER ── */}
       <header style={{
-        background: "#FFFFFF",
+        background: "rgba(255, 255, 255, 0.96)",
+        backdropFilter: "blur(12px)",
+        WebkitBackdropFilter: "blur(12px)",
         height: 60,
         borderBottom: "1px solid #E2E8F0",
         display: "flex",
