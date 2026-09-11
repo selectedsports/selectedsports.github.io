@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
-import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon } from "lucide-react"
+import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon, Ban } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
-import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
@@ -623,6 +623,7 @@ export default function ProPortal({ player, onLogout }) {
   const [managingAuction, setManagingAuction] = useState(null)
   const [editingAuctionDateTime, setEditingAuctionDateTime] = useState(null)
   const [auctionSubTab, setAuctionSubTab] = useState("players")
+  const [proPoolView, setProPoolView] = useState("pool")
   const [auctionPlayers, setAuctionPlayers] = useState([])
   const [auctionTeams, setAuctionTeams] = useState([])
   const [auctionRegOpen, setAuctionRegOpen] = useState(true)
@@ -683,6 +684,24 @@ export default function ProPortal({ player, onLogout }) {
   const removeAuctionPlayer = async (p) => {
     if (!window.confirm(`Remove ${p.name} from the auction pool?`)) return
     try { await deleteAuctionPlayer(p.id); await loadAuctionPool() } catch(e) { alert(e.message) }
+  }
+
+  const tagDropped = async (p) => {
+    if (!window.confirm(`Mark ${p.name} as dropped / withdrawn from the auction? They will be removed from the auction pool and captains' export list, but their registration record will remain safely on file.`)) return
+    try {
+      await tagAuctionPlayerDropped(p.id)
+      if (viewingAuctionPlayer?.id === p.id) setViewingAuctionPlayer(null)
+      await loadAuctionPool()
+    } catch(e) { alert(e.message) }
+  }
+
+  const restorePlayer = async (p) => {
+    if (!window.confirm(`Restore ${p.name} back to the active auction pool?`)) return
+    try {
+      await restoreAuctionPlayer(p.id)
+      if (viewingAuctionPlayer?.id === p.id) setViewingAuctionPlayer(null)
+      await loadAuctionPool()
+    } catch(e) { alert(e.message) }
   }
 
   const openAddAuctionTeam = () => {
@@ -1402,73 +1421,248 @@ export default function ProPortal({ player, onLogout }) {
 
             {auctionSubTab === "players" && (() => {
               const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
-              return poolPlayers.length === 0 ? (
-                <Card style={{ padding: "32px 16px", textAlign: "center" }}>
-                  <div style={{ fontSize: 14, color: "#64748B" }}>No players have registered yet.</div>
-                  <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 6 }}>Share the registration link to start collecting entries.</div>
-                </Card>
-              ) : (
-                <div style={{ display: "grid", gap: 10 }}>
-                  {poolPlayers.map(p => (
-                    <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", borderRadius: 14 }}>
-                      <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
-                        {p.profile_image_url ? (
-                          <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #E2E8F0" }}/>
-                        ) : (
-                          <div style={{ width: 40, height: 40, borderRadius: 10, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#475569", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
-                          <div style={{ fontSize: 11.5, color: "#64748B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
-                            <Phone size={11} style={{ flexShrink: 0 }}/>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</span>
-                          </div>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-                          <ChevronRight size={16} color="#94A3B8"/>
-                          <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Remove player"><Trash2 size={15}/></button>
-                        </div>
-                      </div>
+              const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && (p.status === "waitlist" || p.payment_status === "waitlist") && p.status !== "dropped")
+              const droppedPlayers = auctionPlayers.filter(p => p.status === "dropped")
 
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingTop: 10, borderTop: "1px solid #F1F5F9", flexWrap: "wrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                          {p.payment_status === "paid" && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                              ✓ Paid
-                            </span>
-                          )}
-                          {p.payment_status === "pending" && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
-                              ⏳ Pending
-                            </span>
-                          )}
-                          {(p.status === "waitlist" || p.payment_status === "waitlist") && (
-                            <span style={{ fontSize: 11, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "3px 8px", borderRadius: 6 }}>
-                              ⏳ Waitlist
-                            </span>
-                          )}
-                          {p.payment_screenshot_url && (
-                            <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #166534", background: "rgba(34,197,94,0.08)", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
-                              🧾 Receipt
-                            </button>
-                          )}
-                        </div>
+              return (
+                <div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>
+                    {[
+                      ["pool", `Auction Pool (${poolPlayers.length})`],
+                      ["waitlist", `⏳ Waiting List (${waitlistPlayers.length})`],
+                      ["dropped", `🚫 Dropped (${droppedPlayers.length})`]
+                    ].map(([k, label]) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => setProPoolView(k)}
+                        style={{
+                          padding: isMobile ? "8px 12px" : "9px 16px",
+                          borderRadius: "8px 8px 0 0",
+                          border: "none",
+                          borderBottom: (proPoolView === k || (!proPoolView && k === "pool")) ? "2.5px solid #166534" : "2.5px solid transparent",
+                          background: "none",
+                          color: (proPoolView === k || (!proPoolView && k === "pool")) ? "#166534" : "#94A3B8",
+                          fontSize: isMobile ? 12 : 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          flexShrink: 0
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
 
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
-                          <span style={{ fontSize: 11.5, color: "#64748B", fontWeight: 700, whiteSpace: "nowrap" }}>🪙 Base Price:</span>
-                          <input
-                            type="number"
-                            min="0"
-                            value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")}
-                            onChange={e => setPriceDrafts({ ...priceDrafts, [p.id]: e.target.value })}
-                            onBlur={() => saveAuctionPrice(p.id)}
-                            placeholder="0"
-                            style={{ width: isMobile ? 85 : 110, padding: "5px 8px", borderRadius: 8, border: "1.5px solid #CBD5E1", fontSize: 13, fontWeight: 700, color: "#0F172A", textAlign: "right", outline: "none", background: "#FFFFFF" }}
-                          />
-                        </div>
+                  {proPoolView === "dropped" ? (
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 12 }}>
+                        Players who have withdrawn or been dropped from the auction. They are excluded from bidding and captain lists, but their details and payment receipts remain safely stored.
                       </div>
-                    </Card>
-                  ))}
+                      {droppedPlayers.length === 0 ? (
+                        <Card style={{ padding: "32px 16px", textAlign: "center" }}>
+                          <div style={{ fontSize: 14, color: "#64748B" }}>No players currently marked as dropped.</div>
+                        </Card>
+                      ) : (
+                        <div style={{ display: "grid", gap: 10 }}>
+                          {droppedPlayers.map((p, idx) => (
+                            <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background: "#FEF2F2", border: "1px solid #FECACA", borderRadius: 14 }}>
+                              <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
+                                <span style={{ background: "#FEE2E2", color: "#DC2626", border: "1px solid #FCA5A5", borderRadius: 6, fontSize: 11, fontWeight: 800, padding: "2px 6px", flexShrink: 0 }}>
+                                  #{idx + 1}
+                                </span>
+                                {p.profile_image_url ? (
+                                  <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #FECACA" }}/>
+                                ) : (
+                                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FEE2E2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#DC2626", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: "#991B1B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                                    <Phone size={11} style={{ flexShrink: 0 }}/>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                  <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Delete player"><Trash2 size={15}/></button>
+                                  <ChevronRight size={16} color="#94A3B8"/>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px dashed #FECACA", gap: 8, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 10.5, fontWeight: 800, color: "#DC2626", background: "#FEE2E2", border: "1px solid #FCA5A5", padding: "3px 7px", borderRadius: 6 }}>
+                                    🚫 Dropped
+                                  </span>
+                                  {p.payment_status === "paid" && (
+                                    <span style={{ fontSize: 10.5, fontWeight: 700, color: "#166534", background: "#DCFCE7", padding: "3px 7px", borderRadius: 6 }}>
+                                      ✓ Fee Paid
+                                    </span>
+                                  )}
+                                  {p.payment_screenshot_url && (
+                                    <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "2px 7px", borderRadius: 6, border: "1px solid #166534", background: "#FFFFFF", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                      🧾 Receipt
+                                    </button>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); restorePlayer(p) }}
+                                  style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
+                                >
+                                  Restore to Pool ➔
+                                </button>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : proPoolView === "waitlist" ? (
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 12 }}>
+                        Players who registered after the 45-player cap was reached. Promote them to the pool if a slot opens.
+                      </div>
+                      {waitlistPlayers.length === 0 ? (
+                        <Card style={{ padding: "32px 16px", textAlign: "center" }}>
+                          <div style={{ fontSize: 14, color: "#64748B" }}>No players currently on the waiting list.</div>
+                        </Card>
+                      ) : (
+                        <div style={{ display: "grid", gap: 10 }}>
+                          {waitlistPlayers.map((p, idx) => (
+                            <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 14 }}>
+                              <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
+                                <span style={{ background: "#FEF3C7", color: "#B45309", border: "1px solid #FDE68A", borderRadius: 6, fontSize: 11, fontWeight: 800, padding: "2px 6px", flexShrink: 0 }}>
+                                  #{idx + 1}
+                                </span>
+                                {p.profile_image_url ? (
+                                  <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #FDE68A" }}/>
+                                ) : (
+                                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FEF3C7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#B45309", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: "#92400E", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                                    <Phone size={11} style={{ flexShrink: 0 }}/>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); tagDropped(p) }}
+                                    style={{ background: "#FEF3C7", border: "1px solid #FDE68A", cursor: "pointer", color: "#B45309", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 6, fontSize: 11, fontWeight: 700 }}
+                                    title="Tag as Dropped / Withdrawn"
+                                  >
+                                    <Ban size={12}/> Drop
+                                  </button>
+                                  <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Remove player"><Trash2 size={15}/></button>
+                                  <ChevronRight size={16} color="#94A3B8"/>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px dashed #FDE68A", gap: 8, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 10.5, fontWeight: 800, color: "#B45309", background: "#FEF3C7", border: "1px solid #FDE68A", padding: "3px 7px", borderRadius: 6 }}>
+                                    ⏳ Waitlist
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    if (!confirm(`Promote ${p.name} to the Confirmed Auction Pool? You will need to collect the registration fee.`)) return
+                                    try {
+                                      await updateAuctionPlayerStatus(p.id, "registered", "pending")
+                                      setAuctionPlayers(list => list.map(x => x.id === p.id ? { ...x, status: "registered", payment_status: "pending" } : x))
+                                    } catch(err) { alert(err.message) }
+                                  }}
+                                  style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
+                                >
+                                  Promote to Pool ➔
+                                </button>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    poolPlayers.length === 0 ? (
+                      <Card style={{ padding: "32px 16px", textAlign: "center" }}>
+                        <div style={{ fontSize: 14, color: "#64748B" }}>No players in active auction pool.</div>
+                        <div style={{ fontSize: 12, color: "#94A3B8", marginTop: 6 }}>Share the registration link to start collecting entries.</div>
+                      </Card>
+                    ) : (
+                      <div style={{ display: "grid", gap: 10 }}>
+                        {poolPlayers.map((p, idx) => (
+                          <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", borderRadius: 14 }}>
+                            <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
+                              <span style={{ background: "#F1F5F9", color: "#475569", border: "1px solid #E2E8F0", borderRadius: 6, fontSize: 11, fontWeight: 800, padding: "2px 6px", flexShrink: 0 }}>
+                                #{idx + 1}
+                              </span>
+                              {p.profile_image_url ? (
+                                <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #E2E8F0" }}/>
+                              ) : (
+                                <div style={{ width: 40, height: 40, borderRadius: 10, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#475569", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                              )}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                                <div style={{ fontSize: 11.5, color: "#64748B", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                                  <Phone size={11} style={{ flexShrink: 0 }}/>
+                                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}</span>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); tagDropped(p) }}
+                                  style={{ background: "#FEF3C7", border: "1px solid #FDE68A", cursor: "pointer", color: "#B45309", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 6, fontSize: 11, fontWeight: 700 }}
+                                  title="Tag as Dropped / Withdrawn"
+                                >
+                                  <Ban size={12}/> Drop
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Delete player"><Trash2 size={15}/></button>
+                                <ChevronRight size={16} color="#94A3B8"/>
+                              </div>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, paddingTop: 10, borderTop: "1px solid #F1F5F9", flexWrap: "wrap" }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                {p.payment_status === "paid" && (
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#166534", background: "rgba(34,197,94,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                    ✓ Paid
+                                  </span>
+                                )}
+                                {p.payment_status === "pending" && (
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#B45309", background: "rgba(245,158,11,0.12)", padding: "3px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                                    ⏳ Pending
+                                  </span>
+                                )}
+                                {p.payment_screenshot_url && (
+                                  <button onClick={(e) => { e.stopPropagation(); setReceiptModalImg(p.payment_screenshot_url) }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #166534", background: "rgba(34,197,94,0.08)", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                    🧾 Receipt
+                                  </button>
+                                )}
+                              </div>
+
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
+                                <span style={{ fontSize: 11.5, color: "#64748B", fontWeight: 700, whiteSpace: "nowrap" }}>🪙 Base Price:</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={priceDrafts[p.id] !== undefined ? priceDrafts[p.id] : (p.base_price ?? "")}
+                                  onChange={e => setPriceDrafts({ ...priceDrafts, [p.id]: e.target.value })}
+                                  onBlur={() => saveAuctionPrice(p.id)}
+                                  placeholder="0"
+                                  style={{ width: isMobile ? 85 : 110, padding: "5px 8px", borderRadius: 8, border: "1.5px solid #CBD5E1", fontSize: 13, fontWeight: 700, color: "#0F172A", textAlign: "right", outline: "none", background: "#FFFFFF" }}
+                                />
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )
+                  )}
                 </div>
               )
             })()}
@@ -1847,7 +2041,24 @@ export default function ProPortal({ player, onLogout }) {
                     </div>
                   )}
 
-                  {(viewingAuctionPlayer.status === "waitlist" || viewingAuctionPlayer.payment_status === "waitlist") ? (
+                  {viewingAuctionPlayer.status === "dropped" ? (
+                    <div style={{ marginBottom: 16, padding: "12px 14px", background: "#FEF2F2", border: "1.5px solid #FCA5A5", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 10, color: "#991B1B", fontWeight: 700, textTransform: "uppercase" }}>Player Status</div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: "#DC2626" }}>
+                          🚫 Dropped from Auction
+                        </div>
+                        <div style={{ fontSize: 11, color: "#7F1D1D", marginTop: 2 }}>Removed from active bidding pool and captain export lists.</div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => restorePlayer(viewingAuctionPlayer)}
+                        style={{ padding: "8px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", whiteSpace: "nowrap" }}
+                      >
+                        Restore to Pool ➔
+                      </button>
+                    </div>
+                  ) : (viewingAuctionPlayer.status === "waitlist" || viewingAuctionPlayer.payment_status === "waitlist") ? (
                     <div style={{ marginBottom: 16, padding: "12px 14px", background: "#FFFBEB", border: "1.5px solid #F59E0B", borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                       <div>
                         <div style={{ fontSize: 10, color: "#92400E", fontWeight: 700, textTransform: "uppercase" }}>Player Status</div>
@@ -1913,6 +2124,33 @@ export default function ProPortal({ player, onLogout }) {
                   <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "12px", background: "rgba(34,197,94,0.08)", borderRadius: 9 }}>
                     <span style={{ fontSize: 12, color: "#166534", fontWeight: 700 }}>Base Price 🪙</span>
                     <input type="number" min="0" value={priceDrafts[viewingAuctionPlayer.id] !== undefined ? priceDrafts[viewingAuctionPlayer.id] : (viewingAuctionPlayer.base_price ?? "")} onChange={e => setPriceDrafts({ ...priceDrafts, [viewingAuctionPlayer.id]: e.target.value })} onBlur={() => saveAuctionPrice(viewingAuctionPlayer.id)} placeholder="0" style={{ ...aiS, flex: 1, padding: "8px 10px", background: "#FFFFFF" }}/>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 10, marginTop: 18, paddingTop: 14, borderTop: "1px solid #E2E8F0" }}>
+                    {viewingAuctionPlayer.status !== "dropped" ? (
+                      <button
+                        type="button"
+                        onClick={() => tagDropped(viewingAuctionPlayer)}
+                        style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#FEF3C7", border: "1.5px solid #FDE68A", color: "#B45309", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      >
+                        <Ban size={14}/> Tag as Dropped
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => restorePlayer(viewingAuctionPlayer)}
+                        style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#DCFCE7", border: "1.5px solid #86EFAC", color: "#166534", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      >
+                        <CheckCircle2 size={14}/> Restore to Pool
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removeAuctionPlayer(viewingAuctionPlayer)}
+                      style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                    >
+                      <Trash2 size={14}/> Delete
+                    </button>
                   </div>
                 </div>
               </div>

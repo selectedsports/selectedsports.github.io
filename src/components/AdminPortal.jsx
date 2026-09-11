@@ -3048,7 +3048,7 @@ function AuctionPage({ isMobile, isFounder }) {
               ...(isFounder ? [["registered",`Registered Players`]] : []),
               ["pool",`Auction Pool (${auctionPoolPlayers.length})`],
               ["waitlist",`⏳ Waiting List (${waitlistPlayers.length})`],
-              ...(droppedPlayers.length > 0 ? [["dropped",`🚫 Dropped (${droppedPlayers.length})`]] : [])
+              ["dropped",`🚫 Dropped (${droppedPlayers.length})`]
             ].map(([k,label])=>(
               <button key={k} onClick={()=>setPoolView(k)} style={{ padding: isMobile ? "8px 12px" : "9px 16px", borderRadius:"8px 8px 0 0", border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize: isMobile ? 12 : 13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink: 0 }}>{label}</button>
             ))}
@@ -3141,9 +3141,17 @@ function AuctionPage({ isMobile, isFounder }) {
                             <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
                           </div>
                         </div>
-                        <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
-                          <ChevronRight size={16} color="#94A3B8"/>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                          <button
+                            type="button"
+                            onClick={(e)=>{ e.stopPropagation(); tagDropped(p) }}
+                            style={{ background:"#FEF3C7", border:"1px solid #FDE68A", cursor:"pointer", color:"#B45309", padding:"4px 8px", display:"inline-flex", alignItems:"center", gap:4, borderRadius:6, fontSize:11, fontWeight:700 }}
+                            title="Tag as Dropped / Withdrawn"
+                          >
+                            <Ban size={12}/> Drop
+                          </button>
                           <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Remove player"><Trash2 size={15}/></button>
+                          <ChevronRight size={16} color="#94A3B8"/>
                         </div>
                       </div>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FDE68A", gap: 8, flexWrap:"wrap" }}>
@@ -3283,10 +3291,17 @@ function AuctionPage({ isMobile, isFounder }) {
                         <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
                       </div>
                     </div>
-                    <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
-                      <ChevronRight size={16} color="#94A3B8"/>
-                      <button onClick={(e)=>{ e.stopPropagation(); tagDropped(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#D97706", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Tag as Dropped / Withdrawn"><Ban size={15}/></button>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
+                      <button
+                        type="button"
+                        onClick={(e)=>{ e.stopPropagation(); tagDropped(p) }}
+                        style={{ background:"#FEF3C7", border:"1px solid #FDE68A", cursor:"pointer", color:"#B45309", padding:"4px 8px", display:"inline-flex", alignItems:"center", gap:4, borderRadius:6, fontSize:11, fontWeight:700 }}
+                        title="Tag as Dropped / Withdrawn"
+                      >
+                        <Ban size={12}/> Drop
+                      </button>
                       <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Delete player"><Trash2 size={15}/></button>
+                      <ChevronRight size={16} color="#94A3B8"/>
                     </div>
                   </div>
 
