@@ -2218,6 +2218,17 @@ function AuctionPage({ isMobile, isFounder }) {
   const [poolSearch, setPoolSearch] = useState("")
   const [poolView, setPoolView] = useState("pool") // default to pool
   const [shuffleSeed, setShuffleSeed] = useState(1)
+  const randomizedPool = useMemo(() => {
+    const pool = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
+    const arr = [...pool]
+    let s = (shuffleSeed * 9301 + 49297) % 233280
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr
+  }, [auctionPlayers, shuffleSeed])
   const [showExportPoolModal, setShowExportPoolModal] = useState(false)
   const [copiedPoolWa, setCopiedPoolWa] = useState(false)
   const [exportPoolRoleFilter, setExportPoolRoleFilter] = useState("")
@@ -3012,18 +3023,6 @@ function AuctionPage({ isMobile, isFounder }) {
       )}
 
       {subTab === "players" && (() => {
-        const randomizedPool = useMemo(() => {
-          const pool = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
-          const arr = [...pool]
-          let s = (shuffleSeed * 9301 + 49297) % 233280
-          const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280 }
-          for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(rnd() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-          }
-          return arr
-        }, [auctionPlayers, shuffleSeed])
-
         const auctionPoolPlayers = randomizedPool
         const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "dropped" && (p.status === "waitlist" || p.payment_status === "waitlist"))
         const droppedPlayers = auctionPlayers.filter(p => p.status === "dropped")
