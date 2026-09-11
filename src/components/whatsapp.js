@@ -35,6 +35,7 @@ export function waSquadFull(match, matchPlayers = []) {
 }
 
 export function waGroundBookingConfirmation(booking) {
+  const bookingId = booking.booking_id || booking.id || "CONFIRMED"
   const balanceStr = Number(booking.balance_due || 0) > 0
     ? `⚠️ *Balance Due: ₹${Number(booking.balance_due).toLocaleString("en-IN")}* (To be settled at ground)\n`
     : `✅ *Payment: Fully Paid & Confirmed*\n`
@@ -49,7 +50,9 @@ export function waGroundBookingConfirmation(booking) {
 
   const teamStr = booking.customer_team ? ` (${booking.customer_team})` : ""
 
-  return `🏏 *GROUND BOOKING CONFIRMATION*\n\n` +
+  return `🏏 *GROUND BOOKING CONFIRMATION*\n` +
+    `🆔 *Booking ID: ${bookingId}*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
     `🏟️ *Ground:* ${booking.ground_name || "Match Ground"}\n` +
     `📅 *Date:* ${fmtDate(booking.date)}\n` +
     `⏰ *Slot Timing:* ${booking.time_slot || "Full Slot"}\n` +
@@ -60,6 +63,18 @@ export function waGroundBookingConfirmation(booking) {
     balanceStr +
     amenitiesStr +
     (booking.notes ? `📝 *Notes:* ${booking.notes}\n` : "") +
-    `\n_Your slot is reserved. Please report 15 mins prior to the slot timing._\n` +
-    `_Selected Sports Ground Desk_`
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `📌 *Please present this Booking ID (${bookingId}) upon arrival at the ground entry.*\n` +
+    `_Issued by Selected Sports Ground Desk_`
+}
+
+export function waGroundOwnerCredentials(owner, loginUrl = "https://selectedsports.github.io") {
+  return `🏟️ *SELECTED SPORTS - GROUND DESK ACCESS*\n\n` +
+    `Hello *${owner.name}*,\n` +
+    `Here are your official login credentials for the *${owner.ground_name || "Ground"}* Desk & Slot Diary:\n\n` +
+    `📱 *Registered Mobile:* +91 ${owner.phone}\n` +
+    `🔐 *4-Digit PIN:* ${owner.pin}\n` +
+    `🏟️ *Assigned Venue:* ${owner.ground_name || "All Grounds"}\n\n` +
+    `👉 *Login Link:* ${loginUrl}\n\n` +
+    `_Log in, schedule slot bookings, generate unique Booking IDs, and manage advance & balance dues online._`
 }

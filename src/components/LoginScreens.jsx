@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react"
 import { Logo, Av } from "./ui.jsx"
-import { fetchPlayers, registerPlayer, fetchRecentlyRegistered, fetchPlayerCount, fetchMatchCount, fetchTeamCount, uploadProfilePhoto } from "../db.js"
+import { fetchPlayers, registerPlayer, fetchRecentlyRegistered, fetchPlayerCount, fetchMatchCount, fetchTeamCount, uploadProfilePhoto, authenticateGroundOwner } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { Phone, Lock, Eye, EyeOff, UserPlus, Users, Swords, Trophy } from "lucide-react"
 import { ADMIN_PHONE, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { useMobile } from "../hooks/useMobile.js"
 
-export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, onRegister }) {
+export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onGroundOwnerSuccess, onBack, onRegister, initialMode = "player" }) {
   // LOGIN_ONLY_SCREEN_V1
   const [phone, setPhone] = useState("")
   const [pin, setPin]     = useState("")
@@ -14,6 +14,7 @@ export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, on
   const [err, setErr]     = useState("")
   const [busy, setBusy]   = useState(false)
   const [remember, setRemember] = useState(false)
+  const [loginMode, setLoginMode] = useState(initialMode)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setTimeout(() => setMounted(true), 50) }, [])
@@ -25,9 +26,33 @@ export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, on
     setBusy(true)
     setErr("")
     try {
+      if (loginMode === "ground_owner") {
+        const owner = await authenticateGroundOwner(cleaned, pin)
+        if (owner) {
+          if (onGroundOwnerSuccess) onGroundOwnerSuccess(owner)
+          else onPlayerSuccess(owner)
+          setBusy(false)
+          return
+        }
+        setErr("Ground owner credentials not recognized. Contact admin to register your ground.")
+        setBusy(false)
+        return
+      }
+
+      // Player / Admin mode
       const players = await fetchPlayers()
       const found = players.find(p => p.phone && p.phone.replace(/[^0-9]/g,"").slice(-10) === cleaned)
-      if (!found) { setErr("Mobile number not registered. Contact your admin."); setBusy(false); return }
+      if (!found) {
+        // Check if user is a ground owner logging in under standard tab
+        const owner = await authenticateGroundOwner(cleaned, pin)
+        if (owner) {
+          if (onGroundOwnerSuccess) onGroundOwnerSuccess(owner)
+          else onPlayerSuccess(owner)
+          setBusy(false)
+          return
+        }
+        setErr("Mobile number not registered. Contact your admin."); setBusy(false); return
+      }
       if (pin !== found.pin) { setErr("Wrong PIN. Ask your admin for your PIN."); setBusy(false); return }
       const adminCleaned = ADMIN_PHONE.replace(/[^0-9]/g,"").slice(-10)
       if (cleaned === adminCleaned) {
@@ -62,11 +87,65 @@ export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, on
           background:"#FFFFFF", borderRadius:22, boxShadow:"0 12px 36px rgba(15,23,42,0.08)", border:"1px solid #E2E8F0", padding:"30px 24px",
           opacity:mounted?1:0, transform:mounted?"translateY(0)":"translateY(16px)", transition:"opacity 450ms 100ms, transform 450ms 100ms",
         }}>
-          <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(22,101,52,0.08)", color:"#166534", padding:"4px 10px", borderRadius:999, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:12 }}>
-            <span style={{ width:6, height:6, borderRadius:"50%", background:"#166534" }}></span> Player &amp; Member Portal
+          {/* Mode Switcher Tabs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, background: "#F1F5F9", padding: 4, borderRadius: 12, marginBottom: 18 }}>
+            <button
+              type="button"
+              onClick={() => { setLoginMode("player"); setErr("") }}
+              style={{
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "none",
+                background: loginMode === "player" ? "#FFFFFF" : "transparent",
+                color: loginMode === "player" ? "#166534" : "#64748B",
+                fontWeight: loginMode === "player" ? 800 : 600,
+                fontSize: 13,
+                cursor: "pointer",
+                boxShadow: loginMode === "player" ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "all 150ms ease"
+              }}
+            >
+              🏏 Player / Member
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMode("ground_owner"); setErr("") }}
+              style={{
+                padding: "9px 12px",
+                borderRadius: 9,
+                border: "none",
+                background: loginMode === "ground_owner" ? "#166534" : "transparent",
+                color: loginMode === "ground_owner" ? "#FFFFFF" : "#64748B",
+                fontWeight: loginMode === "ground_owner" ? 800 : 600,
+                fontSize: 13,
+                cursor: "pointer",
+                boxShadow: loginMode === "ground_owner" ? "0 2px 8px rgba(22,101,52,0.2)" : "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                transition: "all 150ms ease"
+              }}
+            >
+              🏟️ Ground Owner
+            </button>
           </div>
-          <h2 style={{ color:"#0F172A", fontSize:23, fontWeight:900, margin:"0 0 6px", fontFamily:"var(--font-head)" }}>Welcome Back 👋</h2>
-          <p style={{ color:"#64748B", fontSize:13, margin:"0 0 20px" }}>Enter your registered mobile number and PIN to enter.</p>
+
+          <div style={{ display:"inline-flex", alignItems:"center", gap:6, background: loginMode === "ground_owner" ? "rgba(34,197,94,0.12)" : "rgba(22,101,52,0.08)", color:"#166534", padding:"4px 10px", borderRadius:999, fontSize:11, fontWeight:700, textTransform:"uppercase", letterSpacing:0.5, marginBottom:12 }}>
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#166534" }}></span> {loginMode === "ground_owner" ? "Ground Owner Desk" : "Player & Member Portal"}
+          </div>
+          <h2 style={{ color:"#0F172A", fontSize:23, fontWeight:900, margin:"0 0 6px", fontFamily:"var(--font-head)" }}>
+            {loginMode === "ground_owner" ? "Ground Desk Login 🏟️" : "Welcome Back 👋"}
+          </h2>
+          <p style={{ color:"#64748B", fontSize:13, margin:"0 0 20px" }}>
+            {loginMode === "ground_owner" 
+              ? "Enter your registered ground mobile & PIN to manage slot bookings."
+              : "Enter your registered mobile number and PIN to enter."}
+          </p>
 
           <label style={{ color:"#0F172A", fontSize:13, fontWeight:700, display:"block", marginBottom:6 }}>Mobile Number</label>
           <div style={{ ...inputWrapStyle, marginBottom:16 }}>
@@ -101,7 +180,7 @@ export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onBack, on
           <button onClick={login} disabled={busy||phone.length<10||pin.length!==4} style={{ width:"100%", height:52, borderRadius:13, background:(phone.length<10||pin.length!==4)?"#E2E8F0":"linear-gradient(135deg,#166534,#15803D)", border:"none", color:"#FFFFFF", fontSize:15, fontWeight:800, cursor:(phone.length<10||pin.length!==4)?"not-allowed":"pointer", transition:"transform 150ms, box-shadow 150ms", boxShadow:(phone.length<10||pin.length!==4)?"none":"0 6px 18px rgba(22,101,52,0.3)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
             onMouseEnter={e=>{ if(!busy && phone.length>=10 && pin.length===4){ e.currentTarget.style.transform="translateY(-1px)"; e.currentTarget.style.boxShadow="0 10px 24px rgba(22,101,52,0.4)" } }}
             onMouseLeave={e=>{ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow=(phone.length<10||pin.length!==4)?"none":"0 6px 18px rgba(22,101,52,0.3)" }}>
-            {busy ? "Signing in..." : "Sign In to Portal →"}
+            {busy ? "Signing in..." : (loginMode === "ground_owner" ? "Sign In to Ground Desk →" : "Sign In to Portal →")}
           </button>
 
           <div style={{ display:"flex", alignItems:"center", gap:12, margin:"18px 0" }}>

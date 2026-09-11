@@ -1662,10 +1662,19 @@ export async function fetchGroundBookings() {
   return []
 }
 
+export function generateBookingId() {
+  const d = new Date()
+  const yy = String(d.getFullYear()).slice(-2)
+  const mm = String(d.getMonth() + 1).padStart(2, "0")
+  const rand = Math.floor(1000 + Math.random() * 9000)
+  return `BK-${yy}${mm}-${rand}`
+}
+
 export async function saveGroundBooking(booking) {
   const currentList = await fetchGroundBookings()
   const now = new Date().toISOString()
   const id = booking.id || ("gb_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7))
+  const booking_id = booking.booking_id || generateBookingId()
   const rate = Number(booking.rate || 0)
   const advance = Number(booking.advance_paid || 0)
   const balance = Math.max(0, rate - advance)
@@ -1680,6 +1689,7 @@ export async function saveGroundBooking(booking) {
   const record = {
     ...booking,
     id,
+    booking_id,
     rate,
     advance_paid: advance,
     balance_due: balance,
@@ -1744,4 +1754,126 @@ export async function updateBookingPaymentStatus(bookingId, { advance_paid, paym
   if (payment_method) updatedBooking.payment_method = payment_method
 
   return await saveGroundBooking(updatedBooking)
+}
+
+// ── Ground Owners Registry & Authentication ────────────────────────────────
+const GROUND_OWNERS_STORAGE_KEY = "selected_ground_owners_cache"
+
+export async function fetchGroundOwners() {
+  try {
+    const { data, error } = await supabase.from("settings").select("value").eq("key", "ground_owners").maybeSingle()
+    if (!error && data?.value) {
+      const parsed = JSON.parse(data.value)
+      if (Array.isArray(parsed)) {
+        try { localStorage.setItem(GROUND_OWNERS_STORAGE_KEY, data.value) } catch {}
+        return parsed
+      }
+    }
+  } catch (err) {
+    console.warn("fetchGroundOwners error:", err)
+  }
+  try {
+    const cached = localStorage.getItem(GROUND_OWNERS_STORAGE_KEY)
+    if (cached) {
+      const parsed = JSON.parse(cached)
+      if (Array.isArray(parsed)) return parsed
+    }
+  } catch {}
+  return []
+}
+
+export async function saveGroundOwner(owner) {
+  const currentList = await fetchGroundOwners()
+  const now = new Date().toISOString()
+  const id = owner.id || ("go_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7))
+  const cleanPhone = (owner.phone || "").replace(/[^0-9]/g, "").slice(-10)
+
+  const record = {
+    ...owner,
+    id,
+    phone: cleanPhone,
+    pin: String(owner.pin || "").trim(),
+    name: owner.name?.trim() || "Ground Manager",
+    ground_id: owner.ground_id || "all",
+    ground_name: owner.ground_name || "All Grounds",
+    active: owner.active !== false,
+    role: "ground_owner",
+    updated_at: now,
+    created_at: owner.created_at || now,
+  }
+
+  const idx = currentList.findIndex(o => o.id === id)
+  let updatedList
+  if (idx >= 0) {
+    updatedList = [...currentList]
+    updatedList[idx] = record
+  } else {
+    updatedList = [record, ...currentList]
+  }
+
+  const jsonStr = JSON.stringify(updatedList)
+  try { localStorage.setItem(GROUND_OWNERS_STORAGE_KEY, jsonStr) } catch {}
+
+  const { error } = await supabase.from("settings").upsert({ key: "ground_owners", value: jsonStr })
+  if (error) {
+    console.warn("Supabase ground_owners upsert error:", error)
+  }
+  return record
+}
+
+export async function deleteGroundOwner(ownerId) {
+  const currentList = await fetchGroundOwners()
+  const updatedList = currentList.filter(o => o.id !== ownerId)
+  const jsonStr = JSON.stringify(updatedList)
+  try { localStorage.setItem(GROUND_OWNERS_STORAGE_KEY, jsonStr) } catch {}
+  const { error } = await supabase.from("settings").upsert({ key: "ground_owners", value: jsonStr })
+  if (error) {
+    console.warn("Supabase ground_owners delete error:", error)
+  }
+  return true
+}
+
+export async function authenticateGroundOwner(phone, pin) {
+  const cleaned = (phone || "").replace(/[^0-9]/g, "").slice(-10)
+  const pinStr = String(pin || "").trim()
+  if (cleaned.length !== 10 || pinStr.length !== 4) return null
+
+  // 1. Check ground_owners registry in settings
+  const owners = await fetchGroundOwners()
+  const foundInSettings = owners.find(o => 
+    (o.phone || "").replace(/[^0-9]/g, "").slice(-10) === cleaned &&
+    String(o.pin).trim() === pinStr &&
+    o.active !== false
+  )
+  if (foundInSettings) {
+    return {
+      ...foundInSettings,
+      role: "ground_owner"
+    }
+  }
+
+  // 2. Check players table for role === "ground_owner"
+  try {
+    const players = await fetchPlayers()
+    const foundPlayer = players.find(p =>
+      (p.phone || "").replace(/[^0-9]/g, "").slice(-10) === cleaned &&
+      String(p.pin).trim() === pinStr &&
+      p.role === "ground_owner"
+    )
+    if (foundPlayer) {
+      return {
+        id: foundPlayer.id,
+        name: foundPlayer.name,
+        phone: foundPlayer.phone,
+        pin: foundPlayer.pin,
+        ground_id: foundPlayer.ground_id || "all",
+        ground_name: foundPlayer.ground_name || "All Grounds",
+        role: "ground_owner"
+      }
+    }
+  } catch (err) {
+    console.warn("authenticateGroundOwner player check error:", err)
+  }
+
+  return null
 }

@@ -81,6 +81,7 @@ const RegistrationSubmittedScreen = lazyWithRetry(() => import("./components/Log
 const AdminPortal = lazyWithRetry(() => import("./components/AdminPortal.jsx"))
 const PlayerPortal = lazyWithRetry(() => import("./components/PlayerPortal.jsx"))
 const ProPortal = lazyWithRetry(() => import("./components/ProPortal.jsx"))
+const GroundOwnerPortal = lazyWithRetry(() => import("./components/GroundOwnerPortal.jsx"))
 const PublicInvitePage = lazyWithRetry(() => import("./components/PublicInvitePage.jsx"))
 const PublicAuctionView = lazyWithRetry(() => import("./components/PublicAuctionView.jsx"))
 const PublicAuctionRegister = lazyWithRetry(() => import("./components/PublicAuctionRegister.jsx"))
@@ -125,6 +126,8 @@ export default function App() {
   const [screen, setScreen]          = useState("home")
   const [loggedPlayer, setPlayer]    = useState(null)
   const [isAdmin, setIsAdmin]        = useState(false)
+  const [isGroundOwner, setIsGroundOwner] = useState(false)
+  const [loginInitialMode, setLoginInitialMode] = useState("player")
   const [matches, setMatches]        = useState([])
   const [loadingMatches, setLoading] = useState(false)
   const [joinToken, setJoinToken]    = useState(null)
@@ -148,6 +151,8 @@ export default function App() {
       setIsAdmin(true); setIsOrganizer(true); setPlayer(saved.player); setScreen("portal")
     } else if (saved?.role === "pro" && saved?.player) {
       setIsAdmin(false); setIsPro(true); setPlayer(saved.player); setScreen("portal")
+    } else if (saved?.role === "ground_owner" && saved?.player) {
+      setIsAdmin(false); setIsGroundOwner(true); setPlayer(saved.player); setScreen("portal")
     } else if (saved?.role === "player" && saved?.player) {
       setIsAdmin(false); setPlayer(saved.player)
       loadMatches().then(() => setScreen("portal"))
@@ -173,14 +178,25 @@ export default function App() {
     setIsAdmin(admin)
     setIsOrganizer(organizer)
     setIsPro(pro)
+    setIsGroundOwner(false)
     setPlayer(player)
     if (!admin) await loadMatches()
     saveSession(founder ? "founder" : (organizer ? "organizer" : (pro ? "pro" : "player")), player)
     setScreen("portal")
   }
 
+  const handleGroundOwnerLogin = (owner) => {
+    setIsGroundOwner(true)
+    setIsAdmin(false)
+    setIsOrganizer(false)
+    setIsPro(false)
+    setPlayer(owner)
+    saveSession("ground_owner", owner)
+    setScreen("portal")
+  }
+
   const handleLogout = () => {
-    clearSession(); setPlayer(null); setIsAdmin(false); setIsPro(false); setIsOrganizer(false); setMatches([]); setScreen("home")
+    clearSession(); setPlayer(null); setIsAdmin(false); setIsPro(false); setIsOrganizer(false); setIsGroundOwner(false); setMatches([]); setScreen("home")
   }
 
   return (
@@ -190,13 +206,29 @@ export default function App() {
         {screen==="liveAuction"  && <PublicAuctionView auctionCode={liveAuctionCode}/>}
         {screen==="teamView"     && <TeamOwnerView auctionCode={teamViewParams?.auctionCode} teamId={teamViewParams?.teamId}/>}
         {screen==="auctionRegister" && <PublicAuctionRegister auctionCode={registerAuctionCode}/>}
-        {screen==="home"         && <HomeScreen onLogin={() => setScreen("login")} onRegister={() => setScreen("register")}/>}
+        {screen==="home"         && (
+          <HomeScreen 
+            onLogin={(mode) => { setLoginInitialMode(mode === "ground_owner" ? "ground_owner" : "player"); setScreen("login") }} 
+            onRegister={() => setScreen("register")}
+            onGroundOwnerLogin={() => { setLoginInitialMode("ground_owner"); setScreen("login") }}
+          />
+        )}
         {screen==="register"     && <RegisterScreen onSuccess={() => setScreen("registered")} onBack={() => setScreen("home")}/>}
         {screen==="registered"   && <RegistrationSubmittedScreen onBack={() => setScreen("home")}/>}
-        {screen==="login"        && <UnifiedLoginScreen onAdminSuccess={handleLogin} onPlayerSuccess={handleLogin} onBack={() => setScreen("home")} onRegister={() => setScreen("register")}/>}
+        {screen==="login"        && (
+          <UnifiedLoginScreen 
+            initialMode={loginInitialMode}
+            onAdminSuccess={handleLogin} 
+            onPlayerSuccess={handleLogin} 
+            onGroundOwnerSuccess={handleGroundOwnerLogin}
+            onBack={() => setScreen("home")} 
+            onRegister={() => setScreen("register")}
+          />
+        )}
         {screen==="portal"       && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}
-        {screen==="portal"       && !isAdmin && isPro && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
-        {screen==="portal"       && !isAdmin && !isPro && (
+        {screen==="portal"       && !isAdmin && isGroundOwner && <GroundOwnerPortal owner={loggedPlayer} onLogout={handleLogout}/>}
+        {screen==="portal"       && !isAdmin && !isGroundOwner && isPro && <ProPortal player={loggedPlayer} onLogout={handleLogout}/>}
+        {screen==="portal"       && !isAdmin && !isGroundOwner && !isPro && (
           (loadingMatches || !loggedPlayer)
             ? <div style={{ minHeight:"100vh",background:"#FBF3E7",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>
             : <PlayerPortal player={loggedPlayer} matches={matches} onLogout={handleLogout}/>

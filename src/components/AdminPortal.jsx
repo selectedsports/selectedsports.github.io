@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check, Ban, Shuffle } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import GroundBookingsSection from "./GroundBookingsSection.jsx"
 import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp, stepBidPointsUp, stepBidPointsDown } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
-import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
+import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull, waGroundOwnerCredentials } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
@@ -4538,10 +4538,33 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
         >
           <Calendar size={15} /> 📅 Slot Diary &amp; Bookings
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("owners")}
+          style={{
+            padding: "9px 18px",
+            borderRadius: 10,
+            border: activeTab === "owners" ? "1.5px solid #166534" : "1.5px solid #E2E8F0",
+            background: activeTab === "owners" ? "#DCFCE7" : "#FFFFFF",
+            color: activeTab === "owners" ? "#166534" : "#64748B",
+            fontSize: 13,
+            fontWeight: activeTab === "owners" ? 800 : 600,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            transition: "all 150ms ease"
+          }}
+        >
+          <ShieldCheck size={15} /> 👥 Ground Owner Logins
+        </button>
       </div>
 
       {activeTab === "bookings" ? (
         <GroundBookingsSection grounds={grounds} initialGroundId={selectedGroundForBooking} isMobile={isMobile} />
+      ) : activeTab === "owners" ? (
+        <GroundOwnersManagement grounds={grounds} isMobile={isMobile} />
       ) : (
         <>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18,gap:12}}>
@@ -4671,6 +4694,346 @@ function GroundsPage({ grounds, matches, onRefresh, isMobile }) {
       {editG&&<div style={mStyle}><div style={mBox}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{margin:0,fontSize:16,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Edit Ground</h3><button onClick={()=>setEditG(null)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"#9ca3af"}}>×</button></div><GForm f={editForm} setF={setEditForm}/><div style={{display:"flex",gap:10,marginTop:18}}><button onClick={()=>setEditG(null)} style={{flex:1,padding:"12px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={editSubmit} disabled={busy} style={{flex:2,padding:"12px",borderRadius:9,background:"#FFFFFF",border:"none",color:"#0F172A",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"Saving...":"Save"}</button></div></div></div>}
       {delG&&<div style={mStyle}><div style={{...mBox,maxWidth:360}}><div style={{textAlign:"center",padding:"10px 0 18px"}}><div style={{fontSize:40,marginBottom:12}}>⚠️</div><h3 style={{margin:"0 0 8px",fontSize:17,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Delete Ground?</h3><p style={{color:"#6b7280",fontSize:13,margin:0}}>Delete <strong>{delG.name}</strong>?</p></div><div style={{display:"flex",gap:10}}><button onClick={()=>setDelG(null)} style={{flex:1,padding:"13px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={delSubmit} disabled={busy} style={{flex:1,padding:"13px",borderRadius:9,background:"#fee2e2",border:"1.5px solid #fecaca",color:"#991b1b",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"...":"Yes, Delete"}</button></div></div></div>}
         </>
+      )}
+    </div>
+  )
+}
+
+
+// ── Ground Owners Management (Admin Component) ──────────────────────────────
+function GroundOwnersManagement({ grounds = [], isMobile = false }) {
+  const [owners, setOwners] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAdd, setShowAdd] = useState(false)
+  const [editingOwner, setEditingOwner] = useState(null)
+  const [delOwner, setDelOwner] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const empty = { name: "", phone: "", pin: "", ground_id: grounds[0]?.id || "all" }
+  const [form, setForm] = useState(empty)
+  const [showPins, setShowPins] = useState({})
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const data = await fetchGroundOwners()
+      setOwners(data || [])
+    } catch (e) {
+      console.error("Error loading ground owners:", e)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleOpenAdd = () => {
+    setEditingOwner(null)
+    setForm({ name: "", phone: "", pin: "", ground_id: grounds[0]?.id || "all" })
+    setShowAdd(true)
+  }
+
+  const handleOpenEdit = (owner) => {
+    setEditingOwner(owner)
+    setForm({
+      name: owner.name || "",
+      phone: owner.phone || "",
+      pin: owner.pin || "",
+      ground_id: owner.ground_id || "all"
+    })
+    setShowAdd(true)
+  }
+
+  const handleSave = async (e) => {
+    e.preventDefault()
+    if (!form.name.trim()) { alert("Please enter ground owner name"); return }
+    const cleanPhone = (form.phone || "").replace(/[^0-9]/g, "").slice(-10)
+    if (cleanPhone.length !== 10) { alert("Please enter a valid 10-digit mobile number"); return }
+    const cleanPin = String(form.pin || "").trim()
+    if (cleanPin.length !== 4) { alert("Please enter a 4-digit PIN"); return }
+
+    const selGround = grounds.find(g => String(g.id) === String(form.ground_id))
+    const groundName = form.ground_id === "all" ? "All Grounds" : (selGround?.name || "Assigned Ground")
+
+    setBusy(true)
+    try {
+      await saveGroundOwner({
+        id: editingOwner?.id,
+        name: form.name.trim(),
+        phone: cleanPhone,
+        pin: cleanPin,
+        ground_id: form.ground_id,
+        ground_name: groundName,
+        active: true
+      })
+      setShowAdd(false)
+      setEditingOwner(null)
+      setForm(empty)
+      await load()
+    } catch (err) {
+      alert(err.message)
+    }
+    setBusy(false)
+  }
+
+  const handleDelete = async () => {
+    if (!delOwner) return
+    setBusy(true)
+    try {
+      await deleteGroundOwner(delOwner.id)
+      setDelOwner(null)
+      await load()
+    } catch (err) {
+      alert(err.message)
+    }
+    setBusy(false)
+  }
+
+  const handleSendCredentials = (owner) => {
+    const text = waGroundOwnerCredentials(owner)
+    const cleanPhone = (owner.phone || "").replace(/[^0-9]/g, "").slice(-10)
+    const url = "https://wa.me/91" + cleanPhone + "?text=" + encodeURIComponent(text)
+    window.open(url, "_blank")
+  }
+
+  const iS = { width: "100%", padding: "10px 12px", borderRadius: 9, border: "1.5px solid #E2E8F0", fontSize: 13.5, outline: "none", background: "#FFFFFF", boxSizing: "border-box", fontFamily: "var(--font-body)" }
+  const lS = { display: "block", fontSize: 12, fontWeight: 700, color: "#334155", marginBottom: 5 }
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h2 style={{ color: "#0F172A", fontSize: isMobile ? 20 : 24, fontWeight: 900, margin: 0, fontFamily: "var(--font-head)" }}>
+              Ground Owner Logins
+            </h2>
+            <span style={{ fontSize: 11, background: "rgba(22,101,52,0.12)", color: "#166534", padding: "3px 8px", borderRadius: 6, fontWeight: 800 }}>
+              {owners.length} Accounts
+            </span>
+          </div>
+          <div style={{ fontSize: 13, color: "#64748B", marginTop: 4 }}>
+            Create separate login credentials for ground owners so they can manage slot bookings online.
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleOpenAdd}
+          style={{
+            padding: "10px 16px",
+            borderRadius: 12,
+            background: "#166534",
+            border: "none",
+            color: "#FFFFFF",
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            fontFamily: "var(--font-head)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6
+          }}
+        >
+          <Plus size={15} /> Add Ground Owner
+        </button>
+      </div>
+
+      {loading ? (
+        <Card style={{ padding: "40px", textAlign: "center" }}><Spinner /></Card>
+      ) : owners.length === 0 ? (
+        <Card style={{ padding: "40px 20px", textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(22,101,52,0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+            <ShieldCheck size={28} color="#166534" />
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 16, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+            No Ground Owner Accounts Yet
+          </div>
+          <p style={{ fontSize: 13, color: "#64748B", maxWidth: 380, margin: "6px auto 16px" }}>
+            Add your ground partners and owners so they can log in via mobile and 4-digit PIN to track bookings and share confirmation slips.
+          </p>
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            style={{ padding: "10px 18px", borderRadius: 10, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+          >
+            <Plus size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Add First Ground Owner
+          </button>
+        </Card>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {owners.map(o => {
+            const isPinVisible = showPins[o.id]
+            return (
+              <div
+                key={o.id}
+                style={{
+                  background: "#FFFFFF",
+                  borderRadius: 14,
+                  border: "1px solid #E2E8F0",
+                  padding: "16px 18px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 14,
+                  flexWrap: "wrap",
+                  boxShadow: "0 1px 3px rgba(15,23,42,0.04)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 200 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: "#DCFCE7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <MapPin size={20} color="#166534" />
+                  </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontWeight: 800, fontSize: 15, color: "#0F172A" }}>{o.name}</span>
+                      <span style={{ fontSize: 11, background: "#F1F5F9", color: "#475569", padding: "2px 7px", borderRadius: 5, fontWeight: 700 }}>
+                        {o.ground_name || "Assigned Ground"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4, fontSize: 12.5, color: "#64748B" }}>
+                      <span>📱 +91 <strong>{o.phone}</strong></span>
+                      <span>
+                        PIN: <strong style={{ letterSpacing: isPinVisible ? 1 : 2, fontFamily: "monospace" }}>{isPinVisible ? o.pin : "••••"}</strong>
+                        <button
+                          type="button"
+                          onClick={() => setShowPins(p => ({ ...p, [o.id]: !p[o.id] }))}
+                          style={{ background: "none", border: "none", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", marginLeft: 4 }}
+                        >
+                          {isPinVisible ? "Hide" : "Show"}
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => handleSendCredentials(o)}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 9,
+                      background: "#DCFCE7",
+                      border: "1px solid #86EFAC",
+                      color: "#166534",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5
+                    }}
+                    title="Send Login Credentials to Ground Owner on WhatsApp"
+                  >
+                    <span>📲 Send WhatsApp PIN</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(o)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 9,
+                      background: "#F8FAF8",
+                      border: "1px solid #E2E8F0",
+                      color: "#475569",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    ✏️ Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDelOwner(o)}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 9,
+                      background: "#FEF2F2",
+                      border: "1px solid #FCA5A5",
+                      color: "#DC2626",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer"
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Add / Edit Ground Owner Modal */}
+      {showAdd && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, padding: 16 }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 18, width: "100%", maxWidth: 440, padding: "24px 22px", boxShadow: "0 20px 50px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontWeight: 900, fontSize: 17, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+                {editingOwner ? "Edit Ground Owner" : "Add Ground Owner Login"}
+              </div>
+              <button type="button" onClick={() => setShowAdd(false)} style={{ background: "none", border: "none", fontSize: 22, color: "#94A3B8", cursor: "pointer" }}>×</button>
+            </div>
+
+            <form onSubmit={handleSave} style={{ display: "grid", gap: 14 }}>
+              <div>
+                <label style={lS}>Ground Owner / Manager Name *</label>
+                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Farhan Pathan" style={iS} required />
+              </div>
+
+              <div>
+                <label style={lS}>10-Digit Mobile Number *</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ padding: "10px 12px", background: "#F1F5F9", borderRadius: 9, fontSize: 13, fontWeight: 700, color: "#475569" }}>+91</div>
+                  <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, "").slice(0, 10) })} placeholder="10-digit mobile" style={{ ...iS, flex: 1 }} required />
+                </div>
+              </div>
+
+              <div>
+                <label style={lS}>4-Digit Login PIN *</label>
+                <input type="tel" inputMode="numeric" pattern="[0-9]*" maxLength={4} value={form.pin} onChange={e => setForm({ ...form, pin: e.target.value.replace(/[^0-9]/g, "").slice(0, 4) })} placeholder="e.g. 1234" style={{ ...iS, letterSpacing: 4, textAlign: "center", fontSize: 16, fontWeight: 800 }} required />
+              </div>
+
+              <div>
+                <label style={lS}>Assigned Ground / Turf</label>
+                <select value={form.ground_id} onChange={e => setForm({ ...form, ground_id: e.target.value })} style={iS}>
+                  <option value="all">All Grounds (Full Access)</option>
+                  {grounds.map(g => (
+                    <option key={g.id} value={String(g.id)}>{g.name} ({g.location || "Pune"})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                <button type="button" onClick={() => setShowAdd(false)} style={{ flex: 1, padding: "12px", borderRadius: 10, border: "1.5px solid #CBD5E1", background: "#FFFFFF", color: "#475569", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                <button type="submit" disabled={busy} style={{ flex: 2, padding: "12px", borderRadius: 10, background: "#166534", border: "none", color: "#FFFFFF", fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)" }}>
+                  {busy ? "Saving..." : (editingOwner ? "Update Login" : "Create Login")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {delOwner && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500, padding: 16 }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 16, maxWidth: 360, width: "100%", padding: 22, textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
+            <h3 style={{ margin: "0 0 6px", fontSize: 17, fontWeight: 800, color: "#0F172A" }}>Delete Ground Owner?</h3>
+            <p style={{ margin: "0 0 16px", fontSize: 13, color: "#64748B" }}>
+              Remove ground owner login for <strong>{delOwner.name}</strong>?
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button type="button" onClick={() => setDelOwner(null)} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1px solid #CBD5E1", background: "#FFFFFF", fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+              <button type="button" onClick={handleDelete} disabled={busy} style={{ flex: 1, padding: "10px", borderRadius: 8, background: "#DC2626", border: "none", color: "#FFFFFF", fontWeight: 800, cursor: "pointer" }}>
+                {busy ? "..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

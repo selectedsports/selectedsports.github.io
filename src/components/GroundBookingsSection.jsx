@@ -35,7 +35,7 @@ const AMENITIES_OPTIONS = [
   "Matting Wicket"
 ]
 
-export default function GroundBookingsSection({ grounds = [], initialGroundId = null, isMobile = false }) {
+export default function GroundBookingsSection({ grounds = [], initialGroundId = null, isMobile = false, lockGround = false, groundOwner = null }) {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -47,6 +47,8 @@ export default function GroundBookingsSection({ grounds = [], initialGroundId = 
   const [settlingBooking, setSettlingBooking] = useState(null)
   const [settleAmount, setSettleAmount] = useState("")
   const [settleMode, setSettleMode] = useState("Cash")
+  const [confirmedBooking, setConfirmedBooking] = useState(null)
+  const [copiedId, setCopiedId] = useState(false)
 
   const todayStr = new Date().toISOString().split("T")[0]
   const tomorrow = new Date()
@@ -395,26 +397,46 @@ export default function GroundBookingsSection({ grounds = [], initialGroundId = 
 
           {/* Ground Venue selector */}
           <div style={{ width: isMobile ? "100%" : 220 }}>
-            <select
-              value={filterGround}
-              onChange={e => setFilterGround(e.target.value)}
-              style={{
+            {lockGround ? (
+              <div style={{
                 width: "100%",
                 padding: "9px 12px",
                 borderRadius: 9,
-                border: "1.5px solid #CBD5E1",
+                background: "#DCFCE7",
+                border: "1.5px solid #86EFAC",
+                color: "#166534",
                 fontSize: 13,
-                background: "#FAFBFB",
-                color: "#0F172A",
-                outline: "none",
-                fontWeight: 600
-              }}
-            >
-              <option value="all">All Grounds &amp; Venues</option>
-              {grounds.map(g => (
-                <option key={g.id} value={String(g.id)}>{g.name}</option>
-              ))}
-            </select>
+                fontWeight: 800,
+                boxSizing: "border-box",
+                display: "flex",
+                alignItems: "center",
+                gap: 6
+              }}>
+                <MapPin size={14} color="#166534" />
+                <span>{grounds.find(g => String(g.id) === String(filterGround))?.name || groundOwner?.ground_name || "Assigned Ground"}</span>
+              </div>
+            ) : (
+              <select
+                value={filterGround}
+                onChange={e => setFilterGround(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  borderRadius: 9,
+                  border: "1.5px solid #CBD5E1",
+                  fontSize: 13,
+                  background: "#FAFBFB",
+                  color: "#0F172A",
+                  outline: "none",
+                  fontWeight: 600
+                }}
+              >
+                <option value="all">All Grounds &amp; Venues</option>
+                {grounds.map(g => (
+                  <option key={g.id} value={String(g.id)}>{g.name}</option>
+                ))}
+              </select>
+            )}
           </div>
         </div>
 
@@ -525,6 +547,24 @@ export default function GroundBookingsSection({ grounds = [], initialGroundId = 
                     }}>
                       <Calendar size={12} /> {fmtDate(b.date)} {isToday && "· TODAY"}
                     </span>
+
+                    {b.booking_id && (
+                      <span style={{
+                        background: "#EFF6FF",
+                        border: "1px solid #BFDBFE",
+                        color: "#1E40AF",
+                        padding: "3px 8px",
+                        borderRadius: 6,
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        letterSpacing: 0.3
+                      }}>
+                        🆔 {b.booking_id}
+                      </span>
+                    )}
 
                     <span style={{ 
                       background: "rgba(59,130,246,0.1)", 
@@ -797,16 +837,154 @@ export default function GroundBookingsSection({ grounds = [], initialGroundId = 
         </div>
       )}
 
+      {/* Unique Booking ID Confirmation Modal */}
+      {confirmedBooking && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600, padding: 14 }}>
+          <div style={{ background: "#FFFFFF", borderRadius: 20, width: "100%", maxWidth: 480, padding: isMobile ? "22px 18px" : "28px 24px", boxShadow: "0 24px 60px rgba(0,0,0,0.3)", textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#DCFCE7", color: "#166534", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
+              <CheckCircle2 size={32} />
+            </div>
+
+            <h3 style={{ margin: "0 0 6px", fontSize: 20, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)" }}>
+              Slot Booking Reserved!
+            </h3>
+            <div style={{ fontSize: 13, color: "#64748B", marginBottom: 18 }}>
+              Official booking recorded. Share the confirmation slip with the captain.
+            </div>
+
+            {/* Unique Booking ID Card */}
+            <div style={{
+              background: "#F0FDF4",
+              border: "2px solid #86EFAC",
+              borderRadius: 14,
+              padding: "16px",
+              marginBottom: 16,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#166534", textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>
+                Official Confirmation Reference
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 900, color: "#0F172A", letterSpacing: 1, fontFamily: "var(--font-head)" }}>
+                {confirmedBooking.booking_id || confirmedBooking.id}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(confirmedBooking.booking_id || confirmedBooking.id);
+                  setCopiedId(true);
+                  setTimeout(() => setCopiedId(false), 2000);
+                }}
+                style={{
+                  marginTop: 8,
+                  padding: "5px 12px",
+                  borderRadius: 6,
+                  background: copiedId ? "#166534" : "#FFFFFF",
+                  border: "1px solid #86EFAC",
+                  color: copiedId ? "#FFFFFF" : "#166534",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                {copiedId ? "✓ Copied to Clipboard" : "📋 Copy Booking ID"}
+              </button>
+            </div>
+
+            {/* Quick Summary Grid */}
+            <div style={{ background: "#F8FAF8", borderRadius: 12, padding: "14px", border: "1px solid #E2E8F0", marginBottom: 20, textAlign: "left", fontSize: 13 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#64748B" }}>Ground / Turf:</span>
+                <strong style={{ color: "#0F172A" }}>{confirmedBooking.ground_name}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#64748B" }}>Date &amp; Slot:</span>
+                <strong style={{ color: "#0F172A" }}>{fmtDate(confirmedBooking.date)} · {confirmedBooking.time_slot}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#64748B" }}>Booked By:</span>
+                <strong style={{ color: "#0F172A" }}>{confirmedBooking.customer_name} ({confirmedBooking.customer_phone})</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                <span style={{ color: "#64748B" }}>Total Rent:</span>
+                <strong style={{ color: "#0F172A" }}>₹{Number(confirmedBooking.rate || 0).toLocaleString("en-IN")}</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #E2E8F0", paddingTop: 6, marginTop: 6 }}>
+                <span style={{ color: "#64748B" }}>Advance Paid:</span>
+                <strong style={{ color: "#166534" }}>₹{Number(confirmedBooking.advance_paid || 0).toLocaleString("en-IN")}</strong>
+              </div>
+              {Number(confirmedBooking.balance_due || 0) > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+                  <span style={{ color: "#DC2626", fontWeight: 700 }}>Balance to Collect:</span>
+                  <strong style={{ color: "#DC2626", fontWeight: 800 }}>₹{Number(confirmedBooking.balance_due).toLocaleString("en-IN")}</strong>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: "grid", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  handleSendWhatsApp(confirmedBooking);
+                  setConfirmedBooking(null);
+                }}
+                style={{
+                  padding: "14px 20px",
+                  borderRadius: 12,
+                  background: "#166534",
+                  border: "none",
+                  color: "#FFFFFF",
+                  fontSize: 14,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  fontFamily: "var(--font-head)",
+                  boxShadow: "0 6px 18px rgba(22,101,52,0.3)"
+                }}
+              >
+                <span>📲 Send Confirmation to Captain on WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setConfirmedBooking(null)}
+                style={{
+                  padding: "11px 16px",
+                  borderRadius: 10,
+                  background: "#FFFFFF",
+                  border: "1.5px solid #CBD5E1",
+                  color: "#475569",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                Close &amp; View Diary
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add / Edit Booking Modal */}
       {showModal && (
         <BookingFormModal
           grounds={grounds}
           initialGroundId={filterGround !== "all" ? filterGround : (grounds[0]?.id || null)}
           booking={editingBooking}
+          lockGround={lockGround}
           onClose={() => setShowModal(false)}
-          onSaved={async () => {
+          onSaved={async (savedBooking) => {
             setShowModal(false)
             await loadData()
+            if (savedBooking && !editingBooking) {
+              setConfirmedBooking(savedBooking)
+            }
           }}
           isMobile={isMobile}
         />
@@ -816,7 +994,7 @@ export default function GroundBookingsSection({ grounds = [], initialGroundId = 
 }
 
 // ── Booking Form Modal Component ──────────────────────────────────────────────
-function BookingFormModal({ grounds = [], initialGroundId = null, booking = null, onClose, onSaved, isMobile = false }) {
+function BookingFormModal({ grounds = [], initialGroundId = null, booking = null, onClose, onSaved, isMobile = false, lockGround = false }) {
   const [groundId, setGroundId] = useState(booking?.ground_id || initialGroundId || (grounds[0]?.id || ""))
   const [customGround, setCustomGround] = useState(booking?.ground_name || "")
   const [customerName, setCustomerName] = useState(booking?.customer_name || "")
@@ -864,8 +1042,9 @@ function BookingFormModal({ grounds = [], initialGroundId = null, booking = null
 
     setBusy(true)
     try {
-      await saveGroundBooking({
+      const savedResult = await saveGroundBooking({
         id: booking?.id,
+        booking_id: booking?.booking_id,
         ground_id: groundId || null,
         ground_name: finalGroundName,
         customer_name: customerName.trim(),
@@ -882,7 +1061,7 @@ function BookingFormModal({ grounds = [], initialGroundId = null, booking = null
         notes: notes.trim(),
         status
       })
-      onSaved()
+      onSaved(savedResult)
     } catch (err) {
       alert(err.message)
     }

@@ -16,7 +16,7 @@ function getCachedStats() {
   return { p: 80, m: 43, t: 24 }
 }
 
-export default function HomeScreen({ onLogin, onRegister }) {
+export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin }) {
   const isMobile = useMobile()
   const initial = useMemo(() => getCachedStats(), [])
 
@@ -323,6 +323,33 @@ export default function HomeScreen({ onLogin, onRegister }) {
           >
             <Sparkles size={16} color="#166534"/>
             <span>Create New Player Account</span>
+          </button>
+
+          <button
+            onClick={() => onGroundOwnerLogin ? onGroundOwnerLogin() : onLogin("ground_owner")}
+            style={{
+              width: "100%",
+              padding: "13px 18px",
+              borderRadius: 15,
+              background: "#F0FDF4",
+              border: "1.5px solid #86EFAC",
+              color: "#166534",
+              fontSize: 14,
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "var(--font-head)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              boxShadow: "0 2px 8px rgba(22,101,52,0.06)",
+              transition: "all 150ms ease"
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#DCFCE7" }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#F0FDF4" }}
+          >
+            <span>🏟️ Ground Owner Login</span>
+            <span style={{ fontSize: 11, background: "rgba(22,101,52,0.12)", padding: "2px 7px", borderRadius: 6 }}>Slot Diary ➔</span>
           </button>
         </div>
 
