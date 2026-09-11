@@ -5,7 +5,7 @@ import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } fro
 import { fetchPlayers, fetchGrounds, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
-import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp } from "../constants.js"
+import { fmtDate, dayName, PAL, matchTitle, AUCTION_PLANS, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite, exportAuctionPoolPdf, exportAuctionPoolCsv, generateAuctionPoolWhatsAppText, shareAuctionPoolOnWhatsApp, stepBidPointsUp, stepBidPointsDown } from "../constants.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { waInvite, waInviteWithLink, waPublicLink, waPayment, waReminder, waSquadFull } from "./whatsapp.js"
 import { supabase } from "../supabase.js"
@@ -2108,7 +2108,7 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
               <span style={{ fontSize:11, color:"#166534", fontWeight:800 }}>Default: 🪙 1,000</span>
             </div>
             <div style={{ display:"flex", gap:6, marginBottom:8 }}>
-              {[500, 1000, 2000, 5000].map(val => (
+              {[1000, 2000, 5000, 10000].map(val => (
                 <button
                   key={val}
                   type="button"
@@ -2132,7 +2132,7 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button
                 type="button"
-                onClick={() => setBidIncrement(prev => String(Math.max(500, (Number(prev) || 1000) - 500)))}
+                onClick={() => setBidIncrement(prev => String(stepBidPointsDown(prev, 1000)))}
                 style={{ width: 42, height: 42, borderRadius: 9, border: "1.5px solid #CBD5E1", background: "#FFFFFF", color: "#0F172A", fontSize: 20, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                 title="Decrease bid points increment"
               >
@@ -2140,7 +2140,7 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
               </button>
               <input
                 type="number"
-                min="1"
+                min="1000"
                 value={bidIncrement}
                 onChange={e => setBidIncrement(e.target.value)}
                 placeholder="1000"
@@ -2148,12 +2148,15 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
               />
               <button
                 type="button"
-                onClick={() => setBidIncrement(prev => String((Number(prev) || 1000) + 500))}
+                onClick={() => setBidIncrement(prev => String(stepBidPointsUp(prev, 1000)))}
                 style={{ width: 42, height: 42, borderRadius: 9, border: "1.5px solid #CBD5E1", background: "#FFFFFF", color: "#0F172A", fontSize: 20, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
                 title="Increase bid points increment"
               >
                 +
               </button>
+            </div>
+            <div style={{ fontSize: 10.5, color: "#64748B", marginTop: 4 }}>
+              Increments: <strong>🪙 1,000</strong> (under 20k) · <strong>🪙 2,000</strong> (above 20k)
             </div>
           </div>
 

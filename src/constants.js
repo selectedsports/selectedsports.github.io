@@ -1181,4 +1181,39 @@ export function exportAuctionPoolPdf(auction, poolPlayers) {
   }
 }
 
+/**
+ * Dynamic bid step calculation:
+ * - Increases by 1,000 Coins when under 20,000
+ * - Increases by 2,000 Coins (2k) every time once reaching or exceeding 20,000
+ */
+export function stepBidPointsUp(currentVal, minFloor = 1000) {
+  const num = Number(currentVal) || 0
+  if (num < minFloor) {
+    return minFloor
+  }
+  if (num < 20000) {
+    const base = Math.floor(num / 1000) * 1000
+    return base + 1000
+  }
+  const base = Math.floor(num / 2000) * 2000
+  return base + 2000
+}
 
+/**
+ * Dynamic bid step down:
+ * - Decreases by 2,000 Coins when above 20,000 (down to 20,000)
+ * - Decreases by 1,000 Coins when 20,000 or below (down to minFloor)
+ */
+export function stepBidPointsDown(currentVal, minFloor = 1000) {
+  const num = Number(currentVal) || 0
+  let next
+  if (num > 20000) {
+    const base = Math.ceil(num / 2000) * 2000
+    next = base - 2000
+    if (next < 20000) next = 20000
+  } else {
+    const base = Math.ceil(num / 1000) * 1000
+    next = base - 1000
+  }
+  return Math.max(minFloor, next)
+}
