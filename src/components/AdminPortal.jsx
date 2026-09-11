@@ -2129,14 +2129,32 @@ function EditAuctionDateTimeModal({ auction, onClose, onUpdated, isMobile }) {
                 </button>
               ))}
             </div>
-            <input
-              type="number"
-              min="1"
-              value={bidIncrement}
-              onChange={e => setBidIncrement(e.target.value)}
-              placeholder="1000"
-              style={iS}
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => setBidIncrement(prev => String(Math.max(500, (Number(prev) || 1000) - 500)))}
+                style={{ width: 42, height: 42, borderRadius: 9, border: "1.5px solid #CBD5E1", background: "#FFFFFF", color: "#0F172A", fontSize: 20, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                title="Decrease bid points increment"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="1"
+                value={bidIncrement}
+                onChange={e => setBidIncrement(e.target.value)}
+                placeholder="1000"
+                style={{ ...iS, textAlign: "center", fontWeight: 800 }}
+              />
+              <button
+                type="button"
+                onClick={() => setBidIncrement(prev => String((Number(prev) || 1000) + 500))}
+                style={{ width: 42, height: 42, borderRadius: 9, border: "1.5px solid #CBD5E1", background: "#FFFFFF", color: "#0F172A", fontSize: 20, fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+                title="Increase bid points increment"
+              >
+                +
+              </button>
+            </div>
           </div>
 
           <div style={{ display:"flex", gap:10, marginTop:10 }}>

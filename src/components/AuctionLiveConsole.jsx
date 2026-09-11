@@ -182,7 +182,25 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             </button>
           ))}
         </div>
-        <input type="number" min="1" value={increment} onChange={e=>setIncrement(e.target.value)} style={{ width:"100%", padding:"11px 12px", borderRadius:9, border:"1.5px solid #e5e7eb", fontSize:14, outline:"none", background:"#fafafa", boxSizing:"border-box", marginBottom:16 }}/>
+        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:16 }}>
+          <button
+            type="button"
+            onClick={() => setIncrement(prev => String(Math.max(500, (Number(prev)||1000) - 500)))}
+            style={{ width:42, height:42, borderRadius:9, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:20, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+            title="Decrease starting bid increment"
+          >
+            −
+          </button>
+          <input type="number" min="1" value={increment} onChange={e=>setIncrement(e.target.value)} style={{ flex:1, padding:"11px 12px", borderRadius:9, border:"1.5px solid #e5e7eb", fontSize:14, fontWeight:800, textAlign:"center", outline:"none", background:"#fafafa", boxSizing:"border-box" }}/>
+          <button
+            type="button"
+            onClick={() => setIncrement(prev => String((Number(prev)||1000) + 500))}
+            style={{ width:42, height:42, borderRadius:9, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:20, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+            title="Increase starting bid increment"
+          >
+            +
+          </button>
+        </div>
         <button onClick={doStart} disabled={busy || auctionTeams.length < 2 || tooEarly} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:(busy||auctionTeams.length<2||tooEarly)?"not-allowed":"pointer", opacity:(busy||auctionTeams.length<2||tooEarly)?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
       </Card>
     )
@@ -372,12 +390,33 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             <div style={{ fontSize:12, color:leadingTeam?"#166534":"#94A3B8", fontWeight:700, marginTop:4 }}>{leadingTeam ? `Leading: ${leadingTeam.name}` : "No bids yet"}</div>
           </div>
 
-          <div style={{ marginBottom:10 }}>
-            <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:6, textTransform:"uppercase" }}>Bid Step (🪙)</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:6 }}>
-              {[1000,2000,5000,10000,15000,20000].map(v => (
-                <button key={v} onClick={()=>setBidStep(v)} style={{ padding:"7px 2px", borderRadius:8, border:bidStep===v?"none":"1.5px solid #E2E8F0", background:bidStep===v?"#166534":"#FFFFFF", color:bidStep===v?"#FFFFFF":"#64748B", fontSize:10, fontWeight:700, cursor:"pointer" }}>+{v>=1000?`${v/1000}k`:v}</button>
-              ))}
+          <div style={{ marginBottom:12 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+              <span style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Bid Step / Points Increment</span>
+              <span style={{ fontSize:12, color:"#166534", fontWeight:800, background:"rgba(34,197,94,0.12)", padding:"2px 8px", borderRadius:6 }}>+🪙 {bidStep.toLocaleString("en-IN")}</span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <button
+                type="button"
+                onClick={() => setBidStep(prev => Math.max(500, prev <= 1000 ? 500 : prev <= 2000 ? 1000 : prev <= 5000 ? 2000 : prev <= 10000 ? 5000 : prev <= 15000 ? 10000 : prev - 5000))}
+                style={{ width:38, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+                title="Decrease bid points increment"
+              >
+                −
+              </button>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:4, flex:1 }}>
+                {[1000,2000,5000,10000,15000,20000].map(v => (
+                  <button key={v} onClick={()=>setBidStep(v)} style={{ padding:"7px 2px", borderRadius:8, border:bidStep===v?"none":"1.5px solid #E2E8F0", background:bidStep===v?"#166534":"#FFFFFF", color:bidStep===v?"#FFFFFF":"#64748B", fontSize:10, fontWeight:700, cursor:"pointer" }}>+{v>=1000?`${v/1000}k`:v}</button>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => setBidStep(prev => (prev < 1000 ? 1000 : prev < 2000 ? 2000 : prev < 5000 ? 5000 : prev < 10000 ? 10000 : prev < 15000 ? 15000 : prev < 20000 ? 20000 : prev + 5000))}
+                style={{ width:38, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+                title="Increase bid points increment"
+              >
+                +
+              </button>
             </div>
           </div>
 
@@ -418,10 +457,13 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
           </div>
 
           <div style={{ padding:"12px", background:"#F8FAF8", borderRadius:10, border:"1px solid #E2E8F0", marginBottom:14 }}>
-            <div style={{ fontSize:11, color:"#94A3B8", fontWeight:700, marginBottom:8, textTransform:"uppercase" }}>Manual Bid — jump to any exact amount</div>
-            <div style={{ display:"flex", gap:8 }}>
-              <select value={manualTeamId} onChange={e=>setManualTeamId(e.target.value)} style={{ flex:1, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none", background:"#FFFFFF" }}>
-                <option value="">Team...</option>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Manual Bid — Jump to Exact Amount</span>
+              <span style={{ fontSize:10.5, color:"#64748B" }}>Use + / − to adjust points</span>
+            </div>
+            <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
+              <select value={manualTeamId} onChange={e=>setManualTeamId(e.target.value)} style={{ flex: isMobile ? "1 1 100%" : 1, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none", background:"#FFFFFF" }}>
+                <option value="">Select Team...</option>
                 {auctionTeams.map(t => {
                   const sc = auctionPlayers.filter(p => p.sold_team_id === t.id).length
                   const mb = calculateMaxBid(t.purse_remaining, sc, DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE)
@@ -432,8 +474,48 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
                   )
                 })}
               </select>
-              <input type="number" min="0" value={manualAmount} onChange={e=>setManualAmount(e.target.value)} placeholder={`> 🪙${state.current_bid||0}`} style={{ width:110, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none" }}/>
-              <button onClick={doManualBid} disabled={busy} style={{ padding:"9px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:busy?"not-allowed":"pointer" }}>Bid</button>
+
+              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = Number(manualAmount) || ((state.current_bid || 0) + bidStep)
+                    const minBid = (state.current_bid || 0) + 500
+                    setManualAmount(String(Math.max(minBid, base - bidStep)))
+                  }}
+                  style={{ width:34, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+                  title="Decrease bid points"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="0"
+                  value={manualAmount}
+                  onChange={e=>setManualAmount(e.target.value)}
+                  placeholder={`🪙 ${(state.current_bid||0) + bidStep}`}
+                  style={{ width:105, padding:"8px 6px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:13, fontWeight:800, color:"#0F172A", textAlign:"center", outline:"none", background:"#FFFFFF" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = Number(manualAmount) || (state.current_bid || 0)
+                    setManualAmount(String(base + bidStep))
+                  }}
+                  style={{ width:34, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
+                  title="Increase bid points"
+                >
+                  +
+                </button>
+              </div>
+
+              <button
+                onClick={doManualBid}
+                disabled={busy}
+                style={{ padding:"9px 16px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12.5, fontWeight:800, cursor:busy?"not-allowed":"pointer", fontFamily:"var(--font-head)", whiteSpace:"nowrap" }}
+              >
+                Place Bid
+              </button>
             </div>
           </div>
 
