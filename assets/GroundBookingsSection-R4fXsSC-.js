@@ -1,4 +1,4 @@
-import{ad as s,ac as e,O as ue,N as ae,C as oe,a7 as xe,l as re,k as se,T as ge,z as ie,q as he,K as me,J as fe,D as ce,P as ye,a2 as Fe}from"./vendor-react-ChecQWJN.js";import{aU as U,aJ as z,F as je,S as Se,C as be,af as ve,U as Ce,bt as Be,b4 as ze}from"./index-alKWCsSu.js";function Ie(r,d){const o=`${d}/join/${r.invite_token}`;return`🏏 *Match Availability - ${U(r)}*
+import{ad as s,ac as e,O as ue,N as ae,C as oe,a7 as xe,l as re,k as se,T as ge,z as ie,q as he,K as me,J as fe,D as ce,P as ye,a2 as Fe}from"./vendor-react-ChecQWJN.js";import{aU as U,aJ as z,F as je,S as Se,C as be,af as ve,U as Ce,bt as Be,b4 as ze}from"./index-Brfo_ITr.js";function Ie(r,d){const o=`${d}/join/${r.invite_token}`;return`🏏 *Match Availability - ${U(r)}*
 📅 ${z(r.date)}
 ⏰ ${r.time_slot}
 📍 ${r.ground}
