@@ -1190,10 +1190,35 @@ export async function fetchAuctionState(auctionId = null) {
 }
 
 function nextUnsoldPlayer(players, excludeId) {
-  const eligible = players.filter(p => p.id !== excludeId && p.status === "registered" && !p.is_captain && p.status !== "captain")
-  if (eligible.length === 0) return null
-  const randomIndex = Math.floor(Math.random() * eligible.length)
-  return eligible[randomIndex]
+  // Round 1: Registered players in pool
+  const registered = players.filter(p =>
+    p.id !== excludeId &&
+    p.status === "registered" &&
+    !p.is_captain &&
+    p.status !== "captain" &&
+    p.status !== "dropped" &&
+    p.status !== "waitlist"
+  )
+  if (registered.length > 0) {
+    const randomIndex = Math.floor(Math.random() * registered.length)
+    return registered[randomIndex]
+  }
+
+  // Round 2: Unsold players round (players who went unsold in Round 1)
+  const unsold = players.filter(p =>
+    p.id !== excludeId &&
+    p.status === "unsold" &&
+    !p.is_captain &&
+    p.status !== "captain" &&
+    p.status !== "dropped" &&
+    p.status !== "waitlist"
+  )
+  if (unsold.length > 0) {
+    const randomIndex = Math.floor(Math.random() * unsold.length)
+    return unsold[randomIndex]
+  }
+
+  return null
 }
 
 export async function startAuction(bidIncrement, auctionId = null) {
@@ -1248,7 +1273,11 @@ export async function markPlayerSold(playerId, teamId, amount, auctionId = null)
 }
 
 export async function markPlayerUnsold(playerId, auctionId = null) {
-  const { error } = await supabase.from("auction_players").update({ status: "unsold" }).eq("id", playerId)
+  // If player was already "unsold" when brought up (Round 2), mark "final_unsold"
+  // so all unsold players are cycled through evenly. If they were "registered", mark "unsold".
+  const { data: p } = await supabase.from("auction_players").select("status").eq("id", playerId).maybeSingle()
+  const nextStatus = (p?.status === "unsold") ? "final_unsold" : "unsold"
+  const { error } = await supabase.from("auction_players").update({ status: nextStatus }).eq("id", playerId)
   if (error) throw error
   await advanceToNextPlayer(playerId, auctionId)
 }
@@ -1268,12 +1297,50 @@ async function advanceToNextPlayer(justDecidedId, auctionId = null) {
 }
 
 export async function jumpToAuctionPlayer(playerId, auctionId = null) {
-  const { data: player, error: e1 } = await supabase.from("auction_players").select("base_price").eq("id", playerId).single()
+  const { data: player, error: e1 } = await supabase.from("auction_players").select("base_price, status").eq("id", playerId).single()
   if (e1) throw e1
+  if (player?.status === "final_unsold") {
+    await supabase.from("auction_players").update({ status: "unsold" }).eq("id", playerId)
+  }
   const table = auctionId ? "auctions" : "auction_state"
   const idVal = auctionId || 1
-  const { error: e2 } = await supabase.from(table).update({ current_player_id: playerId, current_bid: player.base_price || 0, current_team_id: null }).eq("id", idVal)
+  const { error: e2 } = await supabase.from(table).update({
+    status: "live",
+    current_player_id: playerId,
+    current_bid: player.base_price || 0,
+    current_team_id: null
+  }).eq("id", idVal)
   if (e2) throw e2
+}
+
+export async function resetAuctionPlayerToPool(playerId) {
+  const { error } = await supabase.from("auction_players").update({
+    status: "registered",
+    sold_price: 0,
+    sold_team_id: null,
+    sold_at: null
+  }).eq("id", playerId)
+  if (error) throw error
+}
+
+export async function reopenAuctionForUnsold(auctionId = null) {
+  const table = auctionId ? "auctions" : "auction_state"
+  const idVal = auctionId || 1
+  let q = supabase.from("auction_players").update({ status: "unsold" }).eq("status", "final_unsold")
+  q = auctionId ? q.eq("auction_id", auctionId) : q.is("auction_id", null)
+  await q
+
+  const players = await fetchAuctionPlayers(auctionId)
+  const next = nextUnsoldPlayer(players, null)
+  if (!next) throw new Error("No unsold players found to re-auction.")
+
+  const { error } = await supabase.from(table).update({
+    status: "live",
+    current_player_id: next.id,
+    current_bid: next.base_price || 0,
+    current_team_id: null
+  }).eq("id", idVal)
+  if (error) throw error
 }
 
 export async function fetchAuctionBidHistory(playerId, auctionId = null) {

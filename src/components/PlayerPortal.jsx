@@ -1689,7 +1689,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                   const isWaitlist = ap.status === "waitlist" || ap.payment_status === "waitlist"
                   const isCaptain = (ap.is_captain || ap.status === "captain") && !isWaitlist
                   const isSold = ap.status === "sold"
-                  const isUnsold = ap.status === "unsold"
+                  const isUnsold = ap.status === "unsold" || ap.status === "final_unsold"
                   const teamName = !isWaitlist ? (team.name || (isSold ? "Drafted Team" : null)) : null
                   const isPaid = ap.payment_status === "paid"
 

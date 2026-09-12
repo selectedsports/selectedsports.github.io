@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Card, Spinner, Av } from "./ui.jsx"
-import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionSponsors, fetchAuctionVisitors } from "../db.js"
+import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, reopenAuctionForUnsold, resetAuctionPlayerToPool, fetchAuctionSponsors, fetchAuctionVisitors } from "../db.js"
 import { supabase } from "../supabase.js"
 import { Trophy, Users, Wallet, RotateCcw, XCircle, CheckCircle2, ChevronRight, Zap, Gavel, Eye } from "lucide-react"
 import { DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE, calculateMaxBid, formatCoins, stepBidPointsUp, stepBidPointsDown } from "../constants.js"
@@ -73,9 +73,10 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     }
   }, [auctionId])
 
-  const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
+  const isPlayerUnsold = p => p.status === "unsold" || p.status === "final_unsold"
+  const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.status !== "dropped" && p.status !== "waitlist").length
   const soldCount = auctionPlayers.filter(p => p.status === "sold").length
-  const unsoldCount = auctionPlayers.filter(p => p.status === "unsold").length
+  const unsoldCount = auctionPlayers.filter(isPlayerUnsold).length
   const currentPlayer = state?.current_player_id ? auctionPlayers.find(p => p.id === state.current_player_id) : null
   const leadingTeam = state?.current_team_id ? auctionTeams.find(t => t.id === state.current_team_id) : null
 
@@ -193,7 +194,28 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const doJump = async () => {
     if (!jumpTo) return
     setBusy(true)
-    try { await jumpToAuctionPlayer(jumpTo, auctionId); setJumpTo(""); await load() } catch(e) { alert(e.message) }
+    try { await jumpToAuctionPlayer(jumpTo, auctionId); setJumpTo(""); await onPoolChange(); await load() } catch(e) { alert(e.message) }
+    setBusy(false)
+  }
+
+  const doCallPlayerToBlock = async (playerId) => {
+    setBusy(true)
+    try {
+      await jumpToAuctionPlayer(playerId, auctionId)
+      await onPoolChange()
+      await load()
+    } catch(e) { alert(e.message) }
+    setBusy(false)
+  }
+
+  const doReopenUnsold = async () => {
+    if (!window.confirm("Re-open auction for all unsold players?")) return
+    setBusy(true)
+    try {
+      await reopenAuctionForUnsold(auctionId)
+      await onPoolChange()
+      await load()
+    } catch(e) { alert(e.message) }
     setBusy(false)
   }
 
@@ -273,12 +295,70 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   }
 
   if (state.status === "completed") {
+    const unsoldPlayersList = auctionPlayers.filter(isPlayerUnsold)
     return (
       <div>
         <Card style={{ padding:"24px 20px", textAlign:"center", marginBottom:16 }}>
           <div style={{ width:52, height:52, borderRadius:"50%", background:"rgba(184,134,11,0.1)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}><Trophy size={26} color="#B8860B"/></div>
           <div style={{ fontWeight:800, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>Auction Complete</div>
           <div style={{ fontSize:13, color:"#64748B", marginTop:4 }}>{soldCount} sold · {unsoldCount} unsold</div>
+          {unsoldPlayersList.length > 0 && (
+            <button
+              type="button"
+              onClick={doReopenUnsold}
+              disabled={busy}
+              style={{ marginTop:14, padding:"10px 18px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:busy?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", gap:6, fontFamily:"var(--font-head)", boxShadow:"0 2px 8px rgba(22,101,52,0.2)" }}
+            >
+              <RotateCcw size={14}/> Re-open Auction for Unsold Players
+            </button>
+          )}
+        </Card>
+
+        {/* Unsold Players List */}
+        <Card style={{ padding:"16px", marginBottom:16 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <div style={{ fontWeight:800, fontSize:15, color:"#0F172A", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", gap:6 }}>
+              <XCircle size={16} color="#EF4444"/> Unsold Players ({unsoldPlayersList.length})
+            </div>
+            {unsoldPlayersList.length > 0 && (
+              <span style={{ fontSize:11, fontWeight:700, color:"#EF4444", background:"#FEF2F2", border:"1px solid #FECACA", padding:"2px 8px", borderRadius:6 }}>
+                Not Acquired
+              </span>
+            )}
+          </div>
+          {unsoldPlayersList.length === 0 ? (
+            <div style={{ fontSize:12.5, color:"#166534", fontWeight:700, padding:"6px 0" }}>
+              🎉 All registered players were sold! There are no unsold players.
+            </div>
+          ) : (
+            <div style={{ display:"grid", gap:8 }}>
+              {unsoldPlayersList.map(p => (
+                <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#F8FAF8", border:"1px solid #E2E8F0", borderRadius:9, flexWrap:"wrap" }}>
+                  {p.profile_image_url ? (
+                    <img src={p.profile_image_url} alt={p.name} style={{ width:36, height:36, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
+                  ) : (
+                    <div style={{ width:36, height:36, borderRadius:8, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                  )}
+                  <div style={{ flex:1, minWidth:140 }}>
+                    <div style={{ fontSize:13, fontWeight:800, color:"#0F172A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                    <div style={{ fontSize:11, color:"#64748B", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.playing_role || "Player"}{p.city ? ` · 📍 ${p.city}` : ""}</div>
+                  </div>
+                  <div style={{ textAlign:"right", marginRight:8 }}>
+                    <div style={{ fontSize:10, color:"#94A3B8" }}>Base Price</div>
+                    <div style={{ fontSize:12, fontWeight:800, color:"#166534" }}>🪙 {Number(p.base_price||0).toLocaleString("en-IN")}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => doCallPlayerToBlock(p.id)}
+                    disabled={busy}
+                    style={{ padding:"6px 12px", borderRadius:7, background:"#FFFFFF", border:"1.5px solid #166534", color:"#166534", fontSize:11.5, fontWeight:800, cursor:busy?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}
+                  >
+                    <Gavel size={12}/> Auction Player
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
         {auctionTeams.map(t => {
           const squad = auctionPlayers
@@ -441,7 +521,12 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         </Card>
       ) : (
         <Card style={{ padding:"18px 16px", marginBottom:14, border:"2px solid #166534" }}>
-          <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:6 }}>
+          <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:6, marginBottom:6, flexWrap:"wrap" }}>
+            {currentPlayer.status === "unsold" && (
+              <span style={{ background:"#FEF3C7", color:"#B45309", border:"1.5px solid #FDE68A", borderRadius:999, padding:"3px 10px", fontSize:10.5, fontWeight:800, display:"flex", alignItems:"center", gap:4 }}>
+                🔄 ROUND 2 · RE-AUCTION (UNSOLD)
+              </span>
+            )}
             <span style={{ background:"rgba(34,197,94,0.12)", color:"#166534", borderRadius:999, padding:"4px 10px", fontSize:10, fontWeight:800, display:"flex", alignItems:"center", gap:4, flexShrink:0 }}><Gavel size={11}/> On the block</span>
           </div>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom:14 }}>
@@ -709,15 +794,49 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         </Card>
       )}
 
-      {registeredCount > 0 && (
-        <div style={{ display:"flex", gap:8, marginBottom:18 }}>
-          <select value={jumpTo} onChange={e=>setJumpTo(e.target.value)} style={{ flex:1, padding:"11px 12px", borderRadius:10, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", color:"#0F172A" }}>
-            <option value="">Jump to player...</option>
-            {auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.id !== currentPlayer?.id).sort((a,b) => a.name.localeCompare(b.name)).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <button onClick={doJump} disabled={!jumpTo || busy} style={{ padding:"10px 18px", borderRadius:10, border:"1.5px solid #E2E8F0", background:"#FFFFFF", fontSize:13, fontWeight:700, cursor:(!jumpTo||busy)?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:4 }}>Go <ChevronRight size={14}/></button>
-        </div>
-      )}
+      {(() => {
+        const availableRegistered = auctionPlayers
+          .filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.status !== "dropped" && p.status !== "waitlist" && p.id !== currentPlayer?.id)
+          .sort((a,b) => a.name.localeCompare(b.name))
+        const availableUnsold = auctionPlayers
+          .filter(p => isPlayerUnsold(p) && !p.is_captain && p.status !== "captain" && p.id !== currentPlayer?.id)
+          .sort((a,b) => a.name.localeCompare(b.name))
+
+        if (availableRegistered.length === 0 && availableUnsold.length === 0) return null
+
+        return (
+          <div style={{ display:"flex", gap:8, marginBottom:18 }}>
+            <select
+              value={jumpTo}
+              onChange={e=>setJumpTo(e.target.value)}
+              style={{ flex:1, padding:"11px 12px", borderRadius:10, border:"1.5px solid #CBD5E1", fontSize:13, outline:"none", background:"#FFFFFF", color:"#0F172A", fontWeight:600 }}
+            >
+              <option value="">Jump to player...</option>
+              {availableRegistered.length > 0 && (
+                <optgroup label={`Round 1 · Pool (${availableRegistered.length})`}>
+                  {availableRegistered.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (🪙 {Number(p.base_price||0).toLocaleString("en-IN")})</option>
+                  ))}
+                </optgroup>
+              )}
+              {availableUnsold.length > 0 && (
+                <optgroup label={`Round 2 · Unsold Players (${availableUnsold.length})`}>
+                  {availableUnsold.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} (🪙 {Number(p.base_price||0).toLocaleString("en-IN")}) · Unsold</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <button
+              onClick={doJump}
+              disabled={!jumpTo || busy}
+              style={{ padding:"10px 18px", borderRadius:10, border:"1.5px solid #166534", background:"#166534", color:"#FFFFFF", fontSize:13, fontWeight:700, cursor:(!jumpTo||busy)?"not-allowed":"pointer", display:"flex", alignItems:"center", gap:4 }}
+            >
+              Go <ChevronRight size={14}/>
+            </button>
+          </div>
+        )
+      })()}
 
       {(() => {
         const recentSold = auctionPlayers.filter(p => p.status === "sold" && p.sold_at).sort((a,b) => new Date(b.sold_at) - new Date(a.sold_at)).slice(0, 5)

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check, Ban, Shuffle } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge, CoinIcon } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, resetAuctionPlayerToPool, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import GroundBookingsSection from "./GroundBookingsSection.jsx"
@@ -3056,6 +3056,8 @@ function AuctionPage({ isMobile, isFounder }) {
         const auctionPoolPlayers = randomizedPool
         const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "dropped" && (p.status === "waitlist" || p.payment_status === "waitlist"))
         const droppedPlayers = auctionPlayers.filter(p => p.status === "dropped")
+        const isPlayerUnsold = p => p.status === "unsold" || p.status === "final_unsold"
+        const unsoldPlayers = auctionPlayers.filter(isPlayerUnsold)
         const soldCount = auctionPoolPlayers.filter(p => p.status === "sold" || p.sold_team_id).length
         const totalBase = auctionPoolPlayers.reduce((s,p) => s + (Number(p.base_price)||0), 0)
         const inPoolPhones = new Set(auctionPoolPlayers.map(p => (p.phone||"").replace(/[^0-9]/g,"").slice(-10)))
@@ -3063,6 +3065,7 @@ function AuctionPage({ isMobile, isFounder }) {
         const q = poolSearch.trim().toLowerCase()
         const filteredPool = auctionPoolPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
         const filteredDropped = droppedPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
+        const filteredUnsold = unsoldPlayers.filter(p => !q || p.name.toLowerCase().includes(q) || (p.playing_role||"").toLowerCase().includes(q))
 
         const pq = platformSearch.trim().toLowerCase()
         const filteredPlatform = allPlatformPlayers.filter(p => {
@@ -3136,6 +3139,7 @@ function AuctionPage({ isMobile, isFounder }) {
             {[
               ...(isFounder ? [["registered",`Registered Players`]] : []),
               ["pool",`Auction Pool (${auctionPoolPlayers.length})`],
+              ["unsold",`🚫 Unsold (${unsoldPlayers.length})`],
               ["dropped",`🚫 Dropped (${droppedPlayers.length})`]
             ].map(([k,label])=>(
               <button key={k} onClick={()=>setPoolView(k)} style={{ padding: isMobile ? "8px 12px" : "9px 16px", borderRadius:"8px 8px 0 0", border:"none", borderBottom:(poolView===k || (!poolView && k==="pool"))?"2.5px solid #166534":"2.5px solid transparent", background:"none", color:(poolView===k || (!poolView && k==="pool"))?"#166534":"#94A3B8", fontSize: isMobile ? 12 : 13, fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink: 0 }}>{label}</button>
@@ -3201,6 +3205,76 @@ function AuctionPage({ isMobile, isFounder }) {
                 </div>
               )}
             </>
+          ) : poolView === "unsold" ? (
+            <div>
+              <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>
+                Players who did not receive bids during the live auction. You can return them to the confirmed auction pool anytime so they can be re-auctioned.
+              </div>
+              <div style={{ display:"flex", gap:10, marginBottom:14 }}>
+                <div style={{ flex:1, position:"relative" }}>
+                  <SearchIcon size={16} color="#94A3B8" style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                  <input value={poolSearch} onChange={e=>setPoolSearch(e.target.value)} placeholder="Search unsold players..." style={{ width:"100%", padding:"12px 14px 12px 40px", borderRadius:12, border:"1.5px solid #E2E8F0", fontSize:13, outline:"none", background:"#FFFFFF", boxSizing:"border-box", fontFamily:"var(--font-body)" }}/>
+                </div>
+              </div>
+              {filteredUnsold.length === 0 ? (
+                <Card style={{ padding:"32px 16px", textAlign:"center" }}>
+                  <div style={{ fontSize:14, color:"#64748B" }}>{unsoldPlayers.length === 0 ? "No players currently marked as unsold." : "No unsold players match your search."}</div>
+                </Card>
+              ) : (
+                <div style={{ display:"grid", gap:10 }}>
+                  {filteredUnsold.map((p, idx) => (
+                    <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background:"#FFFBF0", border:"1px solid #FED7AA", borderRadius: 14 }}>
+                      <div onClick={()=>setViewingPlayer(p)} style={{ display:"flex", alignItems:"center", gap: 10, marginBottom: 10, cursor:"pointer" }}>
+                        <span style={{ background:"#FFEDD5", color:"#C2410C", border:"1px solid #FDBA74", borderRadius:6, fontSize:11, fontWeight:800, padding:"2px 6px", flexShrink:0 }}>
+                          #{idx + 1}
+                        </span>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width:40, height:40, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid #FED7AA" }}/>
+                        ) : (
+                          <div style={{ width:40, height:40, borderRadius:10, background:"#FFEDD5", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#C2410C", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                        )}
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontWeight:800, fontSize:14, color:"#0F172A", fontFamily:"var(--font-head)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                          <div style={{ fontSize:11.5, color:"#9A3412", display:"flex", alignItems:"center", gap:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop: 2 }}>
+                            <Phone size={11} style={{ flexShrink: 0 }}/>
+                            <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                          <ChevronRight size={16} color="#94A3B8"/>
+                          <button onClick={(e)=>{ e.stopPropagation(); removePlayer(p) }} style={{ background:"none", border:"none", cursor:"pointer", color:"#EF4444", padding:5, display:"flex", alignItems:"center", borderRadius:6 }} title="Delete player"><Trash2 size={15}/></button>
+                        </div>
+                      </div>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", paddingTop:8, borderTop:"1px dashed #FED7AA", gap: 8, flexWrap:"wrap" }}>
+                        <div style={{ display:"flex", alignItems:"center", gap: 6, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color:"#C2410C", background: "#FFEDD5", border:"1px solid #FDBA74", padding: "3px 7px", borderRadius: 6 }}>
+                            🚫 Unsold
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color:"#166534" }}>
+                            🪙 Base: {Number(p.base_price||0).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <div style={{ display:"flex", gap:6, marginLeft:"auto" }}>
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              try {
+                                await resetAuctionPlayerToPool(p.id)
+                                await load()
+                              } catch(err) { alert(err.message) }
+                            }}
+                            style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:11.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", gap:4 }}
+                          >
+                            ↩️ Return to Pool
+                          </button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : poolView === "dropped" ? (
             <div>
               <div style={{ fontSize:12, color:"#64748B", marginBottom:12 }}>

@@ -148,7 +148,7 @@ function RegisteredPlayersList({ auctionId }) {
                   <span style={{ fontSize:10, fontWeight:800, color:"#166534", background:"rgba(34,197,94,0.14)", padding:"3px 8px", borderRadius:999, whiteSpace:"nowrap" }}>
                     Sold 🪙 {Number(p.sold_price||0).toLocaleString("en-IN")}
                   </span>
-                ) : p.status === "unsold" ? (
+                ) : (p.status === "unsold" || p.status === "final_unsold") ? (
                   <span style={{ fontSize:10, fontWeight:700, color:"#EF4444", background:"rgba(239,68,68,0.1)", padding:"3px 8px", borderRadius:999, whiteSpace:"nowrap" }}>
                     Unsold
                   </span>

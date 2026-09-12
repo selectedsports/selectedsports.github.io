@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { Users, MapPin, Swords, CircleDot, User, Calendar, Clock, CheckCircle2, XCircle, Hourglass, Star, AlertTriangle, CreditCard, Mail, Trophy, LogOut, Phone, Trash2, Home, ChevronRight, Plus, ClipboardList, UsersRound, Link as LinkIcon, Ban, Wallet, UserPlus, Gavel } from "lucide-react"
 import { LogoFull, Av, Tag, Card, Spinner , LeaderboardPage, RoleBadge} from "./ui.jsx"
-import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchMatches, fetchGrounds, addGround, fetchTeams, createMatch, addTeam, deleteMatch, fetchMatchPlayers, fetchExpenses, fetchPayments, fetchChat, fetchPublicResponses, updateMatchStatus, fetchPlayers, fetchSettings , fetchStats, fetchProStats, fetchPlayerStats, fetchMatchCounts, fetchProGroupPlayers, fetchMyInvites, confirmPlayerToMatch, updatePlayer, updatePlayerUpi, fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchAuctionTeams, fetchAuctionPlayers, uploadProfilePhoto, fetchMyAuctions, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, resetAuctionPlayerToPool, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
@@ -1428,7 +1428,9 @@ export default function ProPortal({ player, onLogout }) {
             </div>
 
             {auctionSubTab === "players" && (() => {
-              const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped")
+              const isPlayerUnsold = p => p.status === "unsold" || p.status === "final_unsold"
+              const unsoldPlayers = auctionPlayers.filter(isPlayerUnsold)
+              const poolPlayers = auctionPlayers.filter(p => !p.is_captain && p.status !== "captain" && p.status !== "waitlist" && p.payment_status !== "waitlist" && p.status !== "dropped" && !isPlayerUnsold(p))
               const waitlistPlayers = auctionPlayers.filter(p => !p.is_captain && (p.status === "waitlist" || p.payment_status === "waitlist") && p.status !== "dropped")
               const droppedPlayers = auctionPlayers.filter(p => p.status === "dropped")
 
@@ -1437,6 +1439,7 @@ export default function ProPortal({ player, onLogout }) {
                   <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", scrollbarWidth: "none", borderBottom: "1px solid #E2E8F0", paddingBottom: 2 }}>
                     {[
                       ["pool", `Auction Pool (${poolPlayers.length})`],
+                      ["unsold", `🚫 Unsold (${unsoldPlayers.length})`],
                       ["waitlist", `⏳ Waiting List (${waitlistPlayers.length})`],
                       ["dropped", `🚫 Dropped (${droppedPlayers.length})`]
                     ].map(([k, label]) => (
@@ -1519,6 +1522,68 @@ export default function ProPortal({ player, onLogout }) {
                                   style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
                                 >
                                   Restore to Pool ➔
+                                </button>
+                              </div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : proPoolView === "unsold" ? (
+                    <div>
+                      <div style={{ fontSize: 12, color: "#64748B", marginBottom: 12 }}>
+                        Players who did not receive bids during the live auction. You can return them to the confirmed auction pool anytime.
+                      </div>
+                      {unsoldPlayers.length === 0 ? (
+                        <Card style={{ padding: "32px 16px", textAlign: "center" }}>
+                          <div style={{ fontSize: 14, color: "#64748B" }}>No players currently marked as unsold.</div>
+                        </Card>
+                      ) : (
+                        <div style={{ display: "grid", gap: 10 }}>
+                          {unsoldPlayers.map((p, idx) => (
+                            <Card key={p.id} style={{ padding: isMobile ? "12px 12px" : "14px 16px", background: "#FFFBF0", border: "1px solid #FED7AA", borderRadius: 14 }}>
+                              <div onClick={() => setViewingAuctionPlayer(p)} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, cursor: "pointer" }}>
+                                <span style={{ background: "#FFEDD5", color: "#C2410C", border: "1px solid #FDBA74", borderRadius: 6, fontSize: 11, fontWeight: 800, padding: "2px 6px", flexShrink: 0 }}>
+                                  #{idx + 1}
+                                </span>
+                                {p.profile_image_url ? (
+                                  <img src={p.profile_image_url} alt={p.name} style={{ width: 40, height: 40, borderRadius: 10, objectFit: "cover", flexShrink: 0, border: "1px solid #FED7AA" }}/>
+                                ) : (
+                                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "#FFEDD5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, color: "#C2410C", flexShrink: 0 }}>{(p.name || "?")[0]}</div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontWeight: 800, fontSize: 14, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</div>
+                                  <div style={{ fontSize: 11.5, color: "#9A3412", display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                                    <Phone size={11} style={{ flexShrink: 0 }}/>
+                                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.phone}{p.playing_role ? ` · ${p.playing_role}` : ""}{p.city ? ` · 📍 ${p.city}` : ""}</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+                                  <button onClick={(e) => { e.stopPropagation(); removeAuctionPlayer(p) }} style={{ background: "none", border: "none", cursor: "pointer", color: "#EF4444", padding: 5, display: "flex", alignItems: "center", borderRadius: 6 }} title="Delete player"><Trash2 size={15}/></button>
+                                  <ChevronRight size={16} color="#94A3B8"/>
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px dashed #FED7AA", gap: 8, flexWrap: "wrap" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                  <span style={{ fontSize: 10.5, fontWeight: 800, color: "#C2410C", background: "#FFEDD5", border: "1px solid #FDBA74", padding: "3px 7px", borderRadius: 6 }}>
+                                    🚫 Unsold
+                                  </span>
+                                  <span style={{ fontSize: 11, fontWeight: 700, color: "#166534" }}>
+                                    🪙 Base: {Number(p.base_price||0).toLocaleString("en-IN")}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation()
+                                    try {
+                                      await resetAuctionPlayerToPool(p.id)
+                                      await loadAuctionPool()
+                                    } catch(err) { alert(err.message) }
+                                  }}
+                                  style={{ padding: isMobile ? "5px 10px" : "6px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 11.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", gap: 4, marginLeft: "auto" }}
+                                >
+                                  Return to Pool ➔
                                 </button>
                               </div>
                             </Card>

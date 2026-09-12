@@ -315,23 +315,43 @@ function PlayerOnTheBlockCard({ currentPlayer, state, leadingTeam, isWide }) {
     }}>
       {/* Top Status Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
-        <span style={{
-          background: "linear-gradient(90deg, rgba(34,197,94,0.25) 0%, rgba(22,101,52,0.4) 100%)",
-          color: "#86EFAC",
-          border: "1.5px solid rgba(34,197,94,0.5)",
-          borderRadius: 999,
-          padding: "6px 16px",
-          fontSize: 12,
-          fontWeight: 900,
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          letterSpacing: "1px",
-          boxShadow: "0 0 14px rgba(34,197,94,0.3)"
-        }}>
-          <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 10px #22C55E", display: "inline-block" }}></span>
-          LIVE ON THE BLOCK
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{
+            background: "linear-gradient(90deg, rgba(34,197,94,0.25) 0%, rgba(22,101,52,0.4) 100%)",
+            color: "#86EFAC",
+            border: "1.5px solid rgba(34,197,94,0.5)",
+            borderRadius: 999,
+            padding: "6px 16px",
+            fontSize: 12,
+            fontWeight: 900,
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            letterSpacing: "1px",
+            boxShadow: "0 0 14px rgba(34,197,94,0.3)"
+          }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 10px #22C55E", display: "inline-block" }}></span>
+            LIVE ON THE BLOCK
+          </span>
+          {currentPlayer.status === "unsold" && (
+            <span style={{
+              background: "linear-gradient(90deg, rgba(245,158,11,0.25) 0%, rgba(180,83,9,0.4) 100%)",
+              color: "#FDE047",
+              border: "1.5px solid #F59E0B",
+              borderRadius: 999,
+              padding: "6px 14px",
+              fontSize: 11.5,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              letterSpacing: "0.8px",
+              boxShadow: "0 0 14px rgba(245,158,11,0.35)"
+            }}>
+              <span>🔄</span> ROUND 2 · RE-AUCTION (UNSOLD)
+            </span>
+          )}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
           {currentPlayer.jersey_number && (
             <span style={{ color: "#FEF08A", fontSize: 13, fontWeight: 900, background: "rgba(254,240,138,0.12)", border: "1px solid rgba(254,240,138,0.3)", padding: "4px 12px", borderRadius: 8, fontFamily: "var(--font-head)" }}>
@@ -581,7 +601,7 @@ export default function PublicAuctionView({ auctionCode }) {
       ])
 
       const curSold = p.filter(x => x.status === "sold").length
-      const curUnsold = p.filter(x => x.status === "unsold").length
+      const curUnsold = p.filter(x => x.status === "unsold" || x.status === "final_unsold").length
 
       if (prevSoldCountRef.current !== null && curSold > prevSoldCountRef.current) {
         const latestSold = p.filter(x => x.status === "sold" && x.sold_at).sort((a,b) => new Date(b.sold_at) - new Date(a.sold_at))[0]
@@ -675,11 +695,12 @@ export default function PublicAuctionView({ auctionCode }) {
     </div>
   )
 
+  const isPlayerUnsold = p => p.status === "unsold" || p.status === "final_unsold"
   const currentPlayer = state?.current_player_id ? players.find(p => p.id === state.current_player_id) : null
   const leadingTeam = state?.current_team_id ? teams.find(t => t.id === state.current_team_id) : null
   const soldCount = players.filter(p => p.status === "sold").length
-  const unsoldCount = players.filter(p => p.status === "unsold").length
-  const registeredCount = players.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
+  const unsoldCount = players.filter(isPlayerUnsold).length
+  const registeredCount = players.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain" && p.status !== "dropped" && p.status !== "waitlist").length
 
   return (
     <div style={{ minHeight:"100vh", background:"#080E1A", color:"#0F172A", fontFamily:"var(--font-body)" }}>
@@ -1080,6 +1101,55 @@ export default function PublicAuctionView({ auctionCode }) {
                 )
               })}
             </div>
+
+            {/* Unsold Players Section */}
+            {(() => {
+              const unsoldList = players.filter(isPlayerUnsold)
+              return (
+                <div style={{ marginTop: 28, background:"#131E30", borderRadius:18, padding:"22px 20px", border:"1px solid rgba(255,255,255,0.08)", color:"#FFFFFF", boxShadow:"0 8px 30px rgba(0,0,0,0.35)" }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16, flexWrap:"wrap", gap:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                      <div style={{ width:34, height:34, borderRadius:10, background:"rgba(239,68,68,0.15)", display:"flex", alignItems:"center", justifyContent:"center", color:"#EF4444", fontSize:18, fontWeight:900 }}>🚫</div>
+                      <div>
+                        <div style={{ fontWeight:900, fontSize:18, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>Unsold Players ({unsoldCount})</div>
+                        <div style={{ fontSize:12, color:"#94A3B8" }}>Players not acquired by any franchise during the auction</div>
+                      </div>
+                    </div>
+                    {unsoldCount > 0 && (
+                      <span style={{ fontSize:12, fontWeight:800, color:"#FECACA", background:"rgba(239,68,68,0.18)", border:"1.5px solid rgba(239,68,68,0.4)", padding:"4px 12px", borderRadius:999 }}>
+                        {unsoldCount} Unsold
+                      </span>
+                    )}
+                  </div>
+
+                  {unsoldCount === 0 ? (
+                    <div style={{ padding:"18px", borderRadius:12, background:"rgba(34,197,94,0.08)", border:"1px solid rgba(34,197,94,0.25)", textAlign:"center", color:"#86EFAC", fontWeight:700, fontSize:13 }}>
+                      🎉 100% Sold Out — Every registered player was acquired by a franchise!
+                    </div>
+                  ) : (
+                    <div style={{ display:"grid", gridTemplateColumns: isWide ? "repeat(auto-fill, minmax(280px, 1fr))" : "1fr", gap:10 }}>
+                      {unsoldList.map(p => (
+                        <div key={p.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10 }}>
+                          {p.profile_image_url ? (
+                            <img src={p.profile_image_url} alt={p.name} style={{ width:38, height:38, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
+                          ) : (
+                            <div style={{ width:38, height:38, borderRadius:8, background:"#1E293B", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#94A3B8", flexShrink:0 }}>{(p.name||"?")[0]}</div>
+                          )}
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontWeight:800, fontSize:13.5, color:"#FFFFFF", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.name}</div>
+                            <div style={{ fontSize:11, color:"#94A3B8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.playing_role || "Player"}{p.city ? ` · 📍 ${p.city}` : ""}</div>
+                          </div>
+                          <div style={{ textAlign:"right", flexShrink:0 }}>
+                            <div style={{ fontSize:9.5, color:"#94A3B8" }}>Base Price</div>
+                            <div style={{ fontSize:12, fontWeight:800, color:"#FEF08A" }}>🪙 {Number(p.base_price||0).toLocaleString("en-IN")}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </>
         )}
       </div>
