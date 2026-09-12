@@ -907,6 +907,7 @@ export default function ProPortal({ player, onLogout }) {
           <MatchDetail
             detail={detail}
             players={groupPlayers}
+            teams={teams}
             settings={appSettings}
             onBack={() => setDetail(null)}
             onRefresh={() => loadDetail(detail.match)}

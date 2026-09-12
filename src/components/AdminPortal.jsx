@@ -2,7 +2,11 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check, Ban, Shuffle } from "lucide-react"
 import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge, CoinIcon } from "./ui.jsx"
-import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, resetAuctionPlayerToPool, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
+import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, resetAuctionPlayerToPool, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus, fetchScoringConfig, fetchMatchSquad, fetchInnings, fetchDeliveries, fetchMatchScorers, assignMatchScorer, revokeMatchScorer, reopenCompletedMatch } from "../db.js"
+import { reduceInningsState } from "../scoringEngine.js"
+import ScoringSetupModal from "./ScoringSetupModal.jsx"
+import ScoringConsole from "./ScoringConsole.jsx"
+import LiveScorecard from "./LiveScorecard.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import GroundBookingsSection from "./GroundBookingsSection.jsx"
@@ -236,12 +240,12 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
   )
 
   const bottomNavItems = [
-    ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],
+    ["dashboard","Home",LayoutDashboard],["matches","🏏 Scoring & Matches",Swords],
     ["leaderboard","Leaderboard",Trophy],["profile","Profile",UserIcon],
   ]
   const desktopNavItems = [
     ["dashboard","Home",LayoutDashboard],
-    ["matches","Matches",Swords],
+    ["matches","🏏 Live Scoring & Matches",Swords],
     ["players","Players",Users],
     ["teams","Teams",ShieldCheck],
     ["auction","Auction",Wallet],
@@ -249,7 +253,7 @@ export default function AdminPortal({ onLogout, player: loggedPlayer, isFounder 
     ["leaderboard","Leaderboard",Trophy],
   ]
   const drawerItems = [
-    ["dashboard","Home",LayoutDashboard],["matches","Matches",Swords],["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds & Bookings",MapPin],["auction","Auction",Wallet],["leaderboard","Leaderboard",Trophy]
+    ["dashboard","Home",LayoutDashboard],["matches","🏏 Live Scoring & Matches",Swords],["players","Players",Users],["teams","Teams",ShieldCheck],["grounds","Grounds & Bookings",MapPin],["auction","Auction",Wallet],["leaderboard","Leaderboard",Trophy]
   ]
 
   return (
@@ -463,6 +467,55 @@ function Dashboard({ invites = [], onOpenInvite, onInviteRespond, matches, playe
           <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Clock size={13}/> {todaysMatches.length} match{todaysMatches.length!==1?"es":""} today</span>
           <span>·</span>
           <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}><Hourglass size={13}/> {upcoming.length} upcoming</span>
+        </div>
+      </div>
+      {/* Live Cricket Scoring Banner */}
+      <div style={{
+        background: "linear-gradient(135deg, #166534 0%, #14532D 100%)",
+        borderRadius: 18,
+        padding: isMobile ? "16px" : "20px 24px",
+        color: "#FFFFFF",
+        marginBottom: 24,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: 14,
+        boxShadow: "0 6px 20px rgba(22,101,52,0.22)"
+      }}>
+        <div style={{ minWidth: 260, flex: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, color: "#86EFAC", marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#4ADE80", boxShadow: "0 0 8px #4ADE80" }}/>
+            LIVE CRICKET SCORING SUBSYSTEM
+          </div>
+          <div style={{ fontSize: isMobile ? 17 : 21, fontWeight: 900, fontFamily: "var(--font-head)" }}>
+            Ball-by-Ball Match Scoring & Live Scorecards
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4, lineHeight: 1.4 }}>
+            Start live scoring for any upcoming match, record legal balls, extras, wickets, or share spectator links.
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            onClick={() => onNavigate("matches")}
+            style={{
+              padding: "11px 20px",
+              borderRadius: 12,
+              background: "#FFFFFF",
+              border: "none",
+              color: "#166534",
+              fontSize: 13,
+              fontWeight: 900,
+              cursor: "pointer",
+              fontFamily: "var(--font-head)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            }}
+          >
+            🏏 Start / View Scoring →
+          </button>
         </div>
       </div>
 
@@ -1190,7 +1243,7 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
   }
 
   if(loading) return <div style={{ minHeight:"60vh",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>
-  if(detail) return <MatchDetail detail={detail} settings={settings} players={players} onBack={()=>setDetail(null)} onRefresh={()=>loadMatch(detail.match)} onDeleted={()=>{ setDetail(null); onRefresh() }} onStatusChange={async status=>{ await updateMatchStatus(detail.match.id,status); onRefresh(); setDetail(null) }} isMobile={isMobile} loggedPlayer={loggedPlayer}/>
+  if(detail) return <MatchDetail detail={detail} settings={settings} players={players} teams={teams} onBack={()=>setDetail(null)} onRefresh={()=>loadMatch(detail.match)} onDeleted={()=>{ setDetail(null); onRefresh() }} onStatusChange={async status=>{ await updateMatchStatus(detail.match.id,status); onRefresh(); setDetail(null) }} isMobile={isMobile} loggedPlayer={loggedPlayer}/>
 
   return (
     <div>
@@ -1274,6 +1327,45 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
                       )
                     })()}
                   {m.created_by && (()=>{ const creator = players.find(p=>p.id===m.created_by); return creator && creator.role==="pro" ? <div style={{ color:"#7c3aed",fontSize:11,marginTop:5,fontWeight:700 }}>⭐ Scheduled by {creator.name}</div> : null })()}
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }} onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => loadMatch(m)}
+                      style={{
+                        padding: "6px 13px",
+                        borderRadius: 8,
+                        background: "linear-gradient(135deg, #166534 0%, #15803d 100%)",
+                        border: "none",
+                        color: "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        boxShadow: "0 2px 6px rgba(22, 101, 52, 0.2)"
+                      }}
+                    >
+                      🏏 {m.status === "in_progress" ? "Resume Scoring" : "Score Match"}
+                    </button>
+                    <button
+                      onClick={() => loadMatch(m)}
+                      style={{
+                        padding: "6px 11px",
+                        borderRadius: 8,
+                        background: "#FFFFFF",
+                        border: "1.5px solid #E2E8F0",
+                        color: "#0F172A",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}
+                    >
+                      📊 Scorecard
+                    </button>
+                  </div>
                 </div>
                 <div style={{ display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",flexShrink:0 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:4 }}>
@@ -1283,7 +1375,9 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
                   <div style={{ position:"relative" }} onClick={e=>e.stopPropagation()}>
                     <button onClick={()=>setOpenMenuId(id=>id===m.id?null:m.id)} style={{ background:"none", border:"none", cursor:"pointer", padding:4, display:"flex" }}><MoreVertical size={16} color="#94A3B8"/></button>
                     {openMenuId===m.id && (
-                      <div style={{ position:"absolute", top:"100%", right:0, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:160, overflow:"hidden" }}>
+                      <div style={{ position:"absolute", top:"100%", right:0, background:"#FFFFFF", border:"1px solid #E2E8F0", borderRadius:10, boxShadow:"0 8px 24px rgba(15,23,42,0.12)", zIndex:20, minWidth:170, overflow:"hidden" }}>
+                        <button onClick={()=>{ setOpenMenuId(null); loadMatch(m) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"#F0FDF4", textAlign:"left", fontSize:13, color:"#166534", cursor:"pointer", display:"flex", alignItems:"center", gap:8, fontWeight:700 }}>🏏 Live Scoring</button>
+                        <button onClick={()=>{ setOpenMenuId(null); loadMatch(m) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>📊 Scorecard</button>
                         {m.status==="upcoming" && (
                           <button disabled={busyAction} onClick={async()=>{ setBusyAction(true); try{ await updateMatchStatus(m.id,"completed"); onRefresh() } catch(e){alert(e.message)} setBusyAction(false); setOpenMenuId(null) }} style={{ width:"100%", padding:"10px 14px", border:"none", background:"none", textAlign:"left", fontSize:13, color:"#0F172A", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}><CheckCircle2 size={14}/> Mark Completed</button>
                         )}
@@ -1308,7 +1402,7 @@ function MatchesPage({ matches, players, grounds, teams, selId, initialFilter, s
 }
 
 // ─── Match Detail ─────────────────────────────────────────────────────────────
-export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDeleted, onStatusChange, isMobile, loggedPlayer }) {
+export function MatchDetail({ detail, players, teams = [], settings, onBack, onRefresh, onDeleted, onStatusChange, isMobile, loggedPlayer }) {
   const upiId = settings?.upi_id || ""
   const { match:m, matchPlayers, expenses, payments, chat, publicResponses } = detail
   const [tab, setTab]           = useState("players")
@@ -1344,6 +1438,132 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
   const doAddExpense = async ()=>{ if(!expLabel||!expAmt) return; await addExpense(m.id,expLabel,parseFloat(expAmt));setExpLabel("");setExpAmt("");onRefresh() }
   const handleToggleLink = async ()=>{ setToggling(true);await toggleMatchLink(m.id,!linkActive);setLinkActive(l=>!l);setToggling(false) }
   const inviteUrl = `${BASE_URL}/join/${m.invite_token}`
+
+  // ── Scoring Subsystem State (FR-7 to FR-10) ───────────────────────────────────
+  const [scoringConfig, setScoringConfig] = useState(null)
+  const [scoringSquad, setScoringSquad]   = useState([])
+  const [activeInnings, setActiveInnings] = useState([])
+  const [matchScorers, setMatchScorers]   = useState([])
+  const [showScoringSetup, setShowScoringSetup] = useState(false)
+  const [activeScoringSession, setActiveScoringSession] = useState(null)
+  const [showScorecard, setShowScorecard] = useState(false)
+  const [loadingScoring, setLoadingScoring] = useState(false)
+  const [showAssignScorerModal, setShowAssignScorerModal] = useState(false)
+  const [selectedScorerId, setSelectedScorerId] = useState("")
+
+  const loadScoringData = async () => {
+    try {
+      const [cfg, sq, inn, scs] = await Promise.all([
+        fetchScoringConfig(m.id),
+        fetchMatchSquad(m.id),
+        fetchInnings(m.id),
+        fetchMatchScorers(m.id),
+      ])
+      setScoringConfig(cfg)
+      setScoringSquad(sq || [])
+      setActiveInnings(inn || [])
+      setMatchScorers(scs || [])
+    } catch (err) {
+      console.warn("Error loading match scoring info:", err)
+    }
+  }
+
+  useEffect(() => {
+    loadScoringData()
+  }, [m.id])
+
+  const isFounder = loggedPlayer?.role === "founder"
+  const isOrganizer = loggedPlayer?.role === "organizer"
+  const isProCreator = loggedPlayer?.role === "pro" && m.created_by === loggedPlayer?.id
+  const isAssignedScorer = matchScorers.some(s => s.player_id === loggedPlayer?.id)
+  const canScore = isFounder || isOrganizer || isProCreator || isAssignedScorer
+
+  const handleOpenScoring = async () => {
+    setLoadingScoring(true)
+    try {
+      const [cfg, sq, inn] = await Promise.all([
+        fetchScoringConfig(m.id),
+        fetchMatchSquad(m.id),
+        fetchInnings(m.id),
+      ])
+      setScoringConfig(cfg)
+      setScoringSquad(sq || [])
+      setActiveInnings(inn || [])
+
+      // If match scoring is not yet configured or squad has fewer than 2 players, launch setup
+      if (!cfg || !sq || sq.length < 2) {
+        setShowScoringSetup(true)
+        setLoadingScoring(false)
+        return
+      }
+
+      // If config exists, prepare live session
+      const currentInn = (inn && inn.find(i => i.status === "in_progress")) || (inn && inn[inn.length - 1])
+      if (!currentInn) {
+        setShowScoringSetup(true)
+        setLoadingScoring(false)
+        return
+      }
+
+      const dels = await fetchDeliveries(currentInn.id)
+      const state = reduceInningsState(cfg, sq, dels, currentInn)
+
+      const allTeams = teams && teams.length > 0 ? teams : await fetchTeams()
+      const teamA = allTeams.find(t => t.id === (cfg.toss_winner_team_id || m.team_a_id)) || { id: m.team_a_id || "team_a", name: m.team || "Team A" }
+      const teamB = allTeams.find(t => t.id === (m.team_b_id || "team_b")) || { id: m.team_b_id || "team_b", name: "Team B" }
+
+      const battingTeam = currentInn.batting_team_id === teamA.id ? teamA : teamB
+      const bowlingTeam = currentInn.bowling_team_id === teamA.id ? teamA : teamB
+
+      setActiveScoringSession({
+        config: cfg,
+        squad: sq,
+        innings: currentInn,
+        battingTeam,
+        bowlingTeam,
+        strikerId: state.strikerSquadId || sq.find(s => s.team_id === battingTeam.id)?.id,
+        nonStrikerId: state.nonStrikerSquadId || sq.filter(s => s.team_id === battingTeam.id)[1]?.id,
+        openingBowlerId: state.bowlerSquadId || sq.find(s => s.team_id === bowlingTeam.id)?.id,
+      })
+    } catch (err) {
+      alert("Failed to load scoring session: " + err.message)
+    } finally {
+      setLoadingScoring(false)
+    }
+  }
+
+  // Active scoring full screen view
+  if (activeScoringSession) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "#0F172A", overflowY: "auto" }}>
+        <ScoringConsole
+          match={m}
+          config={activeScoringSession.config}
+          squad={activeScoringSession.squad}
+          initialInnings={activeScoringSession.innings}
+          battingTeam={activeScoringSession.battingTeam}
+          bowlingTeam={activeScoringSession.bowlingTeam}
+          initialStrikerId={activeScoringSession.strikerId}
+          initialNonStrikerId={activeScoringSession.nonStrikerId}
+          initialBowlerId={activeScoringSession.openingBowlerId}
+          currentUser={loggedPlayer}
+          onClose={() => {
+            setActiveScoringSession(null)
+            loadScoringData()
+            onRefresh()
+          }}
+          onViewScorecard={() => setShowScorecard(true)}
+        />
+        {showScorecard && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ background: "#F8FAF8", width: "100%", maxWidth: 720, maxHeight: "96vh", overflowY: "auto", borderRadius: isMobile ? 0 : 16 }}>
+              <LiveScorecard matchId={m.id} match={m} onClose={() => setShowScorecard(false)} />
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div style={{ paddingBottom: isMobile ? 40 : 28 }}>
       <button onClick={onBack} style={{ background:"none",border:"none",color:"#166534",fontSize:13,cursor:"pointer",fontWeight:700,marginBottom:14,padding:0,fontFamily:"var(--font-body)" }}>← All Matches</button>
@@ -1358,10 +1578,81 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
                 <div style={{ color:"#64748B",fontSize:12, display:"flex", alignItems:"center", gap:5 }}><MapPin size={12}/> {m.ground} · <Clock size={12}/> {m.time_slot}</div>
                 <div style={{ display:"flex",gap:6,marginTop:10,flexWrap:"wrap" }}>
                   <span style={{ background:m.type==="internal"?"#0F766E":"#FBBF24", color:"#FFFFFF", borderRadius:7, padding:"4px 11px", fontSize:11, fontWeight:700, display:"inline-block" }}>{m.type==="internal"?"Internal 9v9":"External"}</span>
-                  <span style={{ background:m.status==="upcoming"?"#166534":m.status==="completed"?"#64748B":"#EF4444", color:"#FFFFFF", borderRadius:999, padding:"4px 12px", fontSize:11, fontWeight:700, textTransform:"capitalize", display:"inline-block" }}>{m.status}</span>
+                  <span style={{ background:m.status==="in_progress"?"#DC2626":m.status==="upcoming"?"#166534":m.status==="completed"?"#64748B":"#EF4444", color:"#FFFFFF", borderRadius:999, padding:"4px 12px", fontSize:11, fontWeight:700, textTransform:"capitalize", display:"inline-block" }}>{m.status==="in_progress"?"🔴 In Progress":m.status}</span>
                   <button onClick={handleToggleLink} disabled={toggling} style={{ background:linkActive?"rgba(34,197,94,0.12)":"rgba(148,163,184,0.15)", border:linkActive?"1px solid rgba(34,197,94,0.35)":"1px solid #E2E8F0", color:linkActive?"#166534":"#64748B", borderRadius:999, padding:"4px 11px", fontSize:11, fontWeight:700, cursor:toggling?"not-allowed":"pointer", display:"inline-flex", alignItems:"center", gap:5 }}>
                     <LinkIcon size={11}/> Public link {toggling ? "..." : linkActive ? "ON — tap to turn off" : "OFF — tap to turn on"}
                   </button>
+                </div>
+                {/* Cricket Live Scoring Quick Actions */}
+                <div style={{ display:"flex",gap:8,marginTop:12,flexWrap:"wrap",alignItems:"center" }}>
+                  {canScore && (
+                    <button
+                      onClick={handleOpenScoring}
+                      disabled={loadingScoring}
+                      style={{
+                        padding: "8px 14px",
+                        borderRadius: 8,
+                        background: "linear-gradient(135deg, #166534 0%, #15803d 100%)",
+                        border: "none",
+                        color: "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        boxShadow: "0 2px 6px rgba(22, 101, 52, 0.25)"
+                      }}
+                    >
+                      🏏 {loadingScoring ? "Loading..." : m.status === "in_progress" ? "Resume Scoring" : "Start Live Scoring"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setTab("scorecard")}
+                    style={{
+                      padding: "8px 14px",
+                      borderRadius: 8,
+                      background: tab === "scorecard" ? "#166534" : "#FFFFFF",
+                      border: "1.5px solid #166534",
+                      color: tab === "scorecard" ? "#FFFFFF" : "#166534",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5
+                    }}
+                  >
+                    📊 Scorecard
+                  </button>
+                  {scoringConfig?.public_share_token && (
+                    <button
+                      onClick={() => {
+                        const url = `${BASE_URL}/live-score/${scoringConfig.public_share_token}`
+                        if (navigator.share) {
+                          navigator.share({ title: `${matchTitle(m)} Live Score`, url })
+                        } else {
+                          navigator.clipboard.writeText(url)
+                          alert("Public Live Scorecard link copied!\n" + url)
+                        }
+                      }}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 8,
+                        background: "#F0FDF4",
+                        border: "1px solid #86EFAC",
+                        color: "#166534",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5
+                      }}
+                    >
+                      🔗 Share Live Link
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1456,17 +1747,62 @@ export function MatchDetail({ detail, players, settings, onBack, onRefresh, onDe
         </div>
         {/* Tabs */}
         <div style={{ display:"flex",borderBottom:"2px solid #f3f4f6",padding:"0 14px",overflowX:"auto" }}>
-          {[["players","👥 Players"],["expenses","💰 Expenses"]].map(([k,v])=>(
+          {[["players","👥 Players"],["scorecard","📊 Scorecard"],["expenses","💰 Expenses"]].map(([k,v])=>(
             <button key={k} onClick={()=>setTab(k)} style={{ padding:isMobile?"11px 12px":"13px 16px",border:"none",borderBottom:tab===k?"3px solid #166534":"3px solid transparent",background:"transparent",color:tab===k?"#0F172A":"#9ca3af",fontSize:isMobile?12:13,fontWeight:tab===k?800:400,cursor:"pointer",marginBottom:"-2px",whiteSpace:"nowrap",fontFamily:"var(--font-body)" }}>{v}</button>
           ))}
         </div>
         <div style={{ padding:isMobile?"14px":"22px" }}>
+          {tab==="scorecard" && (
+            <div>
+              <LiveScorecard matchId={m.id} match={m} isMobile={isMobile} />
+            </div>
+          )}
           {tab==="players"&&(
             <div>
+              {/* Match Scorer Assignment (FR-7.2) */}
+              {(isFounder || isOrganizer) && (
+                <div style={{ padding: "12px 14px", background: "#F8FAF8", borderRadius: 12, border: "1.5px solid #E2E8F0", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "#0F172A", display: "inline-flex", alignItems: "center", gap: 5 }}>
+                      🏏 Assigned Scorer:
+                    </span>
+                    {matchScorers.length > 0 ? (
+                      matchScorers.map(s => {
+                        const p = players.find(pl => pl.id === s.player_id)
+                        return (
+                          <span key={s.id || s.player_id} style={{ background: "#EEF2FF", border: "1px solid #C7D2FE", color: "#3730A3", borderRadius: 999, padding: "3px 10px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            {p?.name || "Player"}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                await revokeMatchScorer(m.id, s.player_id)
+                                const scs = await fetchMatchScorers(m.id)
+                                setMatchScorers(scs)
+                              }}
+                              title="Revoke scorer access"
+                              style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", padding: 0, fontWeight: 800, fontSize: 13 }}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )
+                      })
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#94A3B8" }}>No scorer assigned (Organizers can score)</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowAssignScorerModal(true)}
+                    style={{ padding: "6px 12px", borderRadius: 8, background: "#FFFFFF", border: "1.5px solid #166534", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    + Assign Scorer
+                  </button>
+                </div>
+              )}
               <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:12,flexWrap:"wrap" }}>
                 <span style={{ fontWeight:800,fontSize:14,color:"#0F172A",fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", gap:7 }}><Lock size={15}/> Private Invites</span>
                 <Tag col="blue">{matchPlayers.length} invited</Tag>
-                {m.status==="upcoming"&&<button onClick={()=>setShowNotify(true)} style={{ marginLeft:"auto",padding:"5px 12px",borderRadius:8,background:"#f0fdf4",border:"1px solid #6ee7b7",color:"#065f46",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>+ Manage</button>}
+                {m.status==="upcoming"&&<button onClick={()=>setShowNotify(true)} style={{ marginLeft:"auto",padding:"5px 12px",borderRadius:8,background:"#f0fdf4",border:"1px solid #6ee7b7",color:"065f46",fontSize:12,cursor:"pointer",fontWeight:700,fontFamily:"var(--font-body)" }}>+ Manage</button>}
               </div>
               {matchPlayers.length===0?(
                 <div style={{ padding:"16px",background:"#fff7ed",borderRadius:12,border:"1px solid #fed7aa",marginBottom:20,textAlign:"center" }}>
@@ -1646,6 +1982,71 @@ export function WalkInsTab({ match:m, publicResponses, onRefresh, linkActive, in
             </div>
           )}
           {approved.length>0&&<div><div style={{ fontWeight:700,fontSize:13,color:"#065f46",marginBottom:10 }}>✅ Approved ({approved.length})</div>{approved.map(r=><div key={r.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"9px 12px",background:"#f0fdf4",borderRadius:10,border:"1px solid #bbf7d0",marginBottom:7 }}><div style={{ width:32,height:32,borderRadius:"50%",background:"#166534",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:"#0F172A" }}>{r.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div><div style={{ flex:1 }}><div style={{ fontWeight:600,fontSize:13 }}>{r.name}</div><div style={{ fontSize:11,color:"#059669" }}>Added to squad</div></div><Tag col="green">✔</Tag></div>)}</div>}
+        </div>
+      )}
+
+      {/* Scoring Setup Modal (FR-7.3 to FR-7.12) */}
+      {showScoringSetup && (
+        <ScoringSetupModal
+          match={m}
+          teams={teams || []}
+          players={players || []}
+          currentUser={loggedPlayer}
+          onClose={() => setShowScoringSetup(false)}
+          onStartScoring={(session) => {
+            setShowScoringSetup(false)
+            setActiveScoringSession(session)
+            loadScoringData()
+            onRefresh()
+          }}
+        />
+      )}
+
+      {/* Assign Scorer Modal (FR-7.2) */}
+      {showAssignScorerModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10001, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }} onClick={() => setShowAssignScorerModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: 16, padding: 22, width: "100%", maxWidth: 400, boxShadow: "0 10px 30px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0F172A", fontFamily: "var(--font-head)" }}>Assign Match Scorer (FR-7.2)</h3>
+              <button onClick={() => setShowAssignScorerModal(false)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#9CA3AF" }}>×</button>
+            </div>
+            <p style={{ fontSize: 12, color: "#64748B", margin: "0 0 16px", lineHeight: 1.4 }}>Designate any registered player to score this match from their mobile phone.</p>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", display: "block", marginBottom: 6 }}>SELECT PLAYER</label>
+              <select
+                value={selectedScorerId}
+                onChange={e => setSelectedScorerId(e.target.value)}
+                style={{ width: "100%", padding: "11px 12px", borderRadius: 10, border: "1.5px solid #CBD5E1", fontSize: 14, outline: "none", background: "#F8FAF8" }}
+              >
+                <option value="">-- Select a player --</option>
+                {players.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.phone ? p.phone.slice(-4) : "no phone"})</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowAssignScorerModal(false)} style={{ flex: 1, padding: "11px", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "#FFFFFF", color: "#475569", fontSize: 13, cursor: "pointer", fontWeight: 700 }}>Cancel</button>
+              <button
+                onClick={async () => {
+                  if (!selectedScorerId) return
+                  try {
+                    await assignMatchScorer(m.id, selectedScorerId, loggedPlayer?.id)
+                    const scs = await fetchMatchScorers(m.id)
+                    setMatchScorers(scs)
+                    setShowAssignScorerModal(false)
+                    setSelectedScorerId("")
+                    alert("Scorer assigned successfully! ✅")
+                  } catch (err) {
+                    alert("Failed to assign scorer: " + err.message)
+                  }
+                }}
+                disabled={!selectedScorerId}
+                style={{ flex: 1, padding: "11px", borderRadius: 10, border: "none", background: "#166534", color: "#FFFFFF", fontSize: 13, cursor: selectedScorerId ? "pointer" : "not-allowed", fontWeight: 800, opacity: selectedScorerId ? 1 : 0.6 }}
+              >
+                Confirm Scorer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

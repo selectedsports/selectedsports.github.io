@@ -86,6 +86,8 @@ const PublicInvitePage = lazyWithRetry(() => import("./components/PublicInvitePa
 const PublicAuctionView = lazyWithRetry(() => import("./components/PublicAuctionView.jsx"))
 const PublicAuctionRegister = lazyWithRetry(() => import("./components/PublicAuctionRegister.jsx"))
 const TeamOwnerView = lazyWithRetry(() => import("./components/TeamOwnerView.jsx"))
+const PublicScoreView = lazyWithRetry(() => import("./components/PublicScoreView.jsx"))
+const LiveScoringHub = lazyWithRetry(() => import("./components/LiveScoringHub.jsx"))
 
 function restoreGitHubPagesPath() {
   const params = new URLSearchParams(window.location.search)
@@ -113,6 +115,19 @@ function getTeamViewParams() {
   const match = window.location.pathname.match(/\/team-view\/([a-zA-Z0-9\-]+)\/([a-zA-Z0-9\-]+)\/?$/)
   return match ? { auctionCode: match[1], teamId: match[2] } : null
 }
+function getLiveScoreToken() {
+  restoreGitHubPagesPath()
+  const path = window.location.pathname
+  const hash = window.location.hash
+  const match = path.match(/\/live-score(?:\/([a-zA-Z0-9\-_]+))?\/?$/) || hash.match(/#\/live-score(?:\/([a-zA-Z0-9\-_]+))?\/?$/)
+  return match ? (match[1] || null) : undefined
+}
+function isScoringHubRoute() {
+  restoreGitHubPagesPath()
+  const path = window.location.pathname
+  const hash = window.location.hash
+  return /\/scoring\/?$/.test(path) || /#\/scoring\/?$/.test(hash)
+}
 
 
 
@@ -136,6 +151,7 @@ export default function App() {
   const [liveAuctionCode, setLiveAuctionCode] = useState(null)
   const [registerAuctionCode, setRegisterAuctionCode] = useState(null)
   const [teamViewParams, setTeamViewParams] = useState(null)
+  const [liveScoreToken, setLiveScoreToken] = useState(null)
 
   const loadMatches = async () => {
     setLoading(true)
@@ -144,6 +160,9 @@ export default function App() {
   }
 
   useEffect(() => {
+    const scoreToken = getLiveScoreToken()
+    if (scoreToken !== undefined) { setLiveScoreToken(scoreToken); setScreen("liveScore"); return }
+    if (isScoringHubRoute()) { setScreen("scoringHub"); return }
     const teamView = getTeamViewParams()
     if (teamView) { setTeamViewParams(teamView); setScreen("teamView"); return }
     const liveCode = getLiveAuctionCode()
@@ -202,6 +221,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <Suspense fallback={<div style={{ minHeight:"100vh",background:"#0F172A",display:"flex",alignItems:"center",justifyContent:"center" }}><Spinner/></div>}>
+        {screen==="liveScore"    && <PublicScoreView token={liveScoreToken} onBackHome={() => setScreen("home")}/>}
+        {screen==="scoringHub"   && <LiveScoringHub onBackHome={() => setScreen("home")} onLogin={(mode) => { setLoginInitialMode(mode || "player"); setScreen("login") }}/>}
         {screen==="publicInvite" && <PublicInvitePage token={joinToken}/>}
         {screen==="liveAuction"  && <PublicAuctionView auctionCode={liveAuctionCode}/>}
         {screen==="teamView"     && <TeamOwnerView auctionCode={teamViewParams?.auctionCode} teamId={teamViewParams?.teamId}/>}
@@ -211,6 +232,7 @@ export default function App() {
             onLogin={(mode) => { setLoginInitialMode(mode === "ground_owner" ? "ground_owner" : "player"); setScreen("login") }} 
             onRegister={() => setScreen("register")}
             onGroundOwnerLogin={() => { setLoginInitialMode("ground_owner"); setScreen("login") }}
+            onOpenScoring={() => setScreen("scoringHub")}
           />
         )}
         {screen==="register"     && <RegisterScreen onSuccess={() => setScreen("registered")} onBack={() => setScreen("home")}/>}
@@ -223,6 +245,7 @@ export default function App() {
             onGroundOwnerSuccess={handleGroundOwnerLogin}
             onBack={() => setScreen("home")} 
             onRegister={() => setScreen("register")}
+            onOpenScoring={() => setScreen("scoringHub")}
           />
         )}
         {screen==="portal"       && isAdmin && <AdminPortal player={loggedPlayer} onLogout={handleLogout} isFounder={!isOrganizer}/>}

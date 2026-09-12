@@ -15,8 +15,14 @@ import {
   setPlayerStatus, fetchGrounds, fetchOrganizerUpi, confirmPlayerToMatch,
   subscribeToChat, updatePlayer, fetchContributions, fetchStats, fetchPlayerStats,
   fetchInboxMessages, countUnreadMessages, markMessagesRead, fetchPlayerGrounds,
-  updatePlayerRole, uploadProfilePhoto, fetchPlayerAuctionHistory, fetchAuctionPlayers
+  updatePlayerRole, uploadProfilePhoto, fetchPlayerAuctionHistory, fetchAuctionPlayers,
+  fetchScoringConfig, fetchMatchSquad, fetchInnings, fetchDeliveries, fetchMatchScorers, fetchTeams
 } from "../db.js"
+import { reduceInningsState } from "../scoringEngine.js"
+import ScoringSetupModal from "./ScoringSetupModal.jsx"
+import ScoringConsole from "./ScoringConsole.jsx"
+import LiveScorecard from "./LiveScorecard.jsx"
+import { BASE_URL } from "./AdminPortal.jsx"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportAuctionPoolPdf } from "../constants.js"
 import { supabase } from "../supabase.js"
@@ -587,7 +593,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
             <div style={{ flex: 1, overflowY: "auto", padding: "12px 10px", display: "flex", flexDirection: "column", gap: 4 }}>
               {[
                 { id: "dashboard", label: "Home Dashboard", icon: Home },
-                { id: "matches", label: "My Matches", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
+                { id: "matches", label: "🏏 Matches & Live Scores", icon: Users, badge: pendingMatches.length > 0 ? pendingMatches.length : null },
                 { id: "tournaments", label: "Tournaments & Auctions", icon: Trophy, badge: auctionHistory.length > 0 ? auctionHistory.length : null },
                 { id: "leaderboard", label: "Leaderboard", icon: Award },
                 { id: "profile", label: "Digital Pass & Profile", icon: UserIcon },
@@ -2917,6 +2923,94 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
   const pp = ppShare(expenses, confirmed.length)
   const myPaid = payments.find(p => p.player_id === player.id)?.paid
 
+  // Scoring Subsystem State
+  const [scoringConfig, setScoringConfig] = useState(null)
+  const [scoringSquad, setScoringSquad]   = useState([])
+  const [activeInnings, setActiveInnings] = useState([])
+  const [matchScorers, setMatchScorers]   = useState([])
+  const [showScoringSetup, setShowScoringSetup] = useState(false)
+  const [activeScoringSession, setActiveScoringSession] = useState(null)
+  const [showScorecard, setShowScorecard] = useState(false)
+  const [loadingScoring, setLoadingScoring] = useState(false)
+
+  const loadScoringData = async () => {
+    try {
+      const [cfg, sq, inn, scs] = await Promise.all([
+        fetchScoringConfig(m.id),
+        fetchMatchSquad(m.id),
+        fetchInnings(m.id),
+        fetchMatchScorers(m.id),
+      ])
+      setScoringConfig(cfg)
+      setScoringSquad(sq || [])
+      setActiveInnings(inn || [])
+      setMatchScorers(scs || [])
+    } catch (err) {
+      console.warn("Error loading match scoring info:", err)
+    }
+  }
+
+  useEffect(() => {
+    loadScoringData()
+  }, [m.id])
+
+  const isFounder = player?.role === "founder"
+  const isOrganizer = player?.role === "organizer"
+  const isProCreator = player?.role === "pro" && m.created_by === player?.id
+  const isAssignedScorer = matchScorers.some(s => s.player_id === player?.id)
+  const canScore = isFounder || isOrganizer || isProCreator || isAssignedScorer
+
+  const handleOpenScoring = async () => {
+    setLoadingScoring(true)
+    try {
+      const [cfg, sq, inn] = await Promise.all([
+        fetchScoringConfig(m.id),
+        fetchMatchSquad(m.id),
+        fetchInnings(m.id),
+      ])
+      setScoringConfig(cfg)
+      setScoringSquad(sq || [])
+      setActiveInnings(inn || [])
+
+      if (!cfg || !sq || sq.length < 2) {
+        setShowScoringSetup(true)
+        setLoadingScoring(false)
+        return
+      }
+
+      const currentInn = (inn && inn.find(i => i.status === "in_progress")) || (inn && inn[inn.length - 1])
+      if (!currentInn) {
+        setShowScoringSetup(true)
+        setLoadingScoring(false)
+        return
+      }
+
+      const dels = await fetchDeliveries(currentInn.id)
+      const state = reduceInningsState(cfg, sq, dels, currentInn)
+      const allTeams = await fetchTeams()
+      const teamA = allTeams.find(t => t.id === (cfg.toss_winner_team_id || m.team_a_id)) || { id: m.team_a_id || "team_a", name: m.team || "Team A" }
+      const teamB = allTeams.find(t => t.id === (m.team_b_id || "team_b")) || { id: m.team_b_id || "team_b", name: "Team B" }
+
+      const battingTeam = currentInn.batting_team_id === teamA.id ? teamA : teamB
+      const bowlingTeam = currentInn.bowling_team_id === teamA.id ? teamA : teamB
+
+      setActiveScoringSession({
+        config: cfg,
+        squad: sq,
+        innings: currentInn,
+        battingTeam,
+        bowlingTeam,
+        strikerId: state.strikerSquadId || sq.find(s => s.team_id === battingTeam.id)?.id,
+        nonStrikerId: state.nonStrikerSquadId || sq.filter(s => s.team_id === battingTeam.id)[1]?.id,
+        openingBowlerId: state.bowlerSquadId || sq.find(s => s.team_id === bowlingTeam.id)?.id,
+      })
+    } catch (err) {
+      alert("Failed to load scoring session: " + err.message)
+    } finally {
+      setLoadingScoring(false)
+    }
+  }
+
   useEffect(() => {
     const ch = subscribeToChat(m.id, msg => setMsgs(prev => [...prev, msg]))
     return () => { supabase.removeChannel(ch) }
@@ -2931,6 +3025,38 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
     } catch (e) {
       alert("Error sending message: " + e.message)
     }
+  }
+
+  // Active scoring full-screen console for assigned scorer
+  if (activeScoringSession) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "#0F172A", overflowY: "auto" }}>
+        <ScoringConsole
+          match={m}
+          config={activeScoringSession.config}
+          squad={activeScoringSession.squad}
+          initialInnings={activeScoringSession.innings}
+          battingTeam={activeScoringSession.battingTeam}
+          bowlingTeam={activeScoringSession.bowlingTeam}
+          initialStrikerId={activeScoringSession.strikerId}
+          initialNonStrikerId={activeScoringSession.nonStrikerId}
+          initialBowlerId={activeScoringSession.openingBowlerId}
+          currentUser={player}
+          onClose={() => {
+            setActiveScoringSession(null)
+            loadScoringData()
+          }}
+          onViewScorecard={() => setShowScorecard(true)}
+        />
+        {showScorecard && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ background: "#F8FAF8", width: "100%", maxWidth: 720, maxHeight: "96vh", overflowY: "auto", borderRadius: isMobile ? 0 : 16 }}>
+              <LiveScorecard matchId={m.id} match={m} onClose={() => setShowScorecard(false)} />
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   return (
@@ -2965,9 +3091,19 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
               <span><MapPin size={13} style={{ verticalAlign: "-2px" }}/> {m.ground}</span>
             </div>
 
-            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-              <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 999, padding: "4px 12px", fontSize: 11, fontWeight: 800, textTransform: "capitalize" }}>
-                {m.status}
+            <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <span style={{
+                background: m.status === "in_progress" ? "#DC2626" : "rgba(255,255,255,0.2)",
+                borderRadius: 999,
+                padding: "4px 12px",
+                fontSize: 11,
+                fontWeight: 800,
+                textTransform: "capitalize",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5
+              }}>
+                {m.status === "in_progress" ? "🔴 LIVE MATCH" : m.status}
               </span>
               <span style={{
                 background: myStatus === "confirmed" ? "#22C55E" : myStatus === "waitlist" ? "#F59E0B" : myStatus === "declined" ? "#EF4444" : "#CBD5E1",
@@ -2985,6 +3121,78 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
                  myStatus === "declined" ? <><XCircle size={13}/> Declined</> :
                  <><Zap size={13}/> Awaiting your reply</>}
               </span>
+            </div>
+
+            {/* Live Scoring & Scorecard Actions Bar */}
+            <div style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
+              {canScore && (
+                <button
+                  onClick={handleOpenScoring}
+                  disabled={loadingScoring}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: 9,
+                    background: "#FFFFFF",
+                    border: "none",
+                    color: "#166534",
+                    fontSize: 12,
+                    fontWeight: 900,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    fontFamily: "var(--font-head)"
+                  }}
+                >
+                  🏏 {loadingScoring ? "Opening..." : m.status === "in_progress" ? "Resume Scoring" : "Open Scoring Console"}
+                </button>
+              )}
+              <button
+                onClick={() => setShowScorecard(true)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 9,
+                  background: "rgba(255,255,255,0.18)",
+                  border: "1px solid rgba(255,255,255,0.4)",
+                  color: "#FFFFFF",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6
+                }}
+              >
+                📊 Scorecard
+              </button>
+              {scoringConfig?.public_share_token && (
+                <button
+                  onClick={() => {
+                    const url = `${BASE_URL}/live-score/${scoringConfig.public_share_token}`
+                    if (navigator.share) {
+                      navigator.share({ title: `${matchTitle(m)} Live Score`, url })
+                    } else {
+                      navigator.clipboard.writeText(url)
+                      alert("Public live score link copied: " + url)
+                    }
+                  }}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 9,
+                    background: "rgba(255,255,255,0.12)",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    color: "#FFFFFF",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5
+                  }}
+                >
+                  🔗 Share Live Link
+                </button>
+              )}
             </div>
           </div>
 
@@ -3214,6 +3422,30 @@ export function MatchDetailPlayer({ detail, player, onBack, onRespond, isMobile 
           </div>
         </Card>
       </div>
+
+      {/* Live Scorecard Modal View */}
+      {showScorecard && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 100000, display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? 0 : 16 }}>
+          <div style={{ background: "#F8FAF8", width: "100%", maxWidth: 720, maxHeight: "96vh", overflowY: "auto", borderRadius: isMobile ? 0 : 16 }}>
+            <LiveScorecard matchId={m.id} match={m} onClose={() => setShowScorecard(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* Scoring Setup Modal */}
+      {showScoringSetup && (
+        <ScoringSetupModal
+          match={m}
+          players={confirmed.map(c => c.players).filter(Boolean)}
+          currentUser={player}
+          onClose={() => setShowScoringSetup(false)}
+          onStartScoring={(session) => {
+            setShowScoringSetup(false)
+            setActiveScoringSession(session)
+            loadScoringData()
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -16,7 +16,7 @@ function getCachedStats() {
   return { p: 80, m: 43, t: 24 }
 }
 
-export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin }) {
+export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin, onOpenScoring }) {
   const isMobile = useMobile()
   const initial = useMemo(() => getCachedStats(), [])
 
@@ -60,6 +60,7 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin }) 
   ]
 
   const featurePills = [
+    { label: "Live Cricket Scoring", icon: Zap },
     { label: "Digital Player Pass", icon: ShieldCheck },
     { label: "Live Auction Console", icon: Zap },
     { label: "Grounds on Google Maps", icon: MapPin },
@@ -239,32 +240,122 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin }) 
           flexWrap: "wrap",
           justifyContent: "center",
           gap: 6,
-          marginBottom: 24
+          marginBottom: 20
         }}>
-          {featurePills.map((fp, idx) => (
-            <span
-              key={idx}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                background: "rgba(22,101,52,0.06)",
-                border: "1px solid rgba(22,101,52,0.18)",
-                color: "#166534",
-                padding: "5px 11px",
-                borderRadius: 999,
-                fontSize: 11,
-                fontWeight: 700
-              }}
-            >
-              <fp.icon size={13} color="#166534" />
-              {fp.label}
-            </span>
-          ))}
+          {featurePills.map((fp, idx) => {
+            const isScoring = fp.label === "Live Cricket Scoring"
+            return (
+              <span
+                key={idx}
+                onClick={isScoring && onOpenScoring ? onOpenScoring : undefined}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  background: isScoring ? "rgba(22,101,52,0.12)" : "rgba(22,101,52,0.06)",
+                  border: isScoring ? "1.5px solid #22C55E" : "1px solid rgba(22,101,52,0.18)",
+                  color: "#166534",
+                  padding: "5px 12px",
+                  borderRadius: 999,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: isScoring ? "pointer" : "default",
+                  boxShadow: isScoring ? "0 2px 8px rgba(34,197,94,0.15)" : "none"
+                }}
+              >
+                <fp.icon size={13} color={isScoring ? "#15803D" : "#166534"} />
+                {fp.label}
+                {isScoring && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#EF4444" }} />}
+              </span>
+            )
+          })}
         </div>
 
         {/* ── CALL TO ACTION BUTTONS ── */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+          {/* PRIMARY: LIVE CRICKET SCORING SUBSYSTEM */}
+          <button
+            onClick={onOpenScoring}
+            style={{
+              width: "100%",
+              padding: "15px 18px",
+              borderRadius: 16,
+              background: "linear-gradient(135deg, #0F172A 0%, #1E293B 100%)",
+              border: "2px solid #22C55E",
+              color: "#FFFFFF",
+              fontSize: 15,
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "var(--font-head)",
+              boxShadow: "0 8px 24px rgba(34,197,94,0.25)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              transition: "transform 150ms ease, box-shadow 150ms ease"
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = "translateY(-2px)"
+              e.currentTarget.style.boxShadow = "0 12px 28px rgba(34,197,94,0.38)"
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = "translateY(0)"
+              e.currentTarget.style.boxShadow = "0 8px 24px rgba(34,197,94,0.25)"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left" }}>
+              <div style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "linear-gradient(135deg, #166534 0%, #22C55E 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 22,
+                boxShadow: "0 4px 12px rgba(34,197,94,0.35)",
+                flexShrink: 0
+              }}>
+                🏏
+              </div>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16, fontWeight: 900, color: "#FFFFFF" }}>
+                    Live Cricket Scoring
+                  </span>
+                  <span style={{
+                    background: "#EF4444",
+                    color: "#FFFFFF",
+                    fontSize: 9,
+                    fontWeight: 900,
+                    padding: "2px 6px",
+                    borderRadius: 999,
+                    letterSpacing: 0.5
+                  }}>
+                    LIVE
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: "#94A3B8", fontWeight: 600, marginTop: 2 }}>
+                  Ball-by-ball console · Scorecards · Fixtures
+                </div>
+              </div>
+            </div>
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              background: "rgba(255,255,255,0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#4ADE80",
+              fontWeight: 900,
+              fontSize: 16
+            }}>
+              ➔
+            </div>
+          </button>
+
           <button
             onClick={onLogin}
             style={{

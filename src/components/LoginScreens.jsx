@@ -6,7 +6,7 @@ import { Phone, Lock, Eye, EyeOff, UserPlus, Users, Swords, Trophy } from "lucid
 import { ADMIN_PHONE, isValidName, birthDateError, maxBirthDateForMinAge } from "../constants.js"
 import { useMobile } from "../hooks/useMobile.js"
 
-export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onGroundOwnerSuccess, onBack, onRegister, initialMode = "player" }) {
+export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onGroundOwnerSuccess, onBack, onRegister, onOpenScoring, initialMode = "player" }) {
   // LOGIN_ONLY_SCREEN_V1
   const [phone, setPhone] = useState("")
   const [pin, setPin]     = useState("")
@@ -87,6 +87,50 @@ export function UnifiedLoginScreen({ onAdminSuccess, onPlayerSuccess, onGroundOw
           background:"#FFFFFF", borderRadius:22, boxShadow:"0 12px 36px rgba(15,23,42,0.08)", border:"1px solid #E2E8F0", padding:"30px 24px",
           opacity:mounted?1:0, transform:mounted?"translateY(0)":"translateY(16px)", transition:"opacity 450ms 100ms, transform 450ms 100ms",
         }}>
+          {/* Quick Access to Cricket Scoring */}
+          {onOpenScoring && (
+            <div style={{
+              marginBottom: 16,
+              padding: "11px 14px",
+              background: "linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)",
+              border: "1.5px solid #86EFAC",
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 10
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🏏</span>
+                <div>
+                  <div style={{ fontSize: 12, color: "#166534", fontWeight: 800 }}>
+                    Want to score or view matches?
+                  </div>
+                  <div style={{ fontSize: 10, color: "#15803D" }}>
+                    No login required for scoring & scorecards
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={onOpenScoring}
+                style={{
+                  background: "#166534",
+                  color: "#FFFFFF",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                Open Scoring ➔
+              </button>
+            </div>
+          )}
+
           {/* Mode Switcher Tabs */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, background: "#F1F5F9", padding: 4, borderRadius: 12, marginBottom: 18 }}>
             <button

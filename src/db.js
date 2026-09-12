@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js"
+import { generateUUID } from "./scoringStorage.js"
 
 // Computes an age-based category from a birth date. Currently only flags Under-19;
 // returns null for anyone 19+ so existing/manual categories aren't overwritten.
@@ -575,6 +576,14 @@ export async function fetchLeaderboard() {
   const { data, error } = await supabase.from("match_players").select("player_id, status, created_at, players(id, name, city, role, profile_image_url), matches!inner(status, date, team, our_team)").eq("status", "confirmed").eq("matches.status", "completed")
   if (error) throw error
   return data || []
+}
+
+export async function fetchCareerStatsLeaderboard() {
+  try {
+    const { data, error } = await supabase.from("player_career_stats").select("*")
+    if (!error && data) return data
+  } catch {}
+  return []
 }
 
 
@@ -1980,4 +1989,521 @@ export async function authenticateGroundOwner(phone, pin) {
   }
 
   return null
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// LIVE CRICKET SCORING SUBSYSTEM (SRS v1.0, DM-9 to DM-18, AD-1 to AD-6)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const LOCAL_STORAGE_PREFIX = "selectedsports_scoring_"
+
+function getLocalKey(key) {
+  return `${LOCAL_STORAGE_PREFIX}${key}`
+}
+
+function readLocal(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(getLocalKey(key))
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writeLocal(key, val) {
+  try {
+    localStorage.setItem(getLocalKey(key), JSON.stringify(val))
+  } catch (err) {
+    console.warn("writeLocal error:", err)
+  }
+}
+
+// ── 1. Scoring Config (DM-9, FR-7.3, FR-7.4) ───────────────────────────────────
+
+export async function fetchScoringConfig(matchId) {
+  if (!matchId) return null
+  const local = readLocal(`config_${matchId}`)
+  try {
+    const { data, error } = await supabase
+      .from("match_scoring_config")
+      .select("*")
+      .eq("match_id", matchId)
+      .maybeSingle()
+    if (!error && data) {
+      writeLocal(`config_${matchId}`, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("fetchScoringConfig Supabase fallback:", err)
+  }
+  return local || {
+    match_id: matchId,
+    format: "T20",
+    overs_per_innings: 20,
+    balls_per_over: 6,
+    players_per_side: 11,
+    max_overs_per_bowler: 4,
+    free_hit_enabled: true,
+    wide_penalty: 1,
+    noball_penalty: 1,
+    byes_enabled: true,
+    last_man_stands: false,
+    public_link_enabled: true,
+    public_token: `sc_${matchId.slice(0, 8)}_${generateUUID().slice(0, 8)}`,
+    scoring_status: "pending",
+  }
+}
+
+export async function saveScoringConfig(matchId, configData) {
+  if (!matchId) return null
+  const full = {
+    ...configData,
+    match_id: matchId,
+    updated_at: new Date().toISOString(),
+  }
+  writeLocal(`config_${matchId}`, full)
+  try {
+    const { data, error } = await supabase
+      .from("match_scoring_config")
+      .upsert(full, { onConflict: "match_id" })
+      .select()
+      .maybeSingle()
+    if (!error && data) return data
+  } catch (err) {
+    console.warn("saveScoringConfig remote write skipped (offline or not migrated):", err)
+  }
+  return full
+}
+
+// ── 2. Match Squad (DM-10, FR-7.6, FR-7.7, FR-7.9, FR-7.10) ────────────────────
+
+export async function fetchMatchSquad(matchId) {
+  if (!matchId) return []
+  const local = readLocal(`squad_${matchId}`)
+  try {
+    const { data, error } = await supabase
+      .from("match_squad")
+      .select("*")
+      .eq("match_id", matchId)
+      .order("batting_order", { ascending: true })
+    if (!error && data && data.length > 0) {
+      writeLocal(`squad_${matchId}`, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("fetchMatchSquad Supabase fallback:", err)
+  }
+  return local || []
+}
+
+export async function saveMatchSquad(matchId, squadList = []) {
+  if (!matchId) return []
+  writeLocal(`squad_${matchId}`, squadList)
+  try {
+    // Delete existing squad rows and replace atomically or upsert
+    await supabase.from("match_squad").delete().eq("match_id", matchId)
+    const { data, error } = await supabase.from("match_squad").insert(squadList).select()
+    if (!error && data) {
+      writeLocal(`squad_${matchId}`, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("saveMatchSquad remote write skipped (offline or not migrated):", err)
+  }
+  return squadList
+}
+
+// ── 3. Match Scorers (DM-16, FR-7.1, FR-7.2) ───────────────────────────────────
+
+export async function fetchMatchScorers(matchId) {
+  if (!matchId) return []
+  const local = readLocal(`scorers_${matchId}`) || []
+  try {
+    const { data, error } = await supabase
+      .from("match_scorers")
+      .select("*")
+      .eq("match_id", matchId)
+      .is("revoked_at", null)
+    if (!error && data) {
+      writeLocal(`scorers_${matchId}`, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("fetchMatchScorers Supabase fallback:", err)
+  }
+  return local
+}
+
+export async function assignMatchScorer(matchId, playerId, assignedBy) {
+  const row = {
+    id: generateUUID(),
+    match_id: matchId,
+    player_id: playerId,
+    assigned_by: assignedBy || null,
+    assigned_at: new Date().toISOString(),
+    revoked_at: null,
+  }
+  const current = await fetchMatchScorers(matchId)
+  const updated = [...current.filter(s => s.player_id !== playerId), row]
+  writeLocal(`scorers_${matchId}`, updated)
+  try {
+    await supabase.from("match_scorers").upsert(row, { onConflict: "match_id, player_id" })
+  } catch {}
+  return row
+}
+
+export async function revokeMatchScorer(matchId, playerId) {
+  const current = await fetchMatchScorers(matchId)
+  const updated = current.filter(s => s.player_id !== playerId)
+  writeLocal(`scorers_${matchId}`, updated)
+  try {
+    await supabase.from("match_scorers").update({ revoked_at: new Date().toISOString() }).match({ match_id: matchId, player_id: playerId })
+  } catch {}
+  return true
+}
+
+// ── 4. Innings (DM-11, FR-7.11, FR-9.8, FR-9.9) ─────────────────────────────────
+
+export async function fetchInnings(matchId) {
+  if (!matchId) return []
+  const local = readLocal(`innings_${matchId}`) || []
+  try {
+    const { data, error } = await supabase
+      .from("innings")
+      .select("*")
+      .eq("match_id", matchId)
+      .order("innings_number", { ascending: true })
+    if (!error && data && data.length > 0) {
+      writeLocal(`innings_${matchId}`, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("fetchInnings Supabase fallback:", err)
+  }
+  return local
+}
+
+export async function saveInningsRecord(inningsRow) {
+  if (!inningsRow || !inningsRow.match_id) return null
+  const current = await fetchInnings(inningsRow.match_id)
+  const index = current.findIndex(i => i.innings_number === inningsRow.innings_number || i.id === inningsRow.id)
+  let updated
+  if (index >= 0) {
+    updated = [...current]
+    updated[index] = { ...updated[index], ...inningsRow }
+  } else {
+    updated = [...current, inningsRow]
+  }
+  writeLocal(`innings_${inningsRow.match_id}`, updated)
+  try {
+    const { data, error } = await supabase
+      .from("innings")
+      .upsert(inningsRow, { onConflict: "match_id, innings_number" })
+      .select()
+      .maybeSingle()
+    if (!error && data) return data
+  } catch (err) {
+    console.warn("saveInningsRecord remote error:", err)
+  }
+  return inningsRow
+}
+
+// ── 5. Deliveries (DM-12, AD-2, FR-10.3, FR-10.4) ──────────────────────────────
+
+export async function fetchDeliveries(inningsId) {
+  if (!inningsId) return []
+  const localKey = `deliveries_${inningsId}`
+  const local = readLocal(localKey) || []
+  try {
+    const { data, error } = await supabase
+      .from("deliveries")
+      .select("*")
+      .eq("innings_id", inningsId)
+      .order("sequence_no", { ascending: true })
+    if (!error && data && data.length > 0) {
+      writeLocal(localKey, data)
+      return data
+    }
+  } catch (err) {
+    console.warn("fetchDeliveries Supabase fallback:", err)
+  }
+  return local
+}
+
+export async function appendDeliveriesBatch(batch = []) {
+  if (!batch || batch.length === 0) return { success: true }
+  const inningsId = batch[0]?.innings_id
+  if (!inningsId) return { success: false, error: "No innings_id provided" }
+
+  // Update local store immediately
+  const localKey = `deliveries_${inningsId}`
+  const local = readLocal(localKey) || []
+  const localMap = new Map(local.map(d => [d.client_uuid, d]))
+  batch.forEach(d => localMap.set(d.client_uuid, d))
+  const updatedLocal = Array.from(localMap.values()).sort((a, b) => (a.sequence_no || 0) - (b.sequence_no || 0))
+  writeLocal(localKey, updatedLocal)
+
+  try {
+    // Idempotent upsert by client_uuid (FR-10.3)
+    const { error } = await supabase.from("deliveries").upsert(batch, { onConflict: "client_uuid" })
+    if (error) {
+      // Check for conflict (FR-10.5)
+      if (error.code === "23505" && error.message?.includes("sequence_no")) {
+        return { conflict: true, error: "Delivery sequence conflict detected" }
+      }
+      throw error
+    }
+    return { success: true }
+  } catch (err) {
+    console.warn("appendDeliveriesBatch remote error:", err)
+    return { success: false, error: err.message }
+  }
+}
+
+// ── 6. Match Results & Player Stats (DM-13, DM-14, DM-15, FR-9.14) ──────────────
+
+export async function commitMatchResult(matchId, resultData, playerStats = []) {
+  if (!matchId) return null
+  const committedAt = new Date().toISOString()
+  const fullResult = {
+    ...resultData,
+    match_id: matchId,
+    committed_at: committedAt,
+  }
+
+  writeLocal(`result_${matchId}`, fullResult)
+  writeLocal(`stats_${matchId}`, playerStats)
+
+  // 1. Update match status to played
+  try {
+    await supabase.from("matches").update({ status: "played" }).eq("id", matchId)
+  } catch {}
+
+  // 2. Save match_results
+  try {
+    await supabase.from("match_results").upsert(fullResult, { onConflict: "match_id" })
+  } catch (err) {
+    console.warn("commitMatchResult match_results error:", err)
+  }
+
+  // 3. Save player_match_stats
+  try {
+    if (playerStats.length > 0) {
+      await supabase.from("player_match_stats").delete().eq("match_id", matchId)
+      await supabase.from("player_match_stats").insert(playerStats.map(s => ({
+        ...s,
+        match_id: matchId,
+        id: s.id || generateUUID(),
+      })))
+    }
+  } catch (err) {
+    console.warn("commitMatchResult player_match_stats error:", err)
+  }
+
+  // 4. Incrementally update player_career_stats cache (AD-4)
+  try {
+    for (const stat of playerStats) {
+      if (!stat.player_id) continue // skip unlinked walk-ins (FR-7.8)
+      await updatePlayerCareerStatsCache(stat.player_id)
+    }
+  } catch (err) {
+    console.warn("Career stats update error:", err)
+  }
+
+  return fullResult
+}
+
+export async function updatePlayerCareerStatsCache(playerId) {
+  if (!playerId) return null
+  try {
+    const { data: matchStats, error } = await supabase
+      .from("player_match_stats")
+      .select("*")
+      .eq("player_id", playerId)
+    if (error || !matchStats) return null
+
+    const cache = {
+      player_id: playerId,
+      matches: matchStats.length,
+      innings_batted: matchStats.filter(s => s.balls_faced > 0 || s.runs > 0).length,
+      runs: matchStats.reduce((sum, s) => sum + (s.runs || 0), 0),
+      highest_score: matchStats.reduce((max, s) => Math.max(max, s.runs || 0), 0),
+      not_outs: matchStats.filter(s => !s.is_out && (s.balls_faced > 0 || s.runs > 0)).length,
+      fours: matchStats.reduce((sum, s) => sum + (s.fours || 0), 0),
+      sixes: matchStats.reduce((sum, s) => sum + (s.sixes || 0), 0),
+      fifties: matchStats.filter(s => s.runs >= 50 && s.runs < 100).length,
+      hundreds: matchStats.filter(s => s.runs >= 100).length,
+      innings_bowled: matchStats.filter(s => (s.balls_bowled || 0) > 0).length,
+      balls_bowled: matchStats.reduce((sum, s) => sum + (s.balls_bowled || 0), 0),
+      maidens: matchStats.reduce((sum, s) => sum + (s.maidens || 0), 0),
+      runs_conceded: matchStats.reduce((sum, s) => sum + (s.runs_conceded || 0), 0),
+      wickets: matchStats.reduce((sum, s) => sum + (s.wickets || 0), 0),
+      best_figures: "—",
+      three_fers: matchStats.filter(s => s.wickets >= 3 && s.wickets < 5).length,
+      five_fers: matchStats.filter(s => s.wickets >= 5).length,
+      catches: matchStats.reduce((sum, s) => sum + (s.catches || 0), 0),
+      run_outs: matchStats.reduce((sum, s) => sum + (s.run_outs || 0), 0),
+      stumpings: matchStats.reduce((sum, s) => sum + (s.stumpings || 0), 0),
+      wins: 0,
+      losses: 0,
+      mom_count: matchStats.filter(s => s.is_mom).length,
+      last_rebuilt_at: new Date().toISOString(),
+    }
+
+    await supabase.from("player_career_stats").upsert(cache, { onConflict: "player_id" })
+    return cache
+  } catch (err) {
+    console.warn("updatePlayerCareerStatsCache error:", err)
+    return null
+  }
+}
+
+/**
+ * Operational command to rebuild entire player_career_stats cache from deliveries / match_stats (AC-13, NFR-17)
+ */
+export async function rebuildCareerStatsFromDeliveries() {
+  try {
+    const players = await fetchPlayers()
+    for (const p of players) {
+      await updatePlayerCareerStatsCache(p.id)
+    }
+    return { success: true, count: players.length }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
+}
+
+// ── 7. Public Live Scorecard Endpoint (FR-9.15, FR-9.17, NFR-15, AD-5) ──────────
+
+export async function fetchPublicScorecard(token) {
+  if (!token) return null
+  try {
+    // 1. Fetch config by public token
+    const { data: config, error: configErr } = await supabase
+      .from("match_scoring_config")
+      .select("*")
+      .eq("public_token", token)
+      .maybeSingle()
+
+    if (configErr || !config || config.public_link_enabled === false) {
+      // Check local storage fallback
+      const allLocalKeys = Object.keys(localStorage)
+      for (const k of allLocalKeys) {
+        if (k.startsWith(`${LOCAL_STORAGE_PREFIX}config_`)) {
+          const cfg = readLocal(k.replace(LOCAL_STORAGE_PREFIX, ""))
+          if (cfg?.public_token === token && cfg.public_link_enabled !== false) {
+            return buildScorecardProjection(cfg.match_id, cfg)
+          }
+        }
+      }
+      return null
+    }
+
+    return await buildScorecardProjection(config.match_id, config)
+  } catch (err) {
+    console.warn("fetchPublicScorecard error:", err)
+    return null
+  }
+}
+
+async function buildScorecardProjection(matchId, config) {
+  // Fetch match details
+  const { data: match } = await supabase
+    .from("matches")
+    .select("id, match_date, match_time, match_type, status, ground_id, team_a_id, team_b_id")
+    .eq("id", matchId)
+    .maybeSingle()
+
+  const [grounds, teams, squad, inningsList, result] = await Promise.all([
+    fetchGrounds(),
+    fetchTeams(),
+    fetchMatchSquad(matchId),
+    fetchInnings(matchId),
+    supabase.from("match_results").select("*").eq("match_id", matchId).maybeSingle().then(r => r.data).catch(() => null),
+  ])
+
+  const ground = grounds.find(g => g.id === match?.ground_id)
+  const teamA = teams.find(t => t.id === match?.team_a_id)
+  const teamB = teams.find(t => t.id === match?.team_b_id)
+
+  // Strictly sanitized projection - NO phone, NO pin, NO upi, NO city (NFR-15, FR-9.17)
+  const sanitizedSquad = (squad || []).map(s => ({
+    id: s.id,
+    team_id: s.team_id,
+    display_name: s.display_name,
+    batting_order: s.batting_order,
+    is_captain: s.is_captain,
+    is_keeper: s.is_keeper,
+  }))
+
+  return {
+    match_id: matchId,
+    status: match?.status || "upcoming",
+    match_date: match?.match_date,
+    match_time: match?.match_time,
+    ground_name: ground?.name || "Cricket Ground",
+    team_a: teamA ? { id: teamA.id, name: teamA.name, logo_url: teamA.logo_url } : { name: "Team A" },
+    team_b: teamB ? { id: teamB.id, name: teamB.name, logo_url: teamB.logo_url } : { name: "Team B" },
+    config: {
+      format: config.format,
+      overs_per_innings: config.overs_per_innings,
+      balls_per_over: config.balls_per_over,
+      players_per_side: config.players_per_side,
+      free_hit_enabled: config.free_hit_enabled,
+      toss_winner_team_id: config.toss_winner_team_id,
+      toss_decision: config.toss_decision,
+    },
+    squad: sanitizedSquad,
+    innings: inningsList || [],
+    result: result || null,
+  }
+}
+
+// ── 8. Innings Write Lock & Heartbeat (DM-17, FR-10.8, FR-10.9) ────────────────
+
+export async function acquireInningsWriteLock(inningsId, playerId, deviceId) {
+  const now = new Date().toISOString()
+  const lock = {
+    innings_id: inningsId,
+    holder_player_id: playerId,
+    device_id: deviceId || "device_" + Date.now(),
+    acquired_at: now,
+    last_heartbeat_at: now,
+  }
+  writeLocal(`lock_${inningsId}`, lock)
+  try {
+    await supabase.from("innings_write_lock").upsert(lock, { onConflict: "innings_id" })
+  } catch {}
+  return lock
+}
+
+export async function heartbeatInningsWriteLock(inningsId) {
+  const now = new Date().toISOString()
+  try {
+    await supabase.from("innings_write_lock").update({ last_heartbeat_at: now }).eq("innings_id", inningsId)
+  } catch {}
+}
+
+export async function releaseInningsWriteLock(inningsId) {
+  try {
+    await supabase.from("innings_write_lock").delete().eq("innings_id", inningsId)
+  } catch {}
+}
+
+// ── 9. Audit & Reopen Completed Match (DM-18, FR-9.21) ─────────────────────────
+
+export async function reopenCompletedMatch(matchId, actorPlayerId, reason) {
+  try {
+    await supabase.from("matches").update({ status: "live" }).eq("id", matchId)
+    await supabase.from("scoring_audit").insert({
+      id: generateUUID(),
+      match_id: matchId,
+      actor_player_id: actorPlayerId,
+      action: "reopen_match",
+      payload: { reason, timestamp: new Date().toISOString() },
+    })
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err.message }
+  }
 }

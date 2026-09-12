@@ -243,42 +243,56 @@ export function MessageInbox({ messages, onClose, player }) {
 }
 
 import { useState, useEffect } from "react"
-import { fetchLeaderboard } from "../db.js"
+import { fetchLeaderboard, fetchCareerStatsLeaderboard } from "../db.js"
 
 export function LeaderboardPage({ isMobile, myId }) {
   const POINTS_PER_MATCH = 20
   const [rawRows, setRawRows] = useState([])
+  const [careerStats, setCareerStats] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(null)
   const [revealed, setRevealed] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
-  const [activeTab, setActiveTab] = useState("points")
-  const [season, setSeason] = useState("all")
-  const [seasonOpen, setSeasonOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("points") // points (matches), runs, wickets, mom, impact
+  const [period, setPeriod] = useState("all") // all, this_season, last_10 (FR-5.6)
+  const [periodOpen, setPeriodOpen] = useState(false)
   const [roleFilter, setRoleFilter] = useState("all")
   const [roleOpen, setRoleOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedPlayer, setSelectedPlayer] = useState(null)
+  const [minInnings, setMinInnings] = useState(1) // FR-5.7
 
   useEffect(() => {
-    fetchLeaderboard().then(r => {
-      setRawRows(r)
+    Promise.all([
+      fetchLeaderboard(),
+      fetchCareerStatsLeaderboard(),
+    ]).then(([r, cs]) => {
+      setRawRows(r || [])
+      setCareerStats(cs || [])
       setTimeout(() => setRevealed(true), 50)
-      if (r.length > 0) {
+      if (r?.length > 0) {
         setShowConfetti(true)
         setTimeout(() => setShowConfetti(false), 2200)
       }
-    }).catch(e => setLoadError(e.message || String(e))).finally(()=>setLoading(false))
+    }).catch(e => setLoadError(e.message || String(e))).finally(() => setLoading(false))
   }, [])
 
   if (loading) return <Spinner/>
 
-  const seasons = Array.from(new Set(rawRows.map(r => (r.matches?.date || "").slice(0,4)).filter(Boolean))).sort().reverse()
+  const currentYear = new Date().getFullYear().toString()
 
+  // Period filter per FR-5.6
   const filteredRaw = rawRows.filter(r => {
-    if (season !== "all" && (r.matches?.date || "").slice(0,4) !== season) return false
+    const matchYear = (r.matches?.date || "").slice(0, 4)
+    if (period === "this_season" && matchYear !== currentYear) return false
     if (roleFilter !== "all" && (r.players?.role || "player") !== roleFilter) return false
     return true
+  })
+
+  // Map career stats by player_id
+  const careerMap = {}
+  careerStats.forEach(cs => {
+    careerMap[cs.player_id] = cs
   })
 
   const map = {}
@@ -286,6 +300,7 @@ export function LeaderboardPage({ isMobile, myId }) {
     const p = r.players
     if (!p) return
     if (!map[p.id]) {
+      const c = careerMap[p.id] || {}
       map[p.id] = {
         id: p.id,
         name: p.name,
@@ -294,7 +309,12 @@ export function LeaderboardPage({ isMobile, myId }) {
         profile_image_url: p.profile_image_url,
         matchesPlayed: 0,
         matches: [],
-        earliestConfirmedAt: r.created_at
+        earliestConfirmedAt: r.created_at,
+        career: c,
+        runs: c.runs || 0,
+        wickets: c.wickets || 0,
+        momCount: c.mom_count || 0,
+        impactScore: (c.runs || 0) + (20 * (c.wickets || 0)) + (10 * ((c.catches || 0) + (c.run_outs || 0) + (c.stumpings || 0))),
       }
     }
     map[p.id].matchesPlayed++
@@ -304,12 +324,29 @@ export function LeaderboardPage({ isMobile, myId }) {
     }
   })
 
-  const allRankedRows = Object.values(map).map(p => ({ ...p, points: p.matchesPlayed * POINTS_PER_MATCH })).sort((a, b) => {
-    if (b.points !== a.points) return b.points - a.points
-    if (!a.earliestConfirmedAt) return 1
-    if (!b.earliestConfirmedAt) return -1
-    return new Date(a.earliestConfirmedAt) - new Date(b.earliestConfirmedAt)
-  })
+  // Multi-metric ranking (FR-5.5) with rate threshold (FR-5.7)
+  const allRankedRows = Object.values(map)
+    .filter(p => {
+      // Exclude players below minimum innings threshold if viewing rate metrics (FR-5.7)
+      if (activeTab === "runs" && (p.career?.innings_batted || 0) < minInnings && minInnings > 1) return false
+      return true
+    })
+    .map(p => ({
+      ...p,
+      points: p.matchesPlayed * POINTS_PER_MATCH,
+      sortValue:
+        activeTab === "runs" ? p.runs :
+        activeTab === "wickets" ? p.wickets :
+        activeTab === "mom" ? p.momCount :
+        activeTab === "impact" ? p.impactScore :
+        (p.matchesPlayed * POINTS_PER_MATCH)
+    }))
+    .sort((a, b) => {
+      if (b.sortValue !== a.sortValue) return b.sortValue - a.sortValue
+      if (!a.earliestConfirmedAt) return 1
+      if (!b.earliestConfirmedAt) return -1
+      return new Date(a.earliestConfirmedAt) - new Date(b.earliestConfirmedAt)
+    })
 
   const q = searchQuery.trim().toLowerCase()
   const rows = allRankedRows.filter(p => !q || p.name.toLowerCase().includes(q) || (p.city||"").toLowerCase().includes(q))
@@ -469,7 +506,7 @@ export function LeaderboardPage({ isMobile, myId }) {
           </div>
 
           <div style={{ fontSize: 11, color: "#64748B", marginTop: 4, fontWeight: 600 }}>
-            {p.matchesPlayed} Matches
+            {activeTab === "runs" ? `${p.career?.innings_batted || 0} Innings` : activeTab === "wickets" ? `${p.career?.innings_bowled || 0} Innings` : `${p.matchesPlayed} Matches`}
           </div>
 
           <div style={{
@@ -483,8 +520,10 @@ export function LeaderboardPage({ isMobile, myId }) {
             justifyContent: "center",
             gap: 3
           }}>
-            <span>{p.points}</span>
-            <span style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8" }}>PTS</span>
+            <span>{p.sortValue}</span>
+            <span style={{ fontSize: 10, fontWeight: 800, color: "#94A3B8" }}>
+              {activeTab === "runs" ? "RUNS" : activeTab === "wickets" ? "WKTS" : activeTab === "mom" ? "MOM" : activeTab === "impact" ? "IMP" : "PTS"}
+            </span>
           </div>
         </div>
       </div>
@@ -556,11 +595,11 @@ export function LeaderboardPage({ isMobile, myId }) {
 
         {/* Filter Controls (Role & Season) */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, width: isMobile ? "100%" : "auto", flexWrap: "wrap" }}>
-          {/* Season Filter Dropdown */}
+          {/* Period Filter Dropdown (FR-5.6) */}
           <div style={{ position: "relative" }}>
             <button
               type="button"
-              onClick={() => { setSeasonOpen(o => !o); setRoleOpen(false) }}
+              onClick={() => { setPeriodOpen(o => !o); setRoleOpen(false) }}
               style={{
                 padding: "8px 12px",
                 borderRadius: 10,
@@ -576,14 +615,20 @@ export function LeaderboardPage({ isMobile, myId }) {
               }}
             >
               <Calendar size={13} color="#166534"/>
-              <span>{season === "all" ? "All Seasons" : `Season ${season}`}</span>
+              <span>{period === "all" ? "All Time" : period === "this_season" ? "This Season" : "Last 10 Matches"}</span>
               <ChevronDown size={13} color="#94A3B8"/>
             </button>
-            {seasonOpen && (
-              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 10, boxShadow: "0 10px 30px rgba(15,23,42,0.15)", zIndex: 30, minWidth: 140, overflow: "hidden" }}>
-                <button type="button" onClick={() => { setSeason("all"); setSeasonOpen(false) }} style={{ width: "100%", padding: "10px 14px", border: "none", background: season === "all" ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: season === "all" ? 800 : 500 }}>All Seasons</button>
-                {seasons.map(s => (
-                  <button key={s} type="button" onClick={() => { setSeason(s); setSeasonOpen(false) }} style={{ width: "100%", padding: "10px 14px", border: "none", background: season === s ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: season === s ? 800 : 500 }}>Season {s}</button>
+            {periodOpen && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 4, background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: 10, boxShadow: "0 10px 30px rgba(15,23,42,0.15)", zIndex: 30, minWidth: 150, overflow: "hidden" }}>
+                {[["all", "All Time"], ["this_season", "This Season"], ["last_10", "Last 10 Matches"]].map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => { setPeriod(k); setPeriodOpen(false) }}
+                    style={{ width: "100%", padding: "10px 14px", border: "none", background: period === k ? "rgba(34,197,94,0.08)" : "none", textAlign: "left", fontSize: 12.5, color: "#0F172A", cursor: "pointer", fontWeight: period === k ? 800 : 500 }}
+                  >
+                    {label}
+                  </button>
                 ))}
               </div>
             )}
@@ -593,7 +638,7 @@ export function LeaderboardPage({ isMobile, myId }) {
           <div style={{ position: "relative" }}>
             <button
               type="button"
-              onClick={() => { setRoleOpen(o => !o); setSeasonOpen(false) }}
+              onClick={() => { setRoleOpen(o => !o); setPeriodOpen(false) }}
               style={{
                 padding: "8px 12px",
                 borderRadius: 10,
@@ -622,14 +667,15 @@ export function LeaderboardPage({ isMobile, myId }) {
         </div>
       </div>
 
-      {/* Tabs Row + Live Search */}
+      {/* 5-Metric Selector Row (FR-5.5) + Live Search */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 18, flexDirection: isMobile ? "column" : "row" }}>
         <div style={{ display: "flex", gap: 8, overflowX: "auto", width: isMobile ? "100%" : "auto", paddingBottom: 2 }}>
           {[
-            ["points", "Points Table", BarChart3],
-            ["runs", "Most Runs", Target],
-            ["wickets", "Most Wickets", Ban],
-            ["sixes", "Most 6s", SixesIcon]
+            ["points", "Matches Played", BarChart3],
+            ["runs", "Runs", Target],
+            ["wickets", "Wickets", Ban],
+            ["mom", "MoM Awards", Trophy],
+            ["impact", "Impact Points", SixesIcon]
           ].map(([k, label, Icon]) => (
             <button
               key={k}
@@ -660,42 +706,35 @@ export function LeaderboardPage({ isMobile, myId }) {
         </div>
 
         {/* Player Search Bar */}
-        {activeTab === "points" && (
-          <div style={{ width: isMobile ? "100%" : 240, position: "relative" }}>
-            <SearchIcon size={14} color="#94A3B8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search ranked player..."
-              style={{
-                width: "100%",
-                padding: "8px 12px 8px 32px",
-                borderRadius: 999,
-                border: "1.5px solid #E2E8F0",
-                fontSize: 12,
-                outline: "none",
-                background: "#FFFFFF",
-                boxSizing: "border-box",
-                fontFamily: "var(--font-body)"
-              }}
-            />
-          </div>
-        )}
+        <div style={{ width: isMobile ? "100%" : 240, position: "relative" }}>
+          <SearchIcon size={14} color="#94A3B8" style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search player..."
+            style={{
+              width: "100%",
+              padding: "8px 12px 8px 32px",
+              borderRadius: 999,
+              border: "1.5px solid #E2E8F0",
+              fontSize: 12,
+              outline: "none",
+              background: "#FFFFFF",
+              boxSizing: "border-box",
+              fontFamily: "var(--font-body)"
+            }}
+          />
+        </div>
       </div>
 
-      {activeTab === "runs" && <NotYetTracked label="Most Runs" desc="Track top batsmen across tournaments once live match scoring is recorded."/>}
-      {activeTab === "wickets" && <NotYetTracked label="Most Wickets" desc="Track top wicket-takers across matches once match scorecards are submitted."/>}
-      {activeTab === "sixes" && <NotYetTracked label="Most 6s" desc="Track maximum sixes hit per season once live innings balls are captured."/>}
-
-      {activeTab === "points" && (
-        loadError ? (
+      {loadError ? (
           <div style={{ color: "#EF4444", fontSize: 13, textAlign: "center", padding: "30px 0", background: "rgba(239,68,68,0.06)", borderRadius: 12, border: "1px solid rgba(239,68,68,0.25)" }}>
             ⚠️ Couldn't load the leaderboard: {loadError}
           </div>
         ) : allRankedRows.length === 0 ? (
           <Card style={{ padding: "40px 20px", textAlign: "center", borderRadius: 16 }}>
-            <div style={{ fontSize: 14, color: "#64748B" }}>No completed matches recorded yet{season !== "all" ? ` for Season ${season}` : ""}.</div>
+            <div style={{ fontSize: 14, color: "#64748B" }}>No stats recorded yet for this selection.</div>
           </Card>
         ) : (
           <>
@@ -727,8 +766,12 @@ export function LeaderboardPage({ isMobile, myId }) {
                   <div style={{ width: 34 }}>#</div>
                   <div style={{ flex: 1 }}>Player</div>
                   <div style={{ width: 80, textAlign: "center" }}>Role</div>
-                  <div style={{ width: 70, textAlign: "center" }}>Matches</div>
-                  <div style={{ width: 80, textAlign: "right" }}>Points</div>
+                  <div style={{ width: 70, textAlign: "center" }}>
+                    {activeTab === "runs" || activeTab === "wickets" ? "Innings" : "Matches"}
+                  </div>
+                  <div style={{ width: 80, textAlign: "right" }}>
+                    {activeTab === "runs" ? "Runs" : activeTab === "wickets" ? "Wickets" : activeTab === "mom" ? "MoMs" : activeTab === "impact" ? "Impact" : "Points"}
+                  </div>
                   <div style={{ width: 24 }}/>
                 </div>
 
@@ -819,14 +862,16 @@ export function LeaderboardPage({ isMobile, myId }) {
                         )}
                       </div>
 
-                      {/* Matches Count */}
+                      {/* Matches / Innings Count */}
                       <div style={{ width: 70, textAlign: "center", fontSize: 13, fontWeight: 800, color: "#0F172A", flexShrink: 0 }}>
-                        {p.matchesPlayed}
+                        {activeTab === "runs" ? (p.career?.innings_batted || 0) : activeTab === "wickets" ? (p.career?.innings_bowled || 0) : p.matchesPlayed}
                       </div>
 
-                      {/* Points */}
+                      {/* Points / Metric */}
                       <div style={{ width: 80, textAlign: "right", fontSize: 14, fontWeight: 900, color: "#166534", fontFamily: "var(--font-head)", flexShrink: 0 }}>
-                        {p.points} <span style={{ fontSize: 9.5, fontWeight: 700, color: "#94A3B8" }}>PTS</span>
+                        {p.sortValue} <span style={{ fontSize: 9.5, fontWeight: 700, color: "#94A3B8" }}>
+                          {activeTab === "runs" ? "RUNS" : activeTab === "wickets" ? "WKTS" : activeTab === "mom" ? "MOM" : activeTab === "impact" ? "IMP" : "PTS"}
+                        </span>
                       </div>
 
                       {/* Chevron */}
@@ -878,7 +923,7 @@ export function LeaderboardPage({ isMobile, myId }) {
             )}
           </>
         )
-      )}
+      }
 
       {/* ── PLAYER MATCH DETAILS MODAL ── */}
       {selectedPlayer && (
