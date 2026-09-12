@@ -13,9 +13,8 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const [bidHistory, setBidHistory] = useState([])
   const [sponsors, setSponsors] = useState([])
   const [jumpTo, setJumpTo] = useState("")
-  const [bidStep, setBidStep] = useState(1000)
-  const [manualTeamId, setManualTeamId] = useState("")
-  const [manualAmount, setManualAmount] = useState("")
+  const [bidAmount, setBidAmount] = useState(1000)
+  const [selectedTeamId, setSelectedTeamId] = useState("")
   const [banner, setBanner] = useState(null) // { type: "sold" | "unsold", playerName, teamName, price }
   const [liveViewers, setLiveViewers] = useState(1)
   const [totalVisitors, setTotalVisitors] = useState(142)
@@ -76,17 +75,25 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     }
   }, [auctionId])
 
-  // Automatically adapt default bid increment: 1k (<20k), 2k (20k-60k), 3k (>=60k)
+  // Dynamic default next bid calculation following tournament rules:
+  // - 0 / base: player's base price
+  // - < 20,000: +1,000
+  // - 20,000 to 60,000: +2,000
+  // - >= 60,000: +3,000
+  const getDefaultNextBid = (currentBid, basePrice = 1000) => {
+    const cur = Number(currentBid) || 0
+    if (cur <= 0) {
+      return Math.max(1000, Number(basePrice) || 1000)
+    }
+    return stepBidPointsUp(cur, 1000)
+  }
+
+  // Automatically adapt next bid amount whenever current bid or player changes
   useEffect(() => {
     const cur = state?.current_bid || 0
-    if (cur >= 60000) {
-      if (bidStep === 1000 || bidStep === 2000) setBidStep(3000)
-    } else if (cur >= 20000) {
-      if (bidStep === 1000 || bidStep === 3000) setBidStep(2000)
-    } else {
-      if (bidStep === 2000 || bidStep === 3000) setBidStep(1000)
-    }
-  }, [state?.current_bid])
+    const baseP = currentPlayer?.base_price || 1000
+    setBidAmount(getDefaultNextBid(cur, baseP))
+  }, [state?.current_bid, state?.current_player_id, currentPlayer?.base_price])
 
   const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
   const soldCount = auctionPlayers.filter(p => p.status === "sold").length
@@ -103,20 +110,17 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     setBusy(false)
   }
 
-  const doBid = async (teamId) => {
-    const nextAmount = (state.current_bid || 0) + bidStep
-    setBusy(true)
-    try { await placeBid(state.current_player_id, teamId, nextAmount, auctionId); await load() } catch(e) { alert(e.message) }
-    setBusy(false)
-  }
-
-  const doManualBid = async () => {
-    const amount = Number(manualAmount)
-    if (!manualTeamId) { alert("Select a team first"); return }
+  const doBid = async (teamId, customAmount) => {
+    const amount = Number(customAmount !== undefined ? customAmount : bidAmount)
+    const curBid = state?.current_bid || 0
+    if (!teamId) { alert("Select a team to place bid"); return }
     if (!amount || amount <= 0) { alert("Enter a valid bid amount in Coins"); return }
-    if (amount <= (state.current_bid || 0)) { alert(`Bid must be higher than current 🪙 ${(state.current_bid || 0).toLocaleString("en-IN")}`); return }
-    
-    const team = auctionTeams.find(t => t.id === manualTeamId)
+    if (curBid > 0 && amount <= curBid) {
+      alert(`Bid amount (🪙 ${amount.toLocaleString("en-IN")}) must be higher than current bid (🪙 ${curBid.toLocaleString("en-IN")})`)
+      return
+    }
+
+    const team = auctionTeams.find(t => t.id === teamId)
     if (!team) return
 
     const squadCount = auctionPlayers.filter(p => p.sold_team_id === team.id).length
@@ -141,7 +145,13 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     }
 
     setBusy(true)
-    try { await placeBid(state.current_player_id, manualTeamId, amount, auctionId); setManualAmount(""); await load() } catch(e) { alert(e.message) }
+    try {
+      await placeBid(state.current_player_id, teamId, amount, auctionId)
+      setSelectedTeamId("")
+      await load()
+    } catch(e) {
+      alert(e.message)
+    }
     setBusy(false)
   }
 
@@ -454,140 +464,243 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             <div style={{ fontSize:12, color:leadingTeam?"#166534":"#94A3B8", fontWeight:700, marginTop:4 }}>{leadingTeam ? `Leading: ${leadingTeam.name}` : "No bids yet"}</div>
           </div>
 
-          <div style={{ marginBottom:12 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
-              <span style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Bid Step / Points Increment</span>
-              <span style={{ fontSize:12, color:"#166534", fontWeight:800, background:"rgba(34,197,94,0.12)", padding:"2px 8px", borderRadius:6 }}>+🪙 {bidStep.toLocaleString("en-IN")}</span>
+          {/* ONLY 1 OPTION OF + / - FOR BIDDING AMOUNT */}
+          <div style={{
+            background: "#FFFFFF",
+            borderRadius: 14,
+            border: "2px solid #166534",
+            padding: "16px 18px",
+            marginBottom: 16,
+            boxShadow: "0 4px 16px rgba(22,101,52,0.08)",
+            textAlign: "center"
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 10
+            }}>
+              <span style={{ fontSize: 11.5, fontWeight: 900, color: "#166534", letterSpacing: "1px", textTransform: "uppercase" }}>
+                Next Bid Amount
+              </span>
+              <span style={{ fontSize: 11, color: "#64748B", fontWeight: 700 }}>
+                Adjust with − / +
+              </span>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+              {/* SINGLE MINUS BUTTON */}
               <button
                 type="button"
-                onClick={() => setBidStep(prev => stepBidPointsDown(prev, 1000))}
-                style={{ width:38, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
-                title="Decrease bid points increment"
+                onClick={() => {
+                  const cur = state?.current_bid || 0
+                  const minFloor = cur > 0 ? (cur + 1) : (currentPlayer?.base_price || 1000)
+                  setBidAmount(prev => {
+                    const down = stepBidPointsDown(prev, minFloor)
+                    return Math.max(minFloor, down)
+                  })
+                }}
+                style={{
+                  width: 50,
+                  height: 48,
+                  borderRadius: 12,
+                  border: "2px solid #CBD5E1",
+                  background: "#F8FAF8",
+                  color: "#0F172A",
+                  fontSize: 26,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.06)",
+                  userSelect: "none",
+                  flexShrink: 0
+                }}
+                title="Decrease bid amount"
               >
                 −
               </button>
-              <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", gap:4, flex:1 }}>
-                {[1000,2000,5000,10000,15000,20000].map(v => (
-                  <button key={v} onClick={()=>setBidStep(v)} style={{ padding:"7px 2px", borderRadius:8, border:bidStep===v?"none":"1.5px solid #E2E8F0", background:bidStep===v?"#166534":"#FFFFFF", color:bidStep===v?"#FFFFFF":"#64748B", fontSize:10, fontWeight:700, cursor:"pointer" }}>+{v>=1000?`${v/1000}k`:v}</button>
-                ))}
+
+              {/* BID AMOUNT DISPLAY / EDIT */}
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(34,197,94,0.08)",
+                border: "2.5px solid #166534",
+                borderRadius: 14,
+                padding: "8px 18px",
+                boxShadow: "inset 0 1px 3px rgba(0,0,0,0.05)"
+              }}>
+                <span style={{ fontSize: 24 }}>🪙</span>
+                <input
+                  type="number"
+                  value={bidAmount}
+                  onChange={e => setBidAmount(Number(e.target.value) || 0)}
+                  style={{
+                    width: 140,
+                    border: "none",
+                    background: "transparent",
+                    fontSize: 24,
+                    fontWeight: 900,
+                    color: "#166534",
+                    fontFamily: "var(--font-head)",
+                    textAlign: "center",
+                    outline: "none"
+                  }}
+                />
               </div>
+
+              {/* SINGLE PLUS BUTTON */}
               <button
                 type="button"
-                onClick={() => setBidStep(prev => stepBidPointsUp(prev, 1000))}
-                style={{ width:38, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
-                title="Increase bid points increment"
+                onClick={() => {
+                  setBidAmount(prev => stepBidPointsUp(prev, 1000))
+                }}
+                style={{
+                  width: 50,
+                  height: 48,
+                  borderRadius: 12,
+                  border: "2px solid #166534",
+                  background: "#166534",
+                  color: "#FFFFFF",
+                  fontSize: 26,
+                  fontWeight: 900,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 3px 8px rgba(22,101,52,0.3)",
+                  userSelect: "none",
+                  flexShrink: 0
+                }}
+                title="Increase bid amount"
               >
                 +
               </button>
             </div>
-            <div style={{ fontSize:10.5, color:"#64748B", marginTop:4, textAlign:"right" }}>
-              Rule: <strong>+🪙 1,000</strong> (&lt;20k) · <strong>+🪙 2,000</strong> (20k-60k) · <strong>+🪙 3,000</strong> (&ge;60k)
+
+            <div style={{ fontSize: 11, color: "#64748B", fontWeight: 700, marginTop: 10 }}>
+              Rule: <strong>+🪙 1,000</strong> (&lt;20k) · <strong>+🪙 2,000</strong> (20k–60k) · <strong>+🪙 3,000</strong> (&ge;60k)
             </div>
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)", gap:8, marginBottom:14 }}>
+          {/* Team Bid Cards */}
+          <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(3,1fr)", gap:10, marginBottom:14 }}>
             {auctionTeams.map(t => {
               const squadCount = auctionPlayers.filter(p => p.sold_team_id === t.id).length
               const isSquadFull = squadCount >= DEFAULT_SQUAD_TARGET
               const maxBid = calculateMaxBid(t.purse_remaining, squadCount, DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE)
-              const nextAmount = (state.current_bid || 0) + bidStep
-              const canAfford = !isSquadFull && maxBid >= nextAmount
+              const canAfford = !isSquadFull && maxBid >= bidAmount
               const isLeading = leadingTeam?.id === t.id
               return (
                 <button
                   key={t.id}
-                  onClick={()=>doBid(t.id)}
+                  onClick={() => doBid(t.id, bidAmount)}
                   disabled={busy || !canAfford || isLeading}
                   style={{
-                    padding:"10px 8px",
-                    borderRadius:10,
-                    border:isLeading?"2px solid #166534":"1.5px solid #E2E8F0",
-                    background:isLeading?"rgba(34,197,94,0.1)":"#FFFFFF",
-                    cursor:(busy||!canAfford||isLeading)?"not-allowed":"pointer",
-                    opacity:(!canAfford||isLeading)?0.5:1,
-                    textAlign:"center"
+                    padding: "12px 10px",
+                    borderRadius: 12,
+                    border: isLeading ? "2.5px solid #166534" : "1.5px solid #CBD5E1",
+                    background: isLeading ? "rgba(34,197,94,0.12)" : "#FFFFFF",
+                    cursor: (busy || !canAfford || isLeading) ? "not-allowed" : "pointer",
+                    opacity: (!canAfford || isLeading) ? 0.55 : 1,
+                    textAlign: "center",
+                    boxShadow: isLeading ? "0 2px 8px rgba(22,101,52,0.2)" : "0 1px 3px rgba(0,0,0,0.04)",
+                    transition: "all 0.15s ease"
                   }}
                 >
-                  {isLeading && <div style={{ fontSize:9, color:"#166534", fontWeight:800, marginBottom:2, display:"flex", alignItems:"center", justifyContent:"center", gap:2 }}><Trophy size={9}/> LEADING</div>}
-                  <div style={{ fontSize:12, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.name}</div>
-                  <div style={{ fontSize:10, color:"#64748B", fontWeight:600, marginTop:1 }}>
+                  {isLeading ? (
+                    <div style={{ fontSize: 10, color: "#166534", fontWeight: 900, marginBottom: 3, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                      <Trophy size={11} /> LEADING (🪙 {Number(state.current_bid || 0).toLocaleString("en-IN")})
+                    </div>
+                  ) : null}
+                  <div style={{ fontSize: 13, fontWeight: 900, color: "#0F172A", fontFamily: "var(--font-head)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {t.name}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: "#64748B", fontWeight: 600, marginTop: 2 }}>
                     {isSquadFull ? `Squad Full (${squadCount}/${DEFAULT_SQUAD_TARGET})` : `Max: 🪙${(maxBid/1000 >= 1 ? `${maxBid/1000}k` : maxBid)}`}
                   </div>
-                  <div style={{ fontSize:10, color:canAfford?"#166534":"#EF4444", fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:2, marginTop:2 }}>
-                    → 🪙{nextAmount.toLocaleString("en-IN")}
-                  </div>
+                  {!isLeading && (
+                    <div style={{
+                      fontSize: 11.5,
+                      color: canAfford ? "#166534" : "#EF4444",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 3,
+                      marginTop: 4,
+                      background: canAfford ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.08)",
+                      padding: "4px 8px",
+                      borderRadius: 6
+                    }}>
+                      👉 Bid 🪙{bidAmount.toLocaleString("en-IN")}
+                    </div>
+                  )}
                 </button>
               )
             })}
           </div>
 
-          <div style={{ padding:"12px", background:"#F8FAF8", borderRadius:10, border:"1px solid #E2E8F0", marginBottom:14 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-              <span style={{ fontSize:11, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Manual Bid — Jump to Exact Amount</span>
-              <span style={{ fontSize:10.5, color:"#64748B" }}>Use + / − to adjust points</span>
-            </div>
-            <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap: isMobile ? "wrap" : "nowrap" }}>
-              <select value={manualTeamId} onChange={e=>setManualTeamId(e.target.value)} style={{ flex: isMobile ? "1 1 100%" : 1, padding:"9px 10px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:12, outline:"none", background:"#FFFFFF" }}>
-                <option value="">Select Team...</option>
-                {auctionTeams.map(t => {
-                  const sc = auctionPlayers.filter(p => p.sold_team_id === t.id).length
-                  const mb = calculateMaxBid(t.purse_remaining, sc, DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE)
-                  return (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")} · Max: 🪙{mb.toLocaleString("en-IN")})
-                    </option>
-                  )
-                })}
-              </select>
-
-              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const currentBid = state.current_bid || 0
-                    const defaultNext = stepBidPointsUp(currentBid, 1000)
-                    const base = Number(manualAmount) || defaultNext
-                    const next = stepBidPointsDown(base, defaultNext)
-                    setManualAmount(String(next))
-                  }}
-                  style={{ width:34, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
-                  title="Decrease bid points"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min="0"
-                  value={manualAmount}
-                  onChange={e=>setManualAmount(e.target.value)}
-                  placeholder={`🪙 ${stepBidPointsUp(state.current_bid||0, 1000).toLocaleString("en-IN")}`}
-                  style={{ width:105, padding:"8px 6px", borderRadius:8, border:"1.5px solid #E2E8F0", fontSize:13, fontWeight:800, color:"#0F172A", textAlign:"center", outline:"none", background:"#FFFFFF" }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const currentBid = state.current_bid || 0
-                    const base = Number(manualAmount) || currentBid
-                    const next = stepBidPointsUp(base, 1000)
-                    setManualAmount(String(next))
-                  }}
-                  style={{ width:34, height:36, borderRadius:8, border:"1.5px solid #CBD5E1", background:"#FFFFFF", color:"#0F172A", fontSize:18, fontWeight:900, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}
-                  title="Increase bid points"
-                >
-                  +
-                </button>
-              </div>
-
-              <button
-                onClick={doManualBid}
-                disabled={busy}
-                style={{ padding:"9px 16px", borderRadius:8, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12.5, fontWeight:800, cursor:busy?"not-allowed":"pointer", fontFamily:"var(--font-head)", whiteSpace:"nowrap" }}
-              >
-                Place Bid
-              </button>
-            </div>
+          {/* Quick Team Dropdown Selector */}
+          <div style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            background: "#F8FAF8",
+            padding: "10px 12px",
+            borderRadius: 10,
+            border: "1px solid #E2E8F0",
+            marginBottom: 14,
+            flexWrap: isMobile ? "wrap" : "nowrap"
+          }}>
+            <select
+              value={selectedTeamId}
+              onChange={e => setSelectedTeamId(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "9px 10px",
+                borderRadius: 8,
+                border: "1.5px solid #CBD5E1",
+                fontSize: 12.5,
+                outline: "none",
+                background: "#FFFFFF",
+                fontWeight: 600
+              }}
+            >
+              <option value="">Or select team from dropdown...</option>
+              {auctionTeams.map(t => {
+                const sc = auctionPlayers.filter(p => p.sold_team_id === t.id).length
+                const mb = calculateMaxBid(t.purse_remaining, sc, DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE)
+                return (
+                  <option key={t.id} value={t.id}>
+                    {t.name} (🪙 {Number(t.purse_remaining || 0).toLocaleString("en-IN")} · Max: 🪙{mb.toLocaleString("en-IN")})
+                  </option>
+                )
+              })}
+            </select>
+            <button
+              type="button"
+              onClick={() => doBid(selectedTeamId, bidAmount)}
+              disabled={busy || !selectedTeamId}
+              style={{
+                padding: "9px 18px",
+                borderRadius: 8,
+                background: "#166534",
+                border: "none",
+                color: "#FFFFFF",
+                fontSize: 12.5,
+                fontWeight: 800,
+                cursor: (busy || !selectedTeamId) ? "not-allowed" : "pointer",
+                opacity: (busy || !selectedTeamId) ? 0.5 : 1,
+                fontFamily: "var(--font-head)",
+                whiteSpace: "nowrap"
+              }}
+            >
+              Place Bid of 🪙 {bidAmount.toLocaleString("en-IN")}
+            </button>
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
