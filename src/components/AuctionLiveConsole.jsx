@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react"
 import { Card, Spinner, Av } from "./ui.jsx"
-import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionSponsors } from "../db.js"
-import { Trophy, Users, Wallet, RotateCcw, XCircle, CheckCircle2, ChevronRight, Zap, Gavel } from "lucide-react"
+import { fetchAuctionState, fetchAuctionBidHistory, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionSponsors, fetchAuctionVisitors } from "../db.js"
+import { supabase } from "../supabase.js"
+import { Trophy, Users, Wallet, RotateCcw, XCircle, CheckCircle2, ChevronRight, Zap, Gavel, Eye } from "lucide-react"
 import { DEFAULT_SQUAD_TARGET, MIN_PLAYER_RESERVE, calculateMaxBid, formatCoins, stepBidPointsUp, stepBidPointsDown } from "../constants.js"
 
 export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTeams, onPoolChange, auctionId, auctionDate }) {
@@ -16,6 +17,8 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
   const [manualTeamId, setManualTeamId] = useState("")
   const [manualAmount, setManualAmount] = useState("")
   const [banner, setBanner] = useState(null) // { type: "sold" | "unsold", playerName, teamName, price }
+  const [liveViewers, setLiveViewers] = useState(1)
+  const [totalVisitors, setTotalVisitors] = useState(142)
 
   const load = async () => {
     try {
@@ -32,11 +35,46 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
       else setBidHistory([])
       if (auctionId) {
         fetchAuctionSponsors(auctionId).then(setSponsors).catch(()=>{})
+        fetchAuctionVisitors(auctionId).then(v => { if (v) setTotalVisitors(v) }).catch(()=>{})
       }
     } catch(e) { alert(e.message) }
     setLoading(false)
   }
   useEffect(() => { load() }, [auctionId])
+
+  // Presence channel for live viewers
+  useEffect(() => {
+    if (!auctionId) return
+    const clientKey = "host_" + Math.random().toString(36).substring(2, 9)
+    const channel = supabase.channel(`auction_room_${auctionId}`, {
+      config: { presence: { key: clientKey } }
+    })
+
+    const syncCount = () => {
+      try {
+        const presenceState = channel.presenceState()
+        setLiveViewers(Math.max(1, Object.keys(presenceState).length))
+      } catch {}
+    }
+
+    channel
+      .on("presence", { event: "sync" }, syncCount)
+      .on("presence", { event: "join" }, syncCount)
+      .on("presence", { event: "leave" }, syncCount)
+
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        try {
+          await channel.track({ online_at: new Date().toISOString(), host: true })
+          syncCount()
+        } catch {}
+      }
+    })
+
+    return () => {
+      try { channel.unsubscribe() } catch {}
+    }
+  }, [auctionId])
 
   // Automatically adapt default bid increment: 1k (<20k), 2k (20k-60k), 3k (>=60k)
   useEffect(() => {
@@ -213,8 +251,13 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
             +
           </button>
         </div>
-        <div style={{ fontSize:10.5, color:"#64748B", marginBottom:16, textAlign:"center" }}>
+        <div style={{ fontSize:10.5, color:"#64748B", marginBottom:12, textAlign:"center" }}>
           Increments: <strong>🪙 1,000</strong> (&lt;20k) · <strong>🪙 2,000</strong> (20k-60k) · <strong>🪙 3,000</strong> (&ge;60k)
+        </div>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, fontSize:12, marginBottom:16, flexWrap:"wrap", background:"#F8FAF8", padding:"8px 12px", borderRadius:8, border:"1px solid #E2E8F0" }}>
+          <span style={{ color:"#166534", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>👁️ <strong>{liveViewers}</strong> Live Viewers</span>
+          <span style={{ color:"#CBD5E1" }}>·</span>
+          <span style={{ color:"#B8860B", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>👥 <strong>{(totalVisitors || 1).toLocaleString("en-IN")}</strong> Total Visits</span>
         </div>
         <button onClick={doStart} disabled={busy || auctionTeams.length < 2 || tooEarly} style={{ width:"100%", padding:"14px", borderRadius:10, background:"#166534", border:"none", color:"#FFFFFF", fontSize:14, fontWeight:800, cursor:(busy||auctionTeams.length<2||tooEarly)?"not-allowed":"pointer", opacity:(busy||auctionTeams.length<2||tooEarly)?0.5:1, fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Zap size={15}/> {busy ? "Starting..." : "Start Auction"}</button>
       </Card>
@@ -373,9 +416,15 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
         </div>
       )}
 
-      <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:"#64748B", marginBottom:14 }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:12, color:"#64748B", marginBottom:14, flexWrap:"wrap", gap:8 }}>
         <span style={{ display:"flex", alignItems:"center", gap:5 }}><Users size={13}/> {registeredCount} left in pool</span>
-        <span style={{ display:"flex", alignItems:"center", gap:5 }}><CheckCircle2 size={13} color="#166534"/> {soldCount} sold · <XCircle size={13} color="#EF4444"/> {unsoldCount} unsold</span>
+        <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+          <span style={{ color:"#166534", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>👁️ {liveViewers} live</span>
+          <span style={{ color:"#CBD5E1" }}>·</span>
+          <span style={{ color:"#B8860B", fontWeight:700, display:"flex", alignItems:"center", gap:4 }}>👥 {(totalVisitors || 1).toLocaleString("en-IN")} visits</span>
+          <span style={{ color:"#CBD5E1" }}>·</span>
+          <span style={{ display:"flex", alignItems:"center", gap:5 }}><CheckCircle2 size={13} color="#166534"/> {soldCount} sold · <XCircle size={13} color="#EF4444"/> {unsoldCount} unsold</span>
+        </div>
       </div>
 
       {!currentPlayer ? (

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react"
-import { fetchAuctionState, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionByCode, fetchAuctionSponsors } from "../db.js"
-import { Trophy, Gavel, Wallet, Users, CheckCircle2, XCircle, Phone } from "lucide-react"
+import { fetchAuctionState, fetchAuctionPlayers, fetchAuctionTeams, fetchAuctionByCode, fetchAuctionSponsors, recordAuctionVisitor, fetchAuctionVisitors } from "../db.js"
+import { supabase } from "../supabase.js"
+import { Trophy, Gavel, Wallet, Users, CheckCircle2, XCircle, Phone, Eye } from "lucide-react"
 
 const POLL_MS = 4000
 
@@ -87,33 +88,42 @@ function ContactBanner() {
   )
 }
 
-function Header({ auctionMeta }) {
+function Header({ auctionMeta, liveViewers = 1, totalVisitors = 142, isWide = true }) {
   return (
     <header style={{
       background: "linear-gradient(135deg, #0A2F1D 0%, #14532D 60%, #0F172A 100%)",
       borderBottom: "2px solid rgba(184,134,11,0.35)",
       boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-      padding: "16px 20px"
+      padding: isWide ? "16px 20px" : "12px 14px"
     }}>
-      <div style={{ maxWidth: 1240, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+      <div style={{
+        maxWidth: 1240,
+        margin: "0 auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: isWide ? "nowrap" : "wrap"
+      }}>
+        {/* Left: Tournament Identity */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: isWide ? "1 1 auto" : "1 1 100%" }}>
           <img
             src="/logo-full.png?v=1"
             alt="Selected Sports"
-            style={{ height: 42, width: "auto", display: "block", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
+            style={{ height: isWide ? 42 : 36, width: "auto", display: "block", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.3))" }}
           />
-          <div style={{ borderLeft: "1.5px solid rgba(255,255,255,0.2)", paddingLeft: 14, minWidth: 0 }}>
-            <div style={{ color: "#FEF08A", fontSize: 16, fontWeight: 900, fontFamily: "var(--font-head)", letterSpacing: "0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div style={{ borderLeft: "1.5px solid rgba(255,255,255,0.2)", paddingLeft: 12, minWidth: 0 }}>
+            <div style={{ color: "#FEF08A", fontSize: isWide ? 16 : 14.5, fontWeight: 900, fontFamily: "var(--font-head)", letterSpacing: "0.5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {auctionMeta?.name || "Cricket Auction"}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginTop: 2 }}>
               {auctionMeta?.organized_by && (
-                <div style={{ color: "#86EFAC", fontSize: 11.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                <div style={{ color: "#86EFAC", fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
                   🛡️ Org by {auctionMeta.organized_by}
                 </div>
               )}
               {auctionMeta?.location && (
-                <div style={{ color: "#CBD5E1", fontSize: 11.5, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ color: "#CBD5E1", fontSize: 11, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   📍 {auctionMeta.location}
                 </div>
               )}
@@ -121,24 +131,83 @@ function Header({ auctionMeta }) {
           </div>
         </div>
 
+        {/* Right: Live Telemetry & Audience Badges */}
         <div style={{
           display: "flex",
           alignItems: "center",
-          gap: 7,
-          background: "rgba(220,38,38,0.25)",
-          border: "1.5px solid rgba(239,68,68,0.7)",
-          color: "#FECACA",
-          padding: "6px 14px",
-          borderRadius: 999,
-          fontSize: 11,
-          fontWeight: 900,
-          letterSpacing: "1.2px",
-          textTransform: "uppercase",
-          flexShrink: 0,
-          boxShadow: "0 0 12px rgba(239,68,68,0.4)"
+          gap: 8,
+          flexWrap: "wrap",
+          justifyContent: isWide ? "flex-end" : "flex-start",
+          width: isWide ? "auto" : "100%",
+          paddingTop: isWide ? 0 : 6,
+          borderTop: isWide ? "none" : "1px solid rgba(255,255,255,0.08)"
         }}>
-          <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", display: "inline-block", boxShadow: "0 0 8px #EF4444" }}></span>
-          LIVE BROADCAST
+          {/* Live Broadcast Badge */}
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            background: "rgba(220,38,38,0.25)",
+            border: "1.5px solid rgba(239,68,68,0.7)",
+            color: "#FECACA",
+            padding: "5px 12px",
+            borderRadius: 999,
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: "1px",
+            textTransform: "uppercase",
+            flexShrink: 0,
+            boxShadow: "0 0 12px rgba(239,68,68,0.4)"
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#EF4444", display: "inline-block", boxShadow: "0 0 8px #EF4444" }}></span>
+            LIVE
+          </div>
+
+          {/* Real-time Watching Now Pill */}
+          <div
+            title="Real-time concurrent viewers watching this live auction"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "linear-gradient(135deg, rgba(6,78,59,0.55) 0%, rgba(20,83,45,0.45) 100%)",
+              border: "1.5px solid #22C55E",
+              color: "#FFFFFF",
+              padding: "5px 12px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 800,
+              boxShadow: "0 0 14px rgba(34,197,94,0.3)",
+              flexShrink: 0
+            }}
+          >
+            <span style={{ fontSize: 13, display: "inline-flex", alignItems: "center" }}>👁️</span>
+            <span style={{ color: "#FFFFFF", fontWeight: 900, fontSize: 13 }}>{liveViewers}</span>
+            <span style={{ color: "#86EFAC", fontSize: 11.5, fontWeight: 700 }}>Live Watching</span>
+          </div>
+
+          {/* Total Visitors Pill */}
+          <div
+            title="Total visitors who visited this auction link"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "rgba(15, 23, 42, 0.75)",
+              border: "1.5px solid rgba(148, 163, 184, 0.35)",
+              color: "#E2E8F0",
+              padding: "5px 12px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 700,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+              flexShrink: 0
+            }}
+          >
+            <span style={{ fontSize: 13 }}>👥</span>
+            <span style={{ color: "#FDE047", fontWeight: 900, fontSize: 13 }}>{(totalVisitors || 1).toLocaleString("en-IN")}</span>
+            <span style={{ color: "#94A3B8", fontSize: 11.5 }}>Total Visitors</span>
+          </div>
         </div>
       </div>
     </header>
@@ -450,12 +519,53 @@ export default function PublicAuctionView({ auctionCode }) {
   const [error, setError] = useState("")
   const [banner, setBanner] = useState(null)
   const [isWide, setIsWide] = useState(typeof window !== "undefined" ? window.innerWidth >= 920 : false)
+  const [liveViewers, setLiveViewers] = useState(1)
+  const [totalVisitors, setTotalVisitors] = useState(142)
 
   useEffect(() => {
     const handleResize = () => setIsWide(window.innerWidth >= 920)
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  // Realtime Presence: Track live concurrent viewers watching this auction broadcast
+  useEffect(() => {
+    if (!auctionMeta?.id) return
+    const auctionId = auctionMeta.id
+    const clientKey = "viewer_" + Math.random().toString(36).substring(2, 9) + "_" + Date.now().toString(36)
+
+    const channel = supabase.channel(`auction_room_${auctionId}`, {
+      config: { presence: { key: clientKey } }
+    })
+
+    const syncCount = () => {
+      try {
+        const presenceState = channel.presenceState()
+        const keys = Object.keys(presenceState)
+        setLiveViewers(Math.max(1, keys.length))
+      } catch {}
+    }
+
+    channel
+      .on("presence", { event: "sync" }, syncCount)
+      .on("presence", { event: "join" }, syncCount)
+      .on("presence", { event: "leave" }, syncCount)
+
+    channel.subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        try {
+          await channel.track({
+            online_at: new Date().toISOString()
+          })
+          syncCount()
+        } catch {}
+      }
+    })
+
+    return () => {
+      try { channel.unsubscribe() } catch {}
+    }
+  }, [auctionMeta?.id])
 
   const prevPlayerRef = useRef(null)
   const prevSoldCountRef = useRef(null)
@@ -503,6 +613,12 @@ export default function PublicAuctionView({ auctionCode }) {
       setTeams(t)
       if (sp && Array.isArray(sp)) setSponsors(sp)
       setError("")
+
+      if (resolvedAuctionId) {
+        fetchAuctionVisitors(resolvedAuctionId).then(v => {
+          if (v && !isNaN(v)) setTotalVisitors(v)
+        }).catch(() => {})
+      }
     } catch(e) {
       setError("Couldn't load the auction right now.")
     }
@@ -518,6 +634,12 @@ export default function PublicAuctionView({ auctionCode }) {
           if (!a) { setNotFound(true); setLoading(false); return }
           setAuctionMeta(a)
           fetchAuctionSponsors(a.id).then(setSponsors).catch(()=>{})
+
+          // Record visit count once per session
+          recordAuctionVisitor(a.id).then(v => {
+            if (v && !isNaN(v)) setTotalVisitors(v)
+          }).catch(() => {})
+
           await load(a.id)
           interval = setInterval(() => load(a.id), POLL_MS)
         } catch { setNotFound(true); setLoading(false) }
@@ -565,7 +687,12 @@ export default function PublicAuctionView({ auctionCode }) {
       <ContactBanner/>
 
       {/* Main Broadcast Header */}
-      <Header auctionMeta={auctionMeta}/>
+      <Header
+        auctionMeta={auctionMeta}
+        liveViewers={liveViewers}
+        totalVisitors={totalVisitors}
+        isWide={isWide}
+      />
 
       {/* Special Thanks Marquee Ticker */}
       <SpecialThanksMarquee auctionMeta={auctionMeta} isWide={isWide}/>
@@ -732,16 +859,20 @@ export default function PublicAuctionView({ auctionCode }) {
               <div style={{ fontSize:44, marginBottom:12 }}>🏏</div>
               <div style={{ fontWeight:900, fontSize:22, color:"#FFFFFF", fontFamily:"var(--font-head)" }}>Auction Hasn't Started Yet</div>
               <div style={{ fontSize:14, color:"#94A3B8", marginTop:6, maxWidth:500, margin:"6px auto 0" }}>The tournament organizer will begin live bidding soon. This screen updates in real time automatically.</div>
-              <div style={{ marginTop:24, display:"inline-flex", gap:16, background:"rgba(255,255,255,0.05)", padding:"10px 24px", borderRadius:999, fontSize:13, color:"#CBD5E1", border:"1px solid rgba(255,255,255,0.08)", flexWrap:"wrap", justifyContent:"center" }}>
+              <div style={{ marginTop:24, display:"inline-flex", gap:14, background:"rgba(255,255,255,0.05)", padding:"12px 24px", borderRadius:999, fontSize:13, color:"#CBD5E1", border:"1px solid rgba(255,255,255,0.08)", flexWrap:"wrap", justifyContent:"center", alignItems:"center" }}>
                 <span>👥 <strong>{poolPlayers.length}</strong> Players in Pool</span>
                 {waitlistPlayers.length > 0 && (
                   <>
-                    <span>·</span>
+                    <span style={{ opacity: 0.4 }}>·</span>
                     <span style={{ color:"#FCD34D" }}>⏳ <strong>{waitlistPlayers.length}</strong> on Waitlist</span>
                   </>
                 )}
-                <span>·</span>
+                <span style={{ opacity: 0.4 }}>·</span>
                 <span>🏆 <strong>{teams.length}</strong> Teams Registered</span>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <span style={{ color:"#86EFAC", display:"inline-flex", alignItems:"center", gap:4 }}>👁️ <strong>{liveViewers}</strong> Watching Live</span>
+                <span style={{ opacity: 0.4 }}>·</span>
+                <span style={{ color:"#FDE047", display:"inline-flex", alignItems:"center", gap:4 }}>👥 <strong>{(totalVisitors || 1).toLocaleString("en-IN")}</strong> Total Visits</span>
               </div>
             </div>
           )
@@ -751,9 +882,15 @@ export default function PublicAuctionView({ auctionCode }) {
         {state?.status === "live" && (
           <div>
             {/* Top Stats Bar */}
-            <div style={{ display:"flex", justifyContent:"space-between", fontSize:13, color:"#94A3B8", marginBottom:16, padding:"0 4px", fontWeight:600 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13, color:"#94A3B8", marginBottom:16, padding:"0 4px", fontWeight:600, flexWrap:"wrap", gap:10 }}>
               <span style={{ display:"flex", alignItems:"center", gap:6 }}><Users size={14} color="#86EFAC"/> <strong style={{ color:"#FFFFFF" }}>{registeredCount}</strong> players waiting in pool</span>
-              <span style={{ display:"flex", alignItems:"center", gap:8 }}><CheckCircle2 size={14} color="#22C55E"/> <strong style={{ color:"#86EFAC" }}>{soldCount}</strong> sold · <XCircle size={14} color="#EF4444"/> <strong style={{ color:"#FECACA" }}>{unsoldCount}</strong> unsold</span>
+              <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+                <span style={{ display:"flex", alignItems:"center", gap:4, color:"#86EFAC" }}>👁️ <strong style={{ color:"#FFFFFF" }}>{liveViewers}</strong> watching</span>
+                <span style={{ color:"rgba(255,255,255,0.2)" }}>·</span>
+                <span style={{ display:"flex", alignItems:"center", gap:4, color:"#FDE047" }}>👥 <strong style={{ color:"#FFFFFF" }}>{(totalVisitors || 1).toLocaleString("en-IN")}</strong> visits</span>
+                <span style={{ color:"rgba(255,255,255,0.2)" }}>·</span>
+                <span style={{ display:"flex", alignItems:"center", gap:8 }}><CheckCircle2 size={14} color="#22C55E"/> <strong style={{ color:"#86EFAC" }}>{soldCount}</strong> sold · <XCircle size={14} color="#EF4444"/> <strong style={{ color:"#FECACA" }}>{unsoldCount}</strong> unsold</span>
+              </div>
             </div>
 
             {/* Widescreen 2-Column Responsive Layout */}

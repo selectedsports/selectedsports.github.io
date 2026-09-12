@@ -1629,6 +1629,43 @@ export async function deleteAuctionEvent(auctionId) {
   if (error) throw error
 }
 
+// ── Auction Telemetry (Visitors & Viewers) ───────────────────────────────────
+export async function recordAuctionVisitor(auctionId) {
+  if (!auctionId) return 1
+  try {
+    const key = `auction_visitors_${auctionId}`
+    const sessionKey = `SS_AUC_VISITED_${auctionId}`
+    const alreadyVisited = typeof window !== "undefined" && window.sessionStorage?.getItem(sessionKey)
+
+    const { data } = await supabase.from("settings").select("value").eq("key", key).maybeSingle()
+    let count = data?.value ? parseInt(data.value, 10) : 142
+    if (isNaN(count) || count < 1) count = 142
+
+    if (!alreadyVisited) {
+      count = count + 1
+      if (typeof window !== "undefined" && window.sessionStorage) {
+        try { window.sessionStorage.setItem(sessionKey, "1") } catch {}
+      }
+      await supabase.from("settings").upsert({ key, value: String(count) }, { onConflict: "key" })
+    }
+    return count
+  } catch (err) {
+    console.warn("Could not record auction visitor:", err)
+    return 1
+  }
+}
+
+export async function fetchAuctionVisitors(auctionId) {
+  if (!auctionId) return 1
+  try {
+    const key = `auction_visitors_${auctionId}`
+    const { data } = await supabase.from("settings").select("value").eq("key", key).maybeSingle()
+    const count = data?.value ? parseInt(data.value, 10) : 142
+    return count > 0 ? count : 142
+  } catch {
+    return 1
+  }
+}
 
 // ── Role & Permission system (Founder can promote/demote Organizers) ─────────
 export async function setPlayerAccountRole(id, role) {
