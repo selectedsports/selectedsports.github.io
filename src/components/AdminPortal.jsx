@@ -3018,7 +3018,7 @@ function AuctionPage({ isMobile, isFounder }) {
                     </div>
                   </div>
                   {canManage ? (
-                    <button onClick={()=>{ setManagingAuction(a); setSubTab(a.status==="completed"?"players":"players") }} style={{ padding:"9px 14px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{a.status==="completed"?"View Results":"Open Auction"} <ChevronRight size={13}/></button>
+                    <button onClick={()=>{ setManagingAuction(a); setSubTab(a.status==="live" ? "live" : "players") }} style={{ padding:"9px 14px", borderRadius:9, background:"#166534", border:"none", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>{a.status==="completed"?"View Results":"Open Auction"} <ChevronRight size={13}/></button>
                   ) : (
                     <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
                       <span style={{ fontSize:11, color:statusColor[a.payment_status]||"#94A3B8", fontWeight:700, fontStyle:"italic" }}>{a.payment_status === "pending" ? "Awaiting payment confirmation" : a.payment_status}</span>

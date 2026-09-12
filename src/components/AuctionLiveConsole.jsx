@@ -25,10 +25,8 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
       setState(s)
       if (s?.bid_increment) {
         setIncrement(String(s.bid_increment))
-        setBidStep(Number(s.bid_increment) || 1000)
       } else {
         setIncrement("1000")
-        setBidStep(1000)
       }
       if (s?.current_player_id) setBidHistory(await fetchAuctionBidHistory(s.current_player_id, auctionId))
       else setBidHistory([])
@@ -75,6 +73,12 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     }
   }, [auctionId])
 
+  const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
+  const soldCount = auctionPlayers.filter(p => p.status === "sold").length
+  const unsoldCount = auctionPlayers.filter(p => p.status === "unsold").length
+  const currentPlayer = state?.current_player_id ? auctionPlayers.find(p => p.id === state.current_player_id) : null
+  const leadingTeam = state?.current_team_id ? auctionTeams.find(t => t.id === state.current_team_id) : null
+
   // Dynamic default next bid calculation following tournament rules:
   // - 0 / base: player's base price
   // - < 20,000: +1,000
@@ -94,12 +98,6 @@ export default function AuctionLiveConsole({ isMobile, auctionPlayers, auctionTe
     const baseP = currentPlayer?.base_price || 1000
     setBidAmount(getDefaultNextBid(cur, baseP))
   }, [state?.current_bid, state?.current_player_id, currentPlayer?.base_price])
-
-  const registeredCount = auctionPlayers.filter(p => p.status === "registered" && !p.is_captain && p.status !== "captain").length
-  const soldCount = auctionPlayers.filter(p => p.status === "sold").length
-  const unsoldCount = auctionPlayers.filter(p => p.status === "unsold").length
-  const currentPlayer = state?.current_player_id ? auctionPlayers.find(p => p.id === state.current_player_id) : null
-  const leadingTeam = state?.current_team_id ? auctionTeams.find(t => t.id === state.current_team_id) : null
 
   const doStart = async () => {
     const inc = Number(increment) || 1000

@@ -126,6 +126,8 @@ export default function App() {
   const [screen, setScreen]          = useState("home")
   const [loggedPlayer, setPlayer]    = useState(null)
   const [isAdmin, setIsAdmin]        = useState(false)
+  const [isOrganizer, setIsOrganizer] = useState(false)
+  const [isPro, setIsPro]            = useState(false)
   const [isGroundOwner, setIsGroundOwner] = useState(false)
   const [loginInitialMode, setLoginInitialMode] = useState("player")
   const [matches, setMatches]        = useState([])
@@ -134,6 +136,12 @@ export default function App() {
   const [liveAuctionCode, setLiveAuctionCode] = useState(null)
   const [registerAuctionCode, setRegisterAuctionCode] = useState(null)
   const [teamViewParams, setTeamViewParams] = useState(null)
+
+  const loadMatches = async () => {
+    setLoading(true)
+    try { setMatches(await fetchMatches()) } catch {}
+    setLoading(false)
+  }
 
   useEffect(() => {
     const teamView = getTeamViewParams()
@@ -159,14 +167,6 @@ export default function App() {
     }
   }, [])
 
-  const loadMatches = async () => {
-    setLoading(true)
-    try { setMatches(await fetchMatches()) } catch {}
-    setLoading(false)
-  }
-
-  const [isPro, setIsPro] = useState(false)
-  const [isOrganizer, setIsOrganizer] = useState(false)
   const handleLogin = async (player) => {
     const phone = (player.phone||"").replace(/[^0-9]/g,"").slice(-10)
     const adminPhone = ADMIN_PHONE.replace(/[^0-9]/g,"").slice(-10)
