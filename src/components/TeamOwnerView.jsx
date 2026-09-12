@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { fetchAuctionByCode, fetchAuctionTeams, fetchAuctionPlayers } from "../db.js"
-import { Av } from "./ui.jsx"
+import { Av, CoinIcon } from "./ui.jsx"
 import { exportTeamRosterCsv, exportTeamRosterPdf } from "../constants.js"
 
 const POLL_MS = 5000
@@ -91,11 +91,11 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
 
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"16px", border:"2px solid #166534", textAlign:"center" }}>
-            <div style={{ fontSize:24, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(team.purse_remaining||0).toLocaleString("en-IN")}</div>
+            <div style={{ fontSize:24, fontWeight:900, color:"#166534", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><CoinIcon size={20}/> {Number(team.purse_remaining||0).toLocaleString("en-IN")}</div>
             <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Coins Left</div>
           </div>
           <div style={{ background:"#FFFFFF", borderRadius:14, padding:"16px", border:"1px solid #E2E8F0", textAlign:"center" }}>
-            <div style={{ fontSize:24, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)" }}>🪙 {Number(spent||0).toLocaleString("en-IN")}</div>
+            <div style={{ fontSize:24, fontWeight:900, color:"#0F172A", fontFamily:"var(--font-head)", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}><CoinIcon size={20}/> {Number(spent||0).toLocaleString("en-IN")}</div>
             <div style={{ fontSize:11, color:"#94A3B8", marginTop:2 }}>Coins Spent</div>
           </div>
         </div>
@@ -133,8 +133,12 @@ export default function TeamOwnerView({ auctionCode, teamId }) {
                     </div>
                     <div style={{ fontSize:11, color:"#94A3B8" }}>{p.city ? `${p.city} · ` : ""}{p.playing_role || "—"}</div>
                   </div>
-                  <div style={{ fontSize:13, fontWeight:800, color:isCap?"#B8860B":"#166534", fontFamily:"var(--font-head)", flexShrink:0 }}>
-                    {isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price||0).toLocaleString("en-IN")}`}
+                  <div style={{ fontSize:13, fontWeight:800, color:isCap?"#B8860B":"#166534", fontFamily:"var(--font-head)", flexShrink:0, display:"flex", alignItems:"center", gap:4 }}>
+                    {isCap ? (
+                      <><CoinIcon size={13}/> 0 (Captain)</>
+                    ) : (
+                      <><CoinIcon size={13}/> {Number(p.sold_price||0).toLocaleString("en-IN")}</>
+                    )}
                   </div>
                 </div>
               )

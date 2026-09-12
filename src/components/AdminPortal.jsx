@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Search as SearchIcon } from "lucide-react"
 import { Users, User as UserIcon, Calendar, MapPin, Landmark, Clock, Lock, Wallet, Phone, Link as LinkIcon, ShieldCheck, CheckCircle2, XCircle, Hourglass, Zap, Trash2, Trophy, LayoutDashboard, Swords, MessageSquare, LogOut, Bell, BarChart3, ChevronRight, Plus, UserPlus, UsersRound, MoreVertical, SlidersHorizontal, Star, ArrowUpDown, ArrowLeft, AlertTriangle, Gavel, FileText, RotateCcw, Share2, Download, Printer, Copy, Check, Ban, Shuffle } from "lucide-react"
-import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge } from "./ui.jsx"
+import { LogoFull, Av, Tag, Btn, Card, Spinner, LeaderboardPage, RoleBadge, CoinIcon } from "./ui.jsx"
 import { fetchPlayers, fetchGrounds, fetchGroundOwners, saveGroundOwner, deleteGroundOwner, fetchMatches, fetchTeams, fetchSettings, confirmPlayerToMatch, fetchMyInvites, fetchMatchCounts, fetchPendingPlayers, approvePlayer, rejectPlayer, createMatch, updateMatchStatus, deleteMatch, toggleMatchLink, updateMatchMaxPlayers, fetchMatchPlayers, notifyPlayer, removePlayerFromMatch, setPlayerStatus, fetchPublicResponses, approvePublicResponse, rejectPublicResponse, fetchExpenses, addExpense, deleteExpense, fetchPayments, togglePayment, addContribution, fetchContributions, deleteContribution, contributionExists, fetchChat, sendMessage, subscribeToChat, addGround, updateGround, deleteGround, addTeam, updateTeam, deleteTeam, uploadTeamLogo, fetchSentMessages, sendAdminMessage, fetchPendingProRequests, approveProRequest, rejectProRequest, globalSearch, fetchAuctionPlayers, updateAuctionPlayerBasePrice, deleteAuctionPlayer, tagAuctionPlayerDropped, restoreAuctionPlayer, fetchAuctionTeams, createAuctionTeam, updateAuctionTeam, deleteAuctionTeam, fetchAuctionState, startAuction, placeBid, undoLastBid, markPlayerSold, markPlayerUnsold, jumpToAuctionPlayer, fetchAuctionBidHistory, fetchAuctionRegistrationOpen, setAuctionRegistrationOpen, fetchRecentActivity, fetchNotifications, fetchUnreadNotificationCount, markNotificationRead, markAllNotificationsRead, fetchAllAuctions, fetchPendingAuctionPayments, approveAuctionPayment, rejectAuctionPayment, deleteAuctionEvent, fetchPlatformUpi, setPlatformUpi, fetchLeaderboard, fetchPlayerMatchHistory, fetchAllAuctionTeamCounts, fetchAllAuctionPlayerCounts, fetchAuctionSponsors, addAuctionSponsor, deleteAuctionSponsor, uploadSponsorLogo, fetchPlayerAuctionHistory, syncAuctionPlayersToRoster, addRosterPlayerToAuction, updatePlayer, updateAuction, updateAuctionPlayerPaymentStatus, updateAuctionPlayerStatus } from "../db.js"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
@@ -3400,8 +3400,8 @@ function AuctionPage({ isMobile, isFounder }) {
           }}>
             {[
               { icon:UsersRound, v:auctionTeams.length, label:"Total Teams" },
-              { icon:Wallet, v:`🪙 ${totalPurse.toLocaleString("en-IN")}`, label:"Purse Pool" },
-              { icon:CheckCircle2, v:`🪙 ${totalRemaining.toLocaleString("en-IN")}`, label:"Remaining" },
+              { icon:Wallet, v:<span style={{ display:"inline-flex", alignItems:"center", gap:3 }}><CoinIcon size={14}/> {totalPurse.toLocaleString("en-IN")}</span>, label:"Purse Pool" },
+              { icon:CheckCircle2, v:<span style={{ display:"inline-flex", alignItems:"center", gap:3 }}><CoinIcon size={14}/> {totalRemaining.toLocaleString("en-IN")}</span>, label:"Remaining" },
             ].map((c,i)=>(
               <div key={i} style={{ background: "#FFFFFF", padding: isMobile ? "10px 8px" : "14px 16px", display:"flex", alignItems:"center", gap: isMobile ? 6 : 10 }}>
                 <c.icon size={isMobile ? 15 : 17} color="#166534" style={{ flexShrink: 0 }}/>
@@ -3443,8 +3443,8 @@ function AuctionPage({ isMobile, isFounder }) {
                       </div>
                     </div>
                     <div style={{ textAlign:"right", flexShrink: 0 }}>
-                      <div style={{ fontWeight:800, fontSize: isMobile ? 13.5 : 15, color:"#166534", fontFamily:"var(--font-head)" }}>🪙 {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
-                      <div style={{ fontSize:9.5, color:"#94A3B8" }}>of 🪙 {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
+                      <div style={{ fontWeight:800, fontSize: isMobile ? 13.5 : 15, color:"#166534", fontFamily:"var(--font-head)", display:"inline-flex", alignItems:"center", gap:3 }}><CoinIcon size={14}/> {Number(t.purse_remaining||0).toLocaleString("en-IN")}</div>
+                      <div style={{ fontSize:9.5, color:"#94A3B8", display:"flex", alignItems:"center", justifyContent:"flex-end", gap:2 }}>of <CoinIcon size={10}/> {Number(t.purse_total||0).toLocaleString("en-IN")}</div>
                     </div>
                     <ChevronRight size={16} color="#94A3B8" style={{ flexShrink: 0 }}/>
                   </div>
@@ -3765,96 +3765,197 @@ function AuctionPage({ isMobile, isFounder }) {
           .sort((a,b) => (b.is_captain || b.status === "captain" ? 1 : 0) - (a.is_captain || a.status === "captain" ? 1 : 0))
         const spent = viewingTeam.purse_total - viewingTeam.purse_remaining
         return (
-        <div style={mStyle} onClick={()=>setViewingTeam(null)}>
-          <div style={mBox} onClick={e=>e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18 }}>
-              <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:"#0F172A", fontFamily:"var(--font-head)" }}>Team Details</h3>
-              <button onClick={()=>setViewingTeam(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#9ca3af" }}>×</button>
-            </div>
-
-            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
-              <TeamAv name={viewingTeam.name} logo={viewingTeam.logo_url} size={56}/>
-              <div>
-                <div style={{ fontWeight:900, fontSize:17, color:"#0F172A", fontFamily:"var(--font-head)" }}>{viewingTeam.name}</div>
-                {viewingTeam.owner_name && <div style={{ fontSize:13, color:"#64748B", marginTop:2 }}>Owner: {viewingTeam.owner_name}</div>}
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: isMobile ? "flex-end" : "center",
+            justifyContent: "center",
+            zIndex: 350,
+            padding: isMobile ? 0 : 16
+          }}
+          onClick={()=>setViewingTeam(null)}
+        >
+          <div
+            style={{
+              background: "#FFFFFF",
+              borderRadius: isMobile ? "20px 20px 0 0" : 18,
+              width: "100%",
+              maxWidth: isMobile ? "100%" : 460,
+              maxHeight: isMobile ? "92vh" : "min(88vh, 720px)",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              border: "1px solid #E2E8F0",
+              overflow: "hidden"
+            }}
+            onClick={e=>e.stopPropagation()}
+          >
+            {/* PINNED HEADER WITH CLOSE BUTTON */}
+            <div style={{
+              padding: isMobile ? "14px 16px" : "16px 20px",
+              borderBottom: "1px solid #F1F5F9",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "#FFFFFF",
+              flexShrink: 0
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                <TeamAv name={viewingTeam.name} logo={viewingTeam.logo_url} size={isMobile ? 40 : 46}/>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 900, fontSize: isMobile ? 16 : 18, color: "#0F172A", fontFamily: "var(--font-head)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {viewingTeam.name}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#64748B", marginTop: 2, display: "flex", alignItems: "center", gap: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {viewingTeam.captain_name ? (
+                      <span>👑 Capt: <strong style={{ color: "#0F172A" }}>{viewingTeam.captain_name}</strong></span>
+                    ) : (viewingTeam.owner_name ? (
+                      <span>Owner: {viewingTeam.owner_name}</span>
+                    ) : (
+                      <span>Team Squad</span>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:18 }}>
-              <div style={{ padding:"10px 8px", background:"#F8FAF8", borderRadius:9, textAlign:"center" }}>
-                <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>STARTING PURSE</div>
-                <div style={{ fontSize:14, color:"#0F172A", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(viewingTeam.purse_total||0).toLocaleString("en-IN")}</div>
-              </div>
-              <div style={{ padding:"10px 8px", background:"rgba(231,76,60,0.08)", borderRadius:9, textAlign:"center" }}>
-                <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>SPENT</div>
-                <div style={{ fontSize:14, color:"#EF4444", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(spent||0).toLocaleString("en-IN")}</div>
-              </div>
-              <div style={{ padding:"10px 8px", background:"rgba(34,197,94,0.08)", borderRadius:9, textAlign:"center" }}>
-                <div style={{ fontSize:10, color:"#94A3B8", fontWeight:600 }}>REMAINING</div>
-                <div style={{ fontSize:14, color:"#166534", fontWeight:800, fontFamily:"var(--font-head)" }}>🪙 {Number(viewingTeam.purse_remaining||0).toLocaleString("en-IN")}</div>
-              </div>
-            </div>
-
-            <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
               <button
-                onClick={()=>copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${viewingTeam.id}`, `modal-team-${viewingTeam.id}`)}
-                style={{ flex:1, minWidth:120, padding:"8px 12px", borderRadius:8, border:"1px solid #E2E8F0", background:"#FFFFFF", color: copiedLink===`modal-team-${viewingTeam.id}` ? "#166534" : "#475569", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
+                onClick={()=>setViewingTeam(null)}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "#F1F5F9",
+                  color: "#64748B",
+                  fontSize: 18,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  marginLeft: 10
+                }}
+                aria-label="Close"
               >
-                <LinkIcon size={13}/> {copiedLink===`modal-team-${viewingTeam.id}` ? "Copied!" : "Team Link"}
-              </button>
-              <button
-                onClick={()=>shareTeamOnWhatsApp(viewingTeam, managingAuction)}
-                style={{ flex:1, minWidth:120, padding:"8px 12px", borderRadius:8, border:"1px solid #22C55E", background:"#F0FDF4", color:"#166534", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
-              >
-                <span>📱</span> WhatsApp
-              </button>
-              <button
-                onClick={()=>exportTeamRosterPdf(viewingTeam, auctionPlayers, managingAuction?.name)}
-                style={{ flex:1, minWidth:130, padding:"8px 12px", borderRadius:8, border:"1px solid #166534", background:"#166534", color:"#FFFFFF", fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}
-              >
-                <span>📄</span> Export PDF
+                ✕
               </button>
             </div>
 
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-              <div style={{ fontSize:12, color:"#94A3B8", fontWeight:700, textTransform:"uppercase" }}>Squad ({squad.length}/9)</div>
-              {squad.length > 0 && (
+            {/* SCROLLABLE SQUAD & STATS BODY */}
+            <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "14px 16px 24px" : "16px 20px 24px", WebkitOverflowScrolling: "touch" }}>
+              {/* PURSE CARDS */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 14 }}>
+                <div style={{ padding: "10px 6px", background: "#F8FAF8", border: "1px solid #E2E8F0", borderRadius: 10, textAlign: "center" }}>
+                  <div style={{ fontSize: 9.5, color: "#94A3B8", fontWeight: 700, textTransform: "uppercase" }}>Starting Purse</div>
+                  <div style={{ fontSize: 13.5, color: "#0F172A", fontWeight: 900, fontFamily: "var(--font-head)", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                    <CoinIcon size={13}/> {Number(viewingTeam.purse_total||0).toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div style={{ padding: "10px 6px", background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 10, textAlign: "center" }}>
+                  <div style={{ fontSize: 9.5, color: "#EF4444", fontWeight: 700, textTransform: "uppercase" }}>Spent</div>
+                  <div style={{ fontSize: 13.5, color: "#DC2626", fontWeight: 900, fontFamily: "var(--font-head)", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                    <CoinIcon size={13}/> {Number(spent||0).toLocaleString("en-IN")}
+                  </div>
+                </div>
+                <div style={{ padding: "10px 6px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 10, textAlign: "center" }}>
+                  <div style={{ fontSize: 9.5, color: "#166534", fontWeight: 700, textTransform: "uppercase" }}>Remaining</div>
+                  <div style={{ fontSize: 13.5, color: "#166534", fontWeight: 900, fontFamily: "var(--font-head)", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
+                    <CoinIcon size={13}/> {Number(viewingTeam.purse_remaining||0).toLocaleString("en-IN")}
+                  </div>
+                </div>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, marginBottom: 16 }}>
                 <button
-                  onClick={()=>exportTeamRosterCsv(viewingTeam, auctionPlayers, managingAuction?.name)}
-                  style={{ background:"none", border:"none", color:"#166534", fontSize:11, fontWeight:700, cursor:"pointer", padding:0, textDecoration:"underline" }}
+                  onClick={()=>copyLink(`${window.location.origin}/team-view/${managingAuction.auction_code}/${viewingTeam.id}`, `modal-team-${viewingTeam.id}`)}
+                  style={{ padding: "8px 6px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#FFFFFF", color: copiedLink===`modal-team-${viewingTeam.id}` ? "#166534" : "#475569", fontSize: 11.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                 >
-                  Download CSV
+                  <LinkIcon size={12}/> {copiedLink===`modal-team-${viewingTeam.id}` ? "Copied!" : "Team Link"}
                 </button>
+                <button
+                  onClick={()=>shareTeamOnWhatsApp(viewingTeam, managingAuction)}
+                  style={{ padding: "8px 6px", borderRadius: 8, border: "1px solid #22C55E", background: "#F0FDF4", color: "#166534", fontSize: 11.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
+                >
+                  <span>📱</span> WhatsApp
+                </button>
+                <button
+                  onClick={()=>exportTeamRosterPdf(viewingTeam, auctionPlayers, managingAuction?.name)}
+                  style={{ padding: "8px 6px", borderRadius: 8, border: "1px solid #166534", background: "#166534", color: "#FFFFFF", fontSize: 11.5, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
+                >
+                  <span>📄</span> Export PDF
+                </button>
+              </div>
+
+              {/* SQUAD HEADER */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, paddingBottom: 6, borderBottom: "1px solid #F1F5F9" }}>
+                <div style={{ fontSize: 12, color: "#0F172A", fontWeight: 800, fontFamily: "var(--font-head)" }}>
+                  Squad ({squad.length}/9 Players)
+                </div>
+                {squad.length > 0 && (
+                  <button
+                    onClick={()=>exportTeamRosterCsv(viewingTeam, auctionPlayers, managingAuction?.name)}
+                    style={{ background: "none", border: "none", color: "#166534", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: 0 }}
+                  >
+                    Download CSV
+                  </button>
+                )}
+              </div>
+
+              {/* SQUAD PLAYERS LIST */}
+              {squad.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#94A3B8", textAlign: "center", padding: "16px 0" }}>No players in squad yet.</div>
+              ) : (
+                <div style={{ display: "grid", gap: 8 }}>
+                  {squad.map((p, idx) => {
+                    const isCap = p.is_captain || p.status === "captain"
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={()=>{ setViewingTeam(null); setViewingPlayer(p) }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 10px",
+                          background: isCap ? "rgba(184,134,11,0.06)" : "#F8FAF8",
+                          border: isCap ? "1px solid rgba(184,134,11,0.3)" : "1px solid #F1F5F9",
+                          borderRadius: 10,
+                          cursor: "pointer"
+                        }}
+                      >
+                        <span style={{ fontSize: 10.5, fontWeight: 800, color: "#94A3B8", width: 18, textAlign: "center", flexShrink: 0 }}>
+                          #{idx + 1}
+                        </span>
+                        {p.profile_image_url ? (
+                          <img src={p.profile_image_url} alt={p.name} style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}/>
+                        ) : (
+                          <div style={{ width: 34, height: 34, borderRadius: 8, background: "#E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#64748B", flexShrink: 0 }}>{(p.name||"?")[0]}</div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#0F172A", display: "flex", alignItems: "center", gap: 5 }}>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.name}</span>
+                            {isCap && <span style={{ fontSize: 9, fontWeight: 800, background: "#B8860B", color: "#FFFFFF", padding: "1px 6px", borderRadius: 4, flexShrink: 0 }}>👑 CAPTAIN</span>}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#64748B", marginTop: 1 }}>{p.playing_role || "—"}</div>
+                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: isCap ? "#B8860B" : "#166534", fontFamily: "var(--font-head)", display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                          {isCap ? (
+                            <><CoinIcon size={12}/> 0 (Captain)</>
+                          ) : (
+                            <><CoinIcon size={12}/> {Number(p.sold_price || 0).toLocaleString("en-IN")}</>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
-            {squad.length === 0 ? (
-              <div style={{ fontSize:13, color:"#94A3B8", textAlign:"center", padding:"16px 0" }}>No players in squad yet.</div>
-            ) : (
-              <div style={{ display:"grid", gap:8 }}>
-                {squad.map(p => {
-                  const isCap = p.is_captain || p.status === "captain"
-                  return (
-                    <div key={p.id} onClick={()=>{ setViewingTeam(null); setViewingPlayer(p) }} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:isCap?"rgba(184,134,11,0.06)":"#F8FAF8", border:isCap?"1px solid rgba(184,134,11,0.3)":"none", borderRadius:9, cursor:"pointer" }}>
-                      {p.profile_image_url ? (
-                        <img src={p.profile_image_url} alt={p.name} style={{ width:34, height:34, borderRadius:8, objectFit:"cover", flexShrink:0 }}/>
-                      ) : (
-                        <div style={{ width:34, height:34, borderRadius:8, background:"#E2E8F0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#64748B", flexShrink:0 }}>{(p.name||"?")[0]}</div>
-                      )}
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:"#0F172A", display:"flex", alignItems:"center", gap:6 }}>
-                          <span>{p.name}</span>
-                          {isCap && <span style={{ fontSize:9, fontWeight:800, background:"#B8860B", color:"#FFFFFF", padding:"1px 6px", borderRadius:4 }}>👑 CAPTAIN</span>}
-                        </div>
-                        <div style={{ fontSize:11, color:"#94A3B8" }}>{p.playing_role || "—"}</div>
-                      </div>
-                      <div style={{ fontSize:12, fontWeight:800, color:isCap?"#B8860B":"#166534", fontFamily:"var(--font-head)" }}>
-                        {isCap ? "🪙 0 (Captain)" : `🪙 ${Number(p.sold_price||0).toLocaleString("en-IN")}`}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         </div>
         )

@@ -23,6 +23,15 @@ export function Av({ name, id, sz = 34 }) {
     </div>
   )
 }
+export function CoinIcon({ size = 14, style = {} }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ display: "inline-block", verticalAlign: "-2px", flexShrink: 0, ...style }}>
+      <circle cx="12" cy="12" r="10" fill="#F59E0B" stroke="#D97706" strokeWidth="1.8"/>
+      <circle cx="12" cy="12" r="7.2" fill="#FBBF24" stroke="#D97706" strokeWidth="0.8"/>
+      <path d="M12 7.2v9.6M9.6 9.6h4.8a1.4 1.4 0 0 1 0 2.8h-4.8a1.4 1.4 0 0 0 0 2.8h5" stroke="#78350F" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  )
+}
 const TAG_STYLES = {
   green:{ bg:"rgba(25,182,106,0.12)", tx:"rgba(34,197,94,0.15)" }, lime:{ bg:"rgba(132,204,22,0.12)", tx:"#4D7C0F" },
   yellow:{ bg:"rgba(244,180,0,0.12)", tx:"rgba(246,196,83,0.15)" }, red:{ bg:"rgba(229,57,53,0.1)", tx:"rgba(231,76,60,0.15)" },
