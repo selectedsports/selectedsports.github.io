@@ -7,6 +7,7 @@ import { reduceInningsState } from "../scoringEngine.js"
 import ScoringSetupModal from "./ScoringSetupModal.jsx"
 import ScoringConsole from "./ScoringConsole.jsx"
 import LiveScorecard from "./LiveScorecard.jsx"
+import PlayerIdCardModal from "./PlayerIdCardModal.jsx"
 import CreateAuctionFlow, { AuctionPaymentModal } from "./CreateAuctionFlow.jsx"
 import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import GroundBookingsSection from "./GroundBookingsSection.jsx"
@@ -2633,6 +2634,7 @@ function AuctionPage({ isMobile, isFounder }) {
   const [pendingPayments, setPendingPayments] = useState([])
   const [showCreateAuction, setShowCreateAuction] = useState(false)
   const [viewingPlayer, setViewingPlayer] = useState(null)
+  const [idCardPlayer, setIdCardPlayer] = useState(null)
   const [playerHistory, setPlayerHistory] = useState([])
   const [loadingPlayerHistory, setLoadingPlayerHistory] = useState(false)
   useEffect(() => {
@@ -3798,6 +3800,14 @@ function AuctionPage({ isMobile, isFounder }) {
                     <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
                       <button
                         type="button"
+                        onClick={(e)=>{ e.stopPropagation(); setIdCardPlayer(p) }}
+                        style={{ background:"#166534", border:"none", cursor:"pointer", color:"#FFFFFF", padding:"4px 8px", display:"inline-flex", alignItems:"center", gap:4, borderRadius:6, fontSize:11, fontWeight:700 }}
+                        title="Wear / Tag Official ID Card"
+                      >
+                        🏷️ ID
+                      </button>
+                      <button
+                        type="button"
                         onClick={(e)=>{ e.stopPropagation(); tagDropped(p) }}
                         style={{ background:"#FEF3C7", border:"1px solid #FDE68A", cursor:"pointer", color:"#B45309", padding:"4px 8px", display:"inline-flex", alignItems:"center", gap:4, borderRadius:6, fontSize:11, fontWeight:700 }}
                         title="Tag as Dropped / Withdrawn"
@@ -4876,6 +4886,14 @@ function AuctionPage({ isMobile, isFounder }) {
                     )}
                     <button
                       type="button"
+                      onClick={() => setIdCardPlayer(viewingPlayer)}
+                      style={{ padding: "8px 12px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 12, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5, fontFamily: "var(--font-head)" }}
+                      title="View, Tag, and Wear Official Player ID Card"
+                    >
+                      🏷️ Wear ID Card
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removePlayer(viewingPlayer)}
                       style={{ padding: "8px 12px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#EF4444", fontSize: 12, fontWeight: 800, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                       title="Permanently delete player record"
@@ -4988,6 +5006,14 @@ function AuctionPage({ isMobile, isFounder }) {
         )
       })()}
 
+      {idCardPlayer && (
+        <PlayerIdCardModal
+          player={idCardPlayer}
+          onClose={() => setIdCardPlayer(null)}
+          isAuction={true}
+        />
+      )}
+
       {receiptModalImg && (
         <div style={mStyle} onClick={()=>setReceiptModalImg(null)}>
           <div style={{ ...mBox, maxWidth:isMobile?"100%":480, textAlign:"center" }} onClick={e=>e.stopPropagation()}>
@@ -5015,6 +5041,12 @@ function AuctionPage({ isMobile, isFounder }) {
             }
           }}
           isMobile={isMobile}
+        />
+      )}
+      {idCardPlayer && (
+        <PlayerIdCardModal
+          player={idCardPlayer}
+          onClose={() => setIdCardPlayer(null)}
         />
       )}
     </div>
@@ -5702,7 +5734,7 @@ function ContributionsSection({ player, isMobile }) {
 // ─── Player Profile (full page) ─── real data only: no batting/bowling stats,
 // no radar chart, no per-match runs/wickets/win-loss, no MVP awards or team
 // captaincy — none of that exists in the data model. Shows what's actually tracked.
-function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit, isMobile }) {
+function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit, onWearIdCard, isMobile }) {
   const [history, setHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(true)
   useEffect(() => {
@@ -5718,7 +5750,12 @@ function PlayerProfileView({ player, matchesPlayed, rank, points, onBack, onEdit
       <button onClick={onBack} style={{ background:"none", border:"none", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", padding:0, marginBottom:18, display:"flex", alignItems:"center", gap:4 }}><ArrowLeft size={15}/> Back to Players</button>
 
       <div style={{ marginBottom:20, position:"relative" }}>
-        <button onClick={onEdit} style={{ position:"absolute", top:0, right:0, padding:"10px 16px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>Edit Player</button>
+        <div style={{ position:"absolute", top:0, right:0, display:"flex", gap:8, flexWrap:"wrap" }}>
+          {onWearIdCard && (
+            <button onClick={onWearIdCard} style={{ padding:"10px 14px", borderRadius:12, background:"#166534", border:"none", color:"#FFFFFF", fontSize:13, fontWeight:800, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0, fontFamily:"var(--font-head)" }}>🏷️ Wear ID Card</button>
+          )}
+          <button onClick={onEdit} style={{ padding:"10px 14px", borderRadius:12, border:"1.5px solid #166534", background:"#FFFFFF", color:"#166534", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>Edit</button>
+        </div>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center" }}>
           {player.profile_image_url ? (
             <img src={player.profile_image_url} alt={player.name} style={{ width:120, height:120, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:12 }}/>
@@ -5819,6 +5856,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
   const [cityFilter,setCityFilter]=useState("")
   const [openMenuId,setOpenMenuId]=useState(null)
   const [viewProfileId,setViewProfileId]=useState(null)
+  const [idCardPlayer,setIdCardPlayer]=useState(null)
   const [lbRaw,setLbRaw]=useState([])
   useEffect(()=>{ fetchLeaderboard().then(setLbRaw).catch(()=>{}) },[])
   const selectedPlayer=players.find(p=>p.id===selectedId)||null
@@ -5905,6 +5943,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
           points={(matchCountMap[viewProfilePlayer.id]||0) * 20}
           onBack={()=>setViewProfileId(null)}
           onEdit={()=>{const parts=(viewProfilePlayer.name||"").trim().split(/\s+/);setEditP(viewProfilePlayer);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:viewProfilePlayer.phone||"",pin:viewProfilePlayer.pin,role:viewProfilePlayer.role||"player",city:viewProfilePlayer.city||"",birthDate:viewProfilePlayer.birth_date||"",jerseyNumber:viewProfilePlayer.jersey_number||"",jerseySize:viewProfilePlayer.jersey_size||"",photoFile:null,photoPreview:viewProfilePlayer.profile_image_url||""})}}
+          onWearIdCard={()=>setIdCardPlayer(viewProfilePlayer)}
           isMobile={isMobile}
         />
       ) : (
@@ -6026,6 +6065,7 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
                   {openMenuId===p.id && (
                     <div style={{position:"absolute",top:"100%",right:0,background:"#FFFFFF",border:"1px solid #E2E8F0",borderRadius:10,boxShadow:"0 8px 24px rgba(15,23,42,0.12)",zIndex:20,minWidth:150,overflow:"hidden"}}>
                       <button onClick={()=>{setViewProfileId(p.id);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>View Profile</button>
+                      <button onClick={()=>{setIdCardPlayer(p);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#166534",cursor:"pointer",display:"flex",alignItems:"center",gap:8,fontWeight:700,borderTop:"1px solid #F1F5F9"}}>🏷️ Wear / Tag ID Card</button>
                       <button onClick={()=>{const parts=(p.name||"").trim().split(/\s+/);setEditP(p);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:p.phone||"",pin:p.pin,role:p.role||"player",city:p.city||"",birthDate:p.birth_date||"",jerseyNumber:p.jersey_number||"",jerseySize:p.jersey_size||"",photoFile:null,photoPreview:p.profile_image_url||""});setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#0F172A",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid #F1F5F9"}}>Edit</button>
                       <button onClick={()=>{setPinP(p);setNewPin("");setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#B8860B",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Change PIN</button>
                       <button onClick={()=>{setDelP(p);setOpenMenuId(null)}} style={{width:"100%",padding:"10px 14px",border:"none",background:"none",textAlign:"left",fontSize:13,color:"#EF4444",cursor:"pointer",display:"flex",alignItems:"center",gap:8,borderTop:"1px solid #F1F5F9"}}>Remove</button>
@@ -6052,7 +6092,8 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
               <div style={{fontSize:12,color:"#6b7280",marginTop:3}}>📱 {selectedPlayer.phone||"No phone"}</div>
               <div style={{fontSize:12,marginTop:6}}><span style={{color:"#9ca3af"}}>PIN: </span><span style={{background:"#d1fae5",color:"#065f46",padding:"2px 10px",borderRadius:5,fontWeight:800,fontSize:14}}>{selectedPlayer.pin}</span></div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+              <button onClick={()=>setIdCardPlayer(selectedPlayer)} style={{padding:"11px 4px",borderRadius:9,border:"none",background:"#166534",color:"#FFFFFF",fontSize:13,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>🏷️ ID Card</button>
               <button onClick={()=>{const parts=(selectedPlayer.name||"").trim().split(/\s+/);setEditP(selectedPlayer);setEditForm({firstName:parts[0]||"",lastName:parts.slice(1).join(" ")||"",phone:selectedPlayer.phone||"",pin:selectedPlayer.pin,role:selectedPlayer.role||"player",city:selectedPlayer.city||"",birthDate:selectedPlayer.birth_date||"",jerseyNumber:selectedPlayer.jersey_number||"",jerseySize:selectedPlayer.jersey_size||"",photoFile:null,photoPreview:selectedPlayer.profile_image_url||""})}} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #dbeafe",background:"#F5E6C8",color:"#7A4F13",fontSize:13,cursor:"pointer",fontWeight:700}}>Edit</button>
               <button onClick={()=>{setPinP(selectedPlayer);setNewPin("")}} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #fde68a",background:"#fefce8",color:"#78350f",fontSize:13,cursor:"pointer",fontWeight:700}}>PIN</button>
               <button onClick={()=>setDelP(selectedPlayer)} style={{padding:"11px 4px",borderRadius:9,border:"1.5px solid #fecaca",background:"#fff5f5",color:"#991b1b",fontSize:13,cursor:"pointer",fontWeight:700}}>Remove</button>
@@ -6130,6 +6171,12 @@ function PlayersPage({ players, onRefresh, isMobile, isFounder }) {
         <div style={{textAlign:"center",padding:"10px 0 18px"}}><div style={{fontSize:40,marginBottom:12}}>⚠️</div><h3 style={{margin:"0 0 8px",fontSize:17,fontWeight:800,color:"#0F172A",fontFamily:"var(--font-head)"}}>Remove Player?</h3><p style={{color:"#6b7280",fontSize:13,margin:0}}>Remove <strong>{delP.name}</strong>?</p></div>
         <div style={{display:"flex",gap:10}}><button onClick={()=>setDelP(null)} style={{flex:1,padding:"13px",borderRadius:9,border:"1.5px solid #e5e7eb",background:"#F8FAF8",fontSize:14,cursor:"pointer"}}>Cancel</button><button onClick={delSubmit} disabled={busy} style={{flex:1,padding:"13px",borderRadius:9,background:"#fee2e2",border:"1.5px solid #fecaca",color:"#991b1b",fontSize:14,cursor:"pointer",fontWeight:800,fontFamily:"var(--font-head)"}}>{busy?"...":"Yes, Remove"}</button></div>
       </div></div>}
+      {idCardPlayer && (
+        <PlayerIdCardModal
+          player={idCardPlayer}
+          onClose={() => setIdCardPlayer(null)}
+        />
+      )}
     </div>
   )
 }

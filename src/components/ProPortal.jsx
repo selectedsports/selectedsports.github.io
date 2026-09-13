@@ -8,6 +8,7 @@ import AuctionLiveConsole from "./AuctionLiveConsole.jsx"
 import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportTeamRosterCsv, exportTeamRosterPdf, shareTeamOnWhatsApp, PUNE_CRICKET_GROUNDS, searchPuneMapGrounds, searchMapGrounds, generateAuctionPlayerInvite } from "../constants.js"
 import { MatchDetail, TeamAv, SearchDropdown } from "./AdminPortal.jsx" // CALENDAR_NAV_REMOVED
 import { MatchDetailPlayer } from "./PlayerPortal.jsx"
+import PlayerIdCardModal from "./PlayerIdCardModal.jsx"
 import { useMobile } from "../hooks/useMobile.js"
 
 function timeSlotStr(sh, sm, eh, em) {
@@ -630,6 +631,7 @@ export default function ProPortal({ player, onLogout }) {
   const [auctionRegBusy, setAuctionRegBusy] = useState(false)
   const [priceDrafts, setPriceDrafts] = useState({})
   const [viewingAuctionPlayer, setViewingAuctionPlayer] = useState(null)
+  const [idCardPlayer, setIdCardPlayer] = useState(null)
   const [showAddAuctionTeam, setShowAddAuctionTeam] = useState(false)
   const [editAuctionTeam, setEditAuctionTeam] = useState(null)
   const [auctionTeamLogoFile, setAuctionTeamLogoFile] = useState(null)
@@ -1689,6 +1691,14 @@ export default function ProPortal({ player, onLogout }) {
                               <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                                 <button
                                   type="button"
+                                  onClick={(e) => { e.stopPropagation(); setIdCardPlayer(p) }}
+                                  style={{ background: "#166534", border: "none", cursor: "pointer", color: "#FFFFFF", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 6, fontSize: 11, fontWeight: 700 }}
+                                  title="Wear / Tag Official ID Card"
+                                >
+                                  🏷️ ID
+                                </button>
+                                <button
+                                  type="button"
                                   onClick={(e) => { e.stopPropagation(); tagDropped(p) }}
                                   style={{ background: "#FEF3C7", border: "1px solid #FDE68A", cursor: "pointer", color: "#B45309", padding: "4px 8px", display: "inline-flex", alignItems: "center", gap: 4, borderRadius: 6, fontSize: 11, fontWeight: 700 }}
                                   title="Tag as Dropped / Withdrawn"
@@ -2220,6 +2230,14 @@ export default function ProPortal({ player, onLogout }) {
                     )}
                     <button
                       type="button"
+                      onClick={() => setIdCardPlayer(viewingAuctionPlayer)}
+                      style={{ padding: "10px 14px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                      title="Wear / Tag Official ID Card"
+                    >
+                      🏷️ Wear ID Card
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => removeAuctionPlayer(viewingAuctionPlayer)}
                       style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 12.5, fontWeight: 800, cursor: "pointer", fontFamily: "var(--font-head)", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                     >
@@ -2268,11 +2286,16 @@ export default function ProPortal({ player, onLogout }) {
 
             {/* Header: Avatar, Name, Phone */}
             <Card style={{ padding: "16px", marginBottom: 16, position:"relative" }}>
-              {!editingProfile && <button onClick={() => {
-                const parts = (player.name || "").trim().split(/\s+/)
-                setPForm({ firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "", phone: player.phone || "", pin: player.pin, city: player.city || "", birthDate: player.birth_date || "", jerseyNumber: player.jersey_number || "", jerseySize: player.jersey_size || "", photoFile: null, photoPreview: player.profile_image_url || "" })
-                setEditingProfile(true)
-              }} style={{ position:"absolute", top:14, right:14, padding: "6px 14px", borderRadius: 8, background: "rgba(246,196,83,0.12)", border: "1px solid rgba(246,196,83,0.3)", color: "#B8860B", fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Edit</button>}
+              {!editingProfile && (
+                <div style={{ position:"absolute", top:14, right:14, display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button onClick={() => setIdCardPlayer(player)} style={{ padding: "6px 12px", borderRadius: 8, background: "#166534", border: "none", color: "#FFFFFF", fontSize: 12, cursor: "pointer", fontWeight: 800, fontFamily: "var(--font-head)", display:"inline-flex", alignItems:"center", gap:4 }}>🏷️ Wear ID Card</button>
+                  <button onClick={() => {
+                    const parts = (player.name || "").trim().split(/\s+/)
+                    setPForm({ firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "", phone: player.phone || "", pin: player.pin, city: player.city || "", birthDate: player.birth_date || "", jerseyNumber: player.jersey_number || "", jerseySize: player.jersey_size || "", photoFile: null, photoPreview: player.profile_image_url || "" })
+                    setEditingProfile(true)
+                  }} style={{ padding: "6px 14px", borderRadius: 8, background: "rgba(246,196,83,0.12)", border: "1px solid rgba(246,196,83,0.3)", color: "#B8860B", fontSize: 12, cursor: "pointer", fontWeight: 700, flexShrink: 0 }}>Edit</button>
+                </div>
+              )}
               <div style={{ display: "flex", flexDirection:"column", alignItems:"center", textAlign:"center", marginBottom: editingProfile ? 16 : 0 }}>
                 {player.profile_image_url ? (
                   <img src={player.profile_image_url} alt={player.name} style={{ width:100, height:100, borderRadius:"50%", objectFit:"cover", border:"3px solid #166534", marginBottom:10 }}/>
@@ -2527,6 +2550,13 @@ export default function ProPortal({ player, onLogout }) {
             </button>
           ))}
         </div>
+      )}
+
+      {idCardPlayer && (
+        <PlayerIdCardModal
+          player={idCardPlayer}
+          onClose={() => setIdCardPlayer(null)}
+        />
       )}
     </div>
   )

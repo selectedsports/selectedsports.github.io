@@ -22,6 +22,7 @@ import { reduceInningsState } from "../scoringEngine.js"
 import ScoringSetupModal from "./ScoringSetupModal.jsx"
 import ScoringConsole from "./ScoringConsole.jsx"
 import LiveScorecard from "./LiveScorecard.jsx"
+import PlayerIdCardModal from "./PlayerIdCardModal.jsx"
 import { BASE_URL } from "./AdminPortal.jsx"
 import { PhotoUploadField } from "./PhotoCropModal.jsx"
 import { fmtDate, dayName, matchTitle, isValidName, birthDateError, maxBirthDateForMinAge, exportAuctionPoolPdf } from "../constants.js"
@@ -132,6 +133,7 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [showSupportModal, setShowSupportModal] = useState(false)
   const [copiedPass, setCopiedPass] = useState(false)
+  const [showIdCard, setShowIdCard] = useState(false)
 
   // Stats & contributions
   const [stats, setStats] = useState(null)
@@ -1199,11 +1201,11 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                     { label: "Matches", icon: Users, tab: "matches", color: "#166534" },
                     { label: "Tournaments", icon: Trophy, tab: "tournaments", color: "#B8860B" },
                     { label: "Rankings", icon: Award, tab: "leaderboard", color: "#0F766E" },
-                    { label: "Player Pass", icon: UserIcon, tab: "profile", color: "#2563EB" },
+                    { label: "Wear ID Card", icon: Award, action: () => setShowIdCard(true), color: "#2563EB" },
                   ].map((btn, idx) => (
                     <button
                       key={idx}
-                      onClick={() => setTab(btn.tab)}
+                      onClick={() => btn.action ? btn.action() : setTab(btn.tab)}
                       style={{
                         padding: "14px 6px",
                         borderRadius: 14,
@@ -1259,25 +1261,47 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                     <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }}>Player ID: #SS-{String(player.id).slice(-4).toUpperCase()}</div>
                   </div>
 
-                  <button
-                    onClick={copyDigitalPass}
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 9,
-                      border: "1px solid #CBD5E1",
-                      background: "#FFFFFF",
-                      color: "#166534",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4
-                    }}
-                  >
-                    {copiedPass ? <Check size={14}/> : <Share2 size={14}/>}
-                    {copiedPass ? "Copied" : "Share"}
-                  </button>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                    <button
+                      onClick={() => setShowIdCard(true)}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 9,
+                        border: "none",
+                        background: "#166534",
+                        color: "#FFFFFF",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        fontFamily: "var(--font-head)"
+                      }}
+                      title="Wear / Tag Official Accreditation ID Card"
+                    >
+                      🏷️ Wear ID Card
+                    </button>
+                    <button
+                      onClick={copyDigitalPass}
+                      style={{
+                        padding: "8px 12px",
+                        borderRadius: 9,
+                        border: "1.5px solid #CBD5E1",
+                        background: "#FFFFFF",
+                        color: "#166534",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}
+                    >
+                      {copiedPass ? <Check size={14}/> : <Share2 size={14}/>}
+                      {copiedPass ? "Copied" : "Share"}
+                    </button>
+                  </div>
                 </div>
               </Card>
 
@@ -2339,27 +2363,49 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
                 })()}
 
                 {/* Pass Footer */}
-                <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.85 }}>
+                <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.1)", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.85, flexWrap: "wrap", gap: 8 }}>
                   <span>ID: #SS-{String(player.id).slice(-6).toUpperCase()}</span>
-                  <button
-                    onClick={copyDigitalPass}
-                    style={{
-                      background: "rgba(255,255,255,0.15)",
-                      border: "none",
-                      color: "#FFFFFF",
-                      padding: "5px 12px",
-                      borderRadius: 6,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4
-                    }}
-                  >
-                    {copiedPass ? <Check size={13}/> : <Share2 size={13}/>}
-                    {copiedPass ? "Pass Copied!" : "Share Sports Pass"}
-                  </button>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <button
+                      onClick={() => setShowIdCard(true)}
+                      style={{
+                        background: "#22C55E",
+                        border: "none",
+                        color: "#0F172A",
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontFamily: "var(--font-head)"
+                      }}
+                      title="Wear / Tag Official Accreditation ID Card"
+                    >
+                      🏷️ Wear ID Card
+                    </button>
+                    <button
+                      onClick={copyDigitalPass}
+                      style={{
+                        background: "rgba(255,255,255,0.15)",
+                        border: "none",
+                        color: "#FFFFFF",
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4
+                      }}
+                    >
+                      {copiedPass ? <Check size={13}/> : <Share2 size={13}/>}
+                      {copiedPass ? "Pass Copied!" : "Share Sports Pass"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2886,6 +2932,12 @@ function PlayerPortalInner({ player, matches = [], onLogout }) {
           </div>
         )
       })()}
+      {showIdCard && (
+        <PlayerIdCardModal
+          player={player}
+          onClose={() => setShowIdCard(false)}
+        />
+      )}
     </div>
   )
 }

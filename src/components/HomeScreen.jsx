@@ -5,6 +5,7 @@ import {
   Users, Swords, Trophy, Sparkles, MapPin, Award, CheckCircle2,
   Phone, ArrowRight, ShieldCheck, Zap
 } from "lucide-react"
+import PlayerIdCardModal from "./PlayerIdCardModal.jsx"
 
 // Instant cached defaults so the homepage never waits or flickers on initial load
 const CACHE_KEY = "ss_home_stats_v2"
@@ -26,6 +27,7 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin, on
   const [countUp, setCountUp]         = useState({ p: initial.p, m: initial.m, t: initial.t })
   const [mounted, setMounted]         = useState(false)
   const [showHelp, setShowHelp]       = useState(false)
+  const [showSampleIdCard, setShowSampleIdCard] = useState(false)
 
   // Smooth immediate mount + parallel background fetch
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin, on
 
   const featurePills = [
     { label: "Live Cricket Scoring", icon: Zap },
-    { label: "Digital Player Pass", icon: ShieldCheck },
+    { label: "Wear / Tag ID Card", icon: ShieldCheck },
     { label: "Live Auction Console", icon: Zap },
     { label: "Grounds on Google Maps", icon: MapPin },
     { label: "Season MVP Leaderboard", icon: Award },
@@ -244,28 +246,33 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin, on
         }}>
           {featurePills.map((fp, idx) => {
             const isScoring = fp.label === "Live Cricket Scoring"
+            const isIdCard = fp.label === "Wear / Tag ID Card"
+            const handleClick = isScoring && onOpenScoring ? onOpenScoring : (isIdCard ? () => setShowSampleIdCard(true) : undefined)
+            const isClickable = !!handleClick
+
             return (
               <span
                 key={idx}
-                onClick={isScoring && onOpenScoring ? onOpenScoring : undefined}
+                onClick={handleClick}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 5,
-                  background: isScoring ? "rgba(22,101,52,0.12)" : "rgba(22,101,52,0.06)",
-                  border: isScoring ? "1.5px solid #22C55E" : "1px solid rgba(22,101,52,0.18)",
-                  color: "#166534",
+                  background: isScoring ? "rgba(22,101,52,0.12)" : (isIdCard ? "rgba(37,99,235,0.08)" : "rgba(22,101,52,0.06)"),
+                  border: isScoring ? "1.5px solid #22C55E" : (isIdCard ? "1.5px solid #60A5FA" : "1px solid rgba(22,101,52,0.18)"),
+                  color: isIdCard ? "#1D4ED8" : "#166534",
                   padding: "5px 12px",
                   borderRadius: 999,
                   fontSize: 11,
                   fontWeight: 800,
-                  cursor: isScoring ? "pointer" : "default",
-                  boxShadow: isScoring ? "0 2px 8px rgba(34,197,94,0.15)" : "none"
+                  cursor: isClickable ? "pointer" : "default",
+                  boxShadow: isScoring ? "0 2px 8px rgba(34,197,94,0.15)" : (isIdCard ? "0 2px 8px rgba(37,99,235,0.12)" : "none")
                 }}
               >
-                <fp.icon size={13} color={isScoring ? "#15803D" : "#166534"} />
+                <fp.icon size={13} color={isScoring ? "#15803D" : (isIdCard ? "#2563EB" : "#166534")} />
                 {fp.label}
                 {isScoring && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#EF4444" }} />}
+                {isIdCard && <span style={{ fontSize: 9, background: "#DBEAFE", color: "#1E40AF", padding: "1px 5px", borderRadius: 4, marginLeft: 2 }}>PREVIEW</span>}
               </span>
             )
           })}
@@ -574,6 +581,23 @@ export default function HomeScreen({ onLogin, onRegister, onGroundOwnerLogin, on
             </div>
           </div>
         </div>
+      )}
+
+      {showSampleIdCard && (
+        <PlayerIdCardModal
+          player={{
+            id: "1001",
+            name: "Selected Sports Star",
+            role: "Captain",
+            playing_role: "All-Rounder",
+            city: "Pune",
+            jersey_number: "07",
+            jersey_size: "L",
+            birth_date: "1998-05-15",
+            phone: "9876543210"
+          }}
+          onClose={() => setShowSampleIdCard(false)}
+        />
       )}
     </div>
   )
