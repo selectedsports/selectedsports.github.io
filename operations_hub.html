@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Selected Sports Operations Hub — Auction Desk, Live Scorer & POTM</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#070B14',
+              slate: '#0F172A',
+              card: '#1E293B',
+              border: '#334155',
+              emerald: '#10B981',
+              emeraldDark: '#065F46',
+              amber: '#F59E0B',
+              amberDark: '#92400E',
+              blue: '#38BDF8',
+              crimson: '#EF4444'
+            }
+          },
+          fontFamily: {
+            head: ['Cabinet Grotesk', 'sans-serif'],
+            body: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #070B14;
+      color: #F8FAFC;
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    .font-head { font-family: 'Cabinet Grotesk', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0F172A; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* 3D Coin Flip Animation */
+    .coin-perspective {
+      perspective: 1000px;
+    }
+    .coin-3d {
+      width: 100px;
+      height: 100px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    .coin-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.4);
+    }
+    .coin-heads {
+      background: radial-gradient(circle at 35% 35%, #FDE68A 0%, #F59E0B 55%, #B45309 100%);
+      border: 4px solid #FBBF24;
+      transform: rotateY(0deg);
+    }
+    .coin-tails {
+      background: radial-gradient(circle at 35% 35%, #CBD5E1 0%, #94A3B8 55%, #475569 100%);
+      border: 4px solid #E2E8F0;
+      transform: rotateY(180deg);
+    }
+    .coin-spinning {
+      animation: coinFlip3D 1.8s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+    }
+    @keyframes coinFlip3D {
+      0% { transform: translateY(0) rotateX(0deg); }
+      30% { transform: translateY(-80px) rotateX(720deg) scale(1.15); }
+      70% { transform: translateY(-40px) rotateX(1440deg) scale(1.05); }
+      100% { transform: translateY(0) rotateX(var(--final-deg, 1800deg)) scale(1); }
+    }
+
+    /* Pulse Glow */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.8; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+    .glow-amber {
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
+    }
+    .glow-danger {
+      animation: pulseGlow 0.6s infinite alternate;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+    }
+
+    /* SVG Turf styling */
+    .field-pin {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+    .field-pin:hover {
+      transform: scale(1.22);
+      filter: drop-shadow(0 4px 10px rgba(0,0,0,0.8));
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-brand-dark flex flex-col justify-between">
+
+  <!-- TOP APP BAR WITH 4 CORE MODULES -->
+  <header class="border-b border-brand-slate bg-brand-slate/95 backdrop-blur-md sticky top-0 z-50 px-3 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand & Hub Status -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-emerald-600 p-0.5 shadow-lg shadow-amber-500/20">
+          <div class="w-full h-full bg-brand-dark rounded-[10px] flex items-center justify-center font-head font-black text-amber-400 text-lg">
+            SS
+          </div>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-head font-extrabold text-base md:text-lg tracking-tight text-white">Selected Sports</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold tracking-wider bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase">OPS SUITE</span>
+          </div>
+          <p class="text-xs text-slate-400">Battle of Champions Auction &bull; Match Center &bull; Scorer &bull; POTM</p>
+        </div>
+      </div>
+
+      <!-- Center Hub Tabs: All 4 Pillars -->
+      <div class="flex items-center bg-brand-dark p-1 rounded-xl border border-brand-border/60 overflow-x-auto max-w-full">
+        <button id="tabAuctionBtn" onclick="switchMainTab('auction')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-amber-500 text-brand-dark shadow-sm whitespace-nowrap">
+          <span>🔨</span>
+          <span>Auction Desk</span>
+        </button>
+        <button id="tabTossBtn" onclick="switchMainTab('toss')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <span>🏏</span>
+          <span>Toss &amp; Lineup</span>
+        </button>
+        <button id="tabScorerBtn" onclick="switchMainTab('scorer')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <span>⚡</span>
+          <span>Live Scorer</span>
+        </button>
+        <button id="tabPostMatchBtn" onclick="switchMainTab('postmatch')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap">
+          <span>🏆</span>
+          <span>POTM &amp; Summary</span>
+        </button>
+      </div>
+
+      <!-- Right Controls: Audio Mute -->
+      <div class="flex items-center gap-2">
+        <!-- Sound Toggle -->
+        <button id="audioToggleBtn" onclick="toggleAudio()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-brand-card hover:bg-slate-700 border border-brand-border text-slate-300 flex items-center gap-1.5 transition-colors" title="Toggle Sound Effects">
+          <span id="audioIcon">🔊</span>
+          <span class="hidden sm:inline">Audio</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER (Supports 390px Frame vs Expanded Desktop) -->
+  <main class="flex-1 py-5 px-3 flex justify-center items-start">
+    <div id="viewportContainer" class="w-full max-w-7xl transition-all duration-300">
+
+      <!-- ============================================================== -->
+      <!-- TAB 1: BATTLE OF CHAMPIONS AUCTIONEER DESK (RETAINED IN FULL)  -->
+      <!-- ============================================================== -->
+      <section id="auctionView" class="space-y-6">
+
+        <!-- Top Lot Navigation Bar -->
+        <div class="bg-brand-card border border-brand-border/80 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+          <div class="flex items-center gap-3">
+            <button onclick="prevLot()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 hover:text-white transition">
+              ←
+            </button>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-amber-400 uppercase tracking-widest font-mono">BATTLE OF CHAMPIONS • SET 2</span>
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-[11px] text-emerald-400 font-semibold">LIVE AUCTION</span>
+              </div>
+              <h2 id="lotIndicatorText" class="font-head text-lg font-black text-white">Lot #24 of 60</h2>
+            </div>
+            <button onclick="nextLot()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center font-bold text-slate-300 hover:text-white transition">
+              →
+            </button>
+          </div>
+
+          <!-- Quick Stats Pills -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <div class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs">
+              <span class="text-slate-400">Total Lots:</span>
+              <span class="font-bold text-white ml-1">60</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-emerald-950/60 border border-emerald-800/80 text-xs">
+              <span class="text-emerald-400">Sold:</span>
+              <span id="soldCounter" class="font-bold text-emerald-300 ml-1">23</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-red-950/60 border border-red-800/80 text-xs">
+              <span class="text-red-400">Unsold:</span>
+              <span id="unsoldCounter" class="font-bold text-red-300 ml-1">0</span>
+            </div>
+            <div class="px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-800/80 text-xs">
+              <span class="text-amber-400">Total Spent:</span>
+              <span id="totalSpentCounter" class="font-bold text-amber-300 ml-1">₹89.2 L</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Master Desk Grid (2 Columns on Desktop) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Left Main Console (7 Cols) -->
+          <div class="lg:col-span-7 space-y-6">
+
+            <!-- Active Player On Block Card -->
+            <div class="bg-brand-card border-2 border-amber-500/40 rounded-2xl p-5 relative overflow-hidden shadow-2xl">
+              <div class="absolute -right-20 -top-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div class="flex flex-col sm:flex-row items-center sm:items-start gap-5">
+                <!-- Player Big Badge -->
+                <div class="relative">
+                  <div id="playerAvatarBg" class="w-24 h-24 rounded-2xl bg-gradient-to-tr from-amber-600 to-emerald-500 p-0.5 shadow-xl shadow-amber-500/20">
+                    <div id="playerAvatarText" class="w-full h-full bg-slate-900 rounded-[14px] flex items-center justify-center font-head font-extrabold text-3xl text-amber-400">
+                      RH
+                    </div>
+                  </div>
+                  <span id="playerRoleBadge" class="absolute -bottom-2 -right-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-brand-dark uppercase tracking-wider shadow">
+                    ALL
+                  </span>
+                </div>
+
+                <!-- Bio & Career Metrics -->
+                <div class="flex-1 text-center sm:text-left">
+                  <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                    <span id="playerRoleTag" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                      Top-Tier All-Rounder
+                    </span>
+                    <span class="text-xs text-slate-400">📍 Koregaon Park Turf</span>
+                    <span class="text-xs font-bold text-emerald-400">⭐ 88.5 STR</span>
+                  </div>
+                  <h3 id="playerNameText" class="font-head text-2xl sm:text-3xl font-black text-white tracking-tight">Rohit Hegde</h3>
+                  <p id="playerStyleText" class="text-xs sm:text-sm text-slate-300 font-medium mt-0.5">Right Hand Bat • Right-Arm Fast-Medium</p>
+
+                  <!-- 4-Stat Box -->
+                  <div class="grid grid-cols-4 gap-2 mt-4 text-center">
+                    <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700/60">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold">Matches</div>
+                      <div id="statMatches" class="font-mono text-sm font-bold text-white mt-0.5">28</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700/60">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold">Strike Rate</div>
+                      <div id="statSR" class="font-mono text-sm font-bold text-emerald-400 mt-0.5">148.5</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700/60">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold">Economy</div>
+                      <div id="statEcon" class="font-mono text-sm font-bold text-amber-400 mt-0.5">6.4</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-2 rounded-xl border border-slate-700/60">
+                      <div class="text-[10px] text-slate-400 uppercase font-bold">Base Price</div>
+                      <div id="statBasePrice" class="font-mono text-sm font-bold text-slate-200 mt-0.5">₹50,000</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 15s Circular Hammer Timer & Bid Leaderboard Display -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl space-y-5">
+              
+              <div class="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <!-- Animated SVG 15s Circular Timer Ring -->
+                <div class="relative flex flex-col items-center">
+                  <div id="timerContainer" class="relative w-36 h-36 flex items-center justify-center">
+                    <svg class="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="42" stroke="#1E293B" stroke-width="8" fill="transparent"/>
+                      <circle id="timerProgressRing" cx="50" cy="50" r="42" stroke="#10B981" stroke-width="8" stroke-linecap="round" fill="transparent"
+                              stroke-dasharray="263.89" stroke-dashoffset="0" class="transition-all duration-300"/>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span id="timerSecondsText" class="font-mono text-3xl font-black text-emerald-400 leading-none">15s</span>
+                      <span id="timerStageLabel" class="text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mt-1">BIDDING</span>
+                    </div>
+                  </div>
+
+                  <!-- Timer Controls -->
+                  <div class="flex items-center gap-1.5 mt-2">
+                    <button onclick="toggleTimerPause()" id="pauseTimerBtn" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700">
+                      ⏸ Pause
+                    </button>
+                    <button onclick="resetTimer()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700">
+                      🔄 Reset 15s
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Current Highest Bid & Leader Franchise -->
+                <div class="flex-1 w-full bg-slate-900/90 rounded-2xl p-4 border border-slate-700/80 text-center sm:text-left flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Highest Bid</span>
+                      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    </div>
+                    <div id="currentBidDisplay" class="font-mono font-black text-3xl sm:text-4xl text-amber-400 tracking-tight">
+                      ₹4,50,000
+                    </div>
+                  </div>
+
+                  <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div class="text-[11px] text-slate-400 font-medium">Holding Franchise</div>
+                      <div id="currentLeaderName" class="font-head font-extrabold text-base text-white">
+                        Pune Strikers
+                      </div>
+                    </div>
+                    <span id="currentLeaderBadge" class="px-3 py-1 rounded-full text-xs font-black bg-indigo-500/20 text-indigo-400 border border-indigo-500/40">
+                      HOLDING
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fast Increment Buttons (+10k, +25k, +50k, +1L) -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  Fast Increment Bid Triggers
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <button onclick="applyIncrement(10000)" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-bold text-sm text-white hover:text-emerald-400 transition transform active:scale-95 flex flex-col items-center">
+                    <span>+₹10,000</span>
+                    <span class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">Quick Bump</span>
+                  </button>
+                  <button onclick="applyIncrement(25000)" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-bold text-sm text-white hover:text-emerald-400 transition transform active:scale-95 flex flex-col items-center">
+                    <span>+₹25,000</span>
+                    <span class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">Standard Bump</span>
+                  </button>
+                  <button onclick="applyIncrement(50000)" class="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-bold text-sm text-white hover:text-amber-400 transition transform active:scale-95 flex flex-col items-center">
+                    <span>+₹50,000</span>
+                    <span class="text-[10px] text-slate-400 font-sans font-normal mt-0.5">Aggressive Bump</span>
+                  </button>
+                  <button onclick="applyIncrement(100000)" class="p-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 border border-amber-500 font-mono font-black text-sm text-brand-dark transition transform active:scale-95 flex flex-col items-center shadow-lg shadow-amber-600/30">
+                    <span>+₹1,00,000</span>
+                    <span class="text-[10px] font-sans font-bold text-brand-dark/80 mt-0.5">Power Bid 🚀</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Franchise Direct Bidding Selector -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  Select Bidding Franchise
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2" id="franchisePillsContainer">
+                  <!-- Generated via JS -->
+                </div>
+              </div>
+
+              <!-- Primary Hammer Action Bar -->
+              <div class="pt-3 border-t border-slate-700/80 grid grid-cols-3 gap-3">
+                <button onclick="handleHammerAction('unsold')" class="py-3 px-3 rounded-xl bg-red-950 hover:bg-red-900 border border-red-700 text-red-300 font-head font-bold text-xs sm:text-sm tracking-wide transition transform active:scale-95 flex items-center justify-center gap-1.5">
+                  <span>🚫</span> <span>PASS / UNSOLD</span>
+                </button>
+                <button onclick="handleHammerAction('reopen')" class="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 font-head font-bold text-xs sm:text-sm tracking-wide transition transform active:scale-95 flex items-center justify-center gap-1.5">
+                  <span>🔄</span> <span>RE-OPEN LOT</span>
+                </button>
+                <button onclick="handleHammerAction('sold')" class="py-3 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 border border-emerald-400 text-white font-head font-black text-xs sm:text-sm tracking-wider transition transform active:scale-95 flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/25">
+                  <span>🔨</span> <span>SOLD!</span>
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Right Column: Franchise Purse Guardian & Real-Time Audit Log (5 Cols) -->
+          <div class="lg:col-span-5 space-y-6">
+
+            <!-- Franchise Purse Guardian & Reserve Protection -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-xl">
+              <div class="flex items-center justify-between mb-4">
+                <div>
+                  <h4 class="font-head font-black text-base text-white">Franchise Purse &amp; Roster</h4>
+                  <p class="text-xs text-slate-400">Strict Minimum Squad Reserve Guard (₹1,000/slot)</p>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  GUARD ACTIVE
+                </span>
+              </div>
+
+              <div class="space-y-3.5" id="franchiseRostersContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Live Timestamped Auction Audit Feed -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-xl flex flex-col">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                  <h4 class="font-head font-black text-base text-white">Auction Audit Feed</h4>
+                </div>
+                <button onclick="clearAuditLog()" class="text-[11px] text-slate-400 hover:text-slate-200 underline">
+                  Clear
+                </button>
+              </div>
+
+              <div id="auditLogFeed" class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 font-mono text-xs space-y-2 h-64 overflow-y-auto">
+                <!-- Live audit entries populated here -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 2: INTERACTIVE TOSS & 11-PLAYER PITCH LINEUP BOARD        -->
+      <!-- ============================================================== -->
+      <section id="tossLineupView" class="space-y-6 hidden">
+
+        <!-- Matchday Fixture Header -->
+        <div class="bg-brand-card border border-brand-border rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 shadow-xl">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                ● 2-HR TURF MATCH
+              </span>
+              <span class="text-xs text-slate-400">Match #18</span>
+            </div>
+            <h2 class="font-head font-black text-xl text-white">Pune Strikers vs Baner Blasters</h2>
+            <p class="text-xs text-slate-400 mt-0.5">📍 Koregaon Turf Arena • Pitch 1 • 🕗 08:00 PM - 10:00 PM</p>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="autoPlaceFielders()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-emerald-500/40 flex items-center gap-1.5 transition">
+              <span>⚡</span> <span>Auto Place 11</span>
+            </button>
+            <button onclick="copyTossSheetToClipboard()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-xs font-extrabold text-white flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition hover:brightness-110">
+              <span id="copyIcon">📋</span> <span id="copyBtnText">Export Toss Sheet</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3D Coin Flip Simulator & Decision Card -->
+        <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl">
+          <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+            
+            <!-- Left: Coin 3D Physics Flip -->
+            <div class="flex flex-col sm:flex-row items-center gap-6">
+              <div class="coin-perspective">
+                <div id="coinElement" class="coin-3d">
+                  <div class="coin-face coin-heads">
+                    <span class="font-head font-black text-3xl text-brand-dark">H</span>
+                    <span class="text-[10px] font-black uppercase tracking-wider text-brand-dark/90">HEADS</span>
+                  </div>
+                  <div class="coin-face coin-tails">
+                    <span class="font-head font-black text-3xl text-slate-900">T</span>
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-800">TAILS</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Coin Flip Controls -->
+              <div class="text-center sm:text-left space-y-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Call The Toss</span>
+                <div class="flex items-center gap-2">
+                  <button id="callHeadsBtn" onclick="setCoinCall('HEADS')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-brand-dark border border-amber-400">
+                    Call Heads
+                  </button>
+                  <button id="callTailsBtn" onclick="setCoinCall('TAILS')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white">
+                    Call Tails
+                  </button>
+                </div>
+                <button onclick="flipCoin()" id="flipActionBtn" class="w-full mt-2 py-2 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 font-head font-black text-xs text-brand-dark uppercase tracking-wider shadow-lg shadow-amber-500/20 transition transform active:scale-95">
+                  🪙 FLIP 3D COIN
+                </button>
+              </div>
+            </div>
+
+            <!-- Right: Toss Result & Elected Decision Box -->
+            <div class="w-full lg:w-96 bg-slate-900/90 rounded-2xl p-4 border border-slate-700/80">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Toss Outcome</span>
+                <span id="tossStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                  PENDING FLIP
+                </span>
+              </div>
+              <div id="tossResultStatement" class="font-head text-base font-extrabold text-white">
+                Coin ready. Make call and spin.
+              </div>
+
+              <!-- Decision Buttons: Bat vs Bowl -->
+              <div class="mt-4 pt-3 border-t border-slate-800">
+                <div class="text-[11px] font-bold text-slate-400 uppercase mb-2">Decision by Winner</div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="electBatBtn" onclick="setTossDecision('Batting')" class="py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-400 flex items-center justify-center gap-1.5 shadow">
+                    <span>🏏</span> <span>Elected to Bat</span>
+                  </button>
+                  <button id="electBowlBtn" onclick="setTossDecision('Bowling')" class="py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white flex items-center justify-center gap-1.5">
+                    <span>⚾</span> <span>Elected to Bowl</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 2-Column: Interactive Field SVG (Left) vs Playing XI & Dues Manager (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Interactive Turf Field Graphic (7 Cols) -->
+          <div class="lg:col-span-7 bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-head font-black text-lg text-white">Turf Field Alignment (11 Positions)</h3>
+                <p class="text-xs text-slate-400">Click any fielding pin to assign or inspect player position</p>
+              </div>
+              <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-800">
+                11/11 Placed
+              </span>
+            </div>
+
+            <!-- Top-Down SVG Field Graphic -->
+            <div class="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border-2 border-emerald-500/40 bg-gradient-to-b from-[#064E3B] via-[#065F46] to-[#047857] shadow-inner flex items-center justify-center">
+              
+              <svg class="absolute inset-0 w-full h-full" viewBox="0 0 400 300">
+                <ellipse cx="200" cy="150" rx="185" ry="135" fill="none" stroke="#A7F3D0" stroke-width="2" stroke-opacity="0.4" stroke-dasharray="6 4"/>
+                <ellipse cx="200" cy="150" rx="120" ry="90" fill="rgba(6, 78, 59, 0.4)" stroke="#6EE7B7" stroke-width="1.5" stroke-opacity="0.5"/>
+                <rect x="186" y="90" width="28" height="120" rx="4" fill="#D97706" opacity="0.85" stroke="#FDE68A" stroke-width="1"/>
+                <line x1="184" y1="105" x2="216" y2="105" stroke="#FFFFFF" stroke-width="1.5"/>
+                <line x1="184" y1="195" x2="216" y2="195" stroke="#FFFFFF" stroke-width="1.5"/>
+                <circle cx="200" cy="103" r="2" fill="#FFFFFF"/>
+                <circle cx="200" cy="197" r="2" fill="#FFFFFF"/>
+              </svg>
+
+              <!-- Dynamic 11 Field Position Pins -->
+              <div id="fieldPinsContainer" class="absolute inset-0 pointer-events-auto">
+                <!-- Placed via JS -->
+              </div>
+
+              <!-- Position Assign Tooltip -->
+              <div id="positionAssignModal" class="absolute bottom-3 left-3 right-3 bg-slate-900/95 backdrop-blur-md p-3 rounded-xl border border-brand-border text-xs hidden shadow-2xl">
+                <div class="flex items-center justify-between mb-2">
+                  <span id="assignModalTitle" class="font-bold text-amber-400 uppercase">Assign Fielder</span>
+                  <button onclick="closeAssignModal()" class="text-slate-400 hover:text-white font-bold text-sm">✕</button>
+                </div>
+                <div id="assignModalPlayersList" class="flex gap-2 overflow-x-auto pb-1">
+                  <!-- Player options -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Field Legend -->
+            <div class="mt-4 pt-3 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-300">
+              <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span> WK / Captain</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Bowlers</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Ring Fielders</span>
+              </div>
+              <span class="text-slate-400">Touch pin to re-assign position</span>
+            </div>
+          </div>
+
+          <!-- Playing XI & Dues Manager (5 Cols) -->
+          <div class="lg:col-span-5 bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-head font-black text-lg text-white">Playing XI &amp; UPI Clearance</h3>
+                <p class="text-xs text-slate-400">Match fee split: ₹250/player (11/11 Cleared)</p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">
+                100% Settle
+              </span>
+            </div>
+
+            <!-- Playing XI 11-player Roster List -->
+            <div class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[380px]" id="playingXiRosterContainer">
+              <!-- Rendered via JS -->
+            </div>
+
+            <!-- Bench Substitutes -->
+            <div class="mt-4 pt-3 border-t border-slate-700/80">
+              <div class="text-xs font-bold text-slate-400 uppercase mb-2">Bench Reserves (3 Available)</div>
+              <div class="grid grid-cols-3 gap-2" id="benchContainer">
+                <!-- Rendered via JS -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 3: TOUCH-OPTIMIZED TURF SCORER & MATCH CENTER (#viewScorer)-->
+      <!-- ============================================================== -->
+      <section id="viewScorer" class="space-y-6 hidden">
+
+        <!-- Live Match Banner & Equation Card -->
+        <div class="bg-brand-card border-2 border-emerald-500/40 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping"></span>
+                <span class="text-xs font-extrabold text-red-400 uppercase tracking-widest font-mono">LIVE 2-HR MATCH CENTER</span>
+                <span class="text-xs text-slate-400">• Innings 2 (Chase)</span>
+              </div>
+              <div class="flex items-baseline gap-3">
+                <h2 id="scorerBattingTeam" class="font-head font-black text-2xl sm:text-3xl text-white">Pune Strikers</h2>
+                <div class="flex items-baseline gap-1">
+                  <span id="scoreTotalRuns" class="font-mono text-3xl sm:text-4xl font-black text-amber-400">118</span>
+                  <span class="font-mono text-2xl font-bold text-slate-400">/</span>
+                  <span id="scoreTotalWickets" class="font-mono text-2xl font-black text-red-400">3</span>
+                </div>
+                <span id="scoreTotalOvers" class="text-sm font-mono font-bold text-slate-300 ml-1">(9.4 / 12 ov)</span>
+              </div>
+            </div>
+
+            <!-- Dynamic Run Rate Engine Display -->
+            <div class="flex items-center gap-4 bg-slate-900/90 px-4 py-3 rounded-xl border border-slate-700">
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current RR (CRR)</div>
+                <div id="scorerCRR" class="font-mono text-lg font-black text-emerald-400">12.21</div>
+              </div>
+              <div class="h-8 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Required RR (RRR)</div>
+                <div id="scorerRRR" class="font-mono text-lg font-black text-amber-400">10.28</div>
+              </div>
+              <div class="h-8 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Target / Equation</div>
+                <div id="scorerEquation" class="font-mono text-xs font-bold text-white">Need 25 off 14b</div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Target Progress Bar -->
+          <div class="mt-4 pt-3 border-t border-slate-800 flex items-center gap-3">
+            <span class="text-xs text-slate-400 font-mono">0</span>
+            <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+              <div id="scorerTargetProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-amber-500 rounded-full transition-all duration-300" style="width: 82%;"></div>
+            </div>
+            <span class="text-xs font-mono font-bold text-amber-400">Target: 143</span>
+          </div>
+        </div>
+
+        <!-- 2 Columns: Partnership & Striker Highlights vs Ball Trail & Touchpad -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Left: Striker / Non-Striker & Bowler Card (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+
+            <!-- Active Batters (Striker vs Non-Striker) -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-4 shadow-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Batting Crease</span>
+                <button onclick="rotateStrike()" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-bold flex items-center gap-1 border border-slate-700">
+                  <span>⇄</span> <span>Rotate Strike</span>
+                </button>
+              </div>
+
+              <!-- Striker 1 -->
+              <div id="strikerCard1" class="p-3 rounded-xl bg-slate-900 border-2 border-emerald-500/60 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-head font-extrabold text-sm text-white" id="striker1Name">Aditya Deshmukh</span>
+                    <span class="text-emerald-400 text-xs font-black">★ ON STRIKE</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    <span id="striker1Runs" class="font-mono text-amber-400 font-bold text-sm">58*</span> 
+                    <span class="text-slate-400">off <span id="striker1Balls">26</span>b</span> • 
+                    <span class="text-slate-300">4s: <span id="striker1Fours">4</span></span>, 
+                    <span class="text-slate-300">6s: <span id="striker1Sixes">5</span></span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400 font-bold">SR</div>
+                  <div id="striker1SR" class="font-mono text-sm font-black text-emerald-400">223.1</div>
+                </div>
+              </div>
+
+              <!-- Non-Striker 2 -->
+              <div id="strikerCard2" class="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-head font-extrabold text-sm text-slate-200" id="striker2Name">Rohit Hegde</span>
+                    <span class="text-slate-500 text-xs">Runner</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">
+                    <span id="striker2Runs" class="font-mono text-slate-200 font-bold text-sm">32</span> 
+                    <span class="text-slate-400">off <span id="striker2Balls">17</span>b</span> • 
+                    <span class="text-slate-400">4s: <span id="striker2Fours">3</span></span>, 
+                    <span class="text-slate-400">6s: <span id="striker2Sixes">1</span></span>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400 font-bold">SR</div>
+                  <div id="striker2SR" class="font-mono text-sm font-bold text-slate-300">188.2</div>
+                </div>
+              </div>
+
+              <!-- Active Partnership Pill -->
+              <div class="bg-emerald-950/40 border border-emerald-800/60 rounded-xl p-2.5 text-center text-xs">
+                <span class="text-slate-400">Current 4th Wicket Partnership:</span>
+                <span id="partnershipStat" class="font-mono font-black text-emerald-400 ml-1">74 runs (38 balls)</span>
+              </div>
+            </div>
+
+            <!-- Active Bowler Card -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-4 shadow-xl">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Bowling Spell</span>
+                <span class="text-xs text-amber-400 font-bold">Baner Blasters</span>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <div class="font-head font-extrabold text-sm text-white" id="bowlerName">Nikhil Salunke</div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">Right-Arm Express Fast</div>
+                </div>
+                <div class="flex items-center gap-3 font-mono text-xs">
+                  <div>
+                    <div class="text-[9px] text-slate-500 uppercase">O-M-R-W</div>
+                    <div id="bowlerFigures" class="font-bold text-slate-200">1.4-0-18-2</div>
+                  </div>
+                  <div>
+                    <div class="text-[9px] text-slate-500 uppercase">Econ</div>
+                    <div id="bowlerEcon" class="font-bold text-amber-400">10.8</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right: Over Ball Trail & Touchpad (7 Cols) -->
+          <div class="lg:col-span-7 space-y-4">
+
+            <!-- Over Ball Trail (Current Over Visual Track) -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-4 shadow-xl">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Current Over Trail</span>
+                  <span id="currentOverLabel" class="text-xs font-mono font-bold text-emerald-400">Over 10</span>
+                </div>
+                <button onclick="undoLastBall()" class="px-2.5 py-1 rounded-lg bg-red-950/60 hover:bg-red-900/80 border border-red-800 text-red-300 text-xs font-bold flex items-center gap-1 transition">
+                  <span>↶</span> <span>Undo Ball</span>
+                </button>
+              </div>
+
+              <!-- Horizontal Badges Trail -->
+              <div id="overBallTrailContainer" class="flex items-center gap-2 overflow-x-auto pb-1 min-h-[46px]">
+                <!-- Dynamic Ball Badges -->
+              </div>
+            </div>
+
+            <!-- Touchpad for Scorers (Runs, Boundaries, Extras, Wickets) -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-2xl space-y-4">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">One-Tap Scorer Pad</span>
+                <span class="text-[11px] text-emerald-400 font-semibold">Touch / Click to Record</span>
+              </div>
+
+              <!-- Primary Runs Pad: 0, 1, 2, 3, 4, 6 -->
+              <div class="grid grid-cols-6 gap-2">
+                <button onclick="recordBall(0)" class="h-14 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-black text-xl text-slate-300 active:scale-95 transition flex flex-col items-center justify-center">
+                  <span>0</span>
+                  <span class="text-[9px] font-sans text-slate-400 font-normal">Dot</span>
+                </button>
+                <button onclick="recordBall(1)" class="h-14 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-black text-xl text-white active:scale-95 transition flex flex-col items-center justify-center">
+                  <span>1</span>
+                  <span class="text-[9px] font-sans text-slate-400 font-normal">Single</span>
+                </button>
+                <button onclick="recordBall(2)" class="h-14 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-black text-xl text-white active:scale-95 transition flex flex-col items-center justify-center">
+                  <span>2</span>
+                  <span class="text-[9px] font-sans text-slate-400 font-normal">Two</span>
+                </button>
+                <button onclick="recordBall(3)" class="h-14 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono font-black text-xl text-white active:scale-95 transition flex flex-col items-center justify-center">
+                  <span>3</span>
+                  <span class="text-[9px] font-sans text-slate-400 font-normal">Three</span>
+                </button>
+                <button onclick="recordBall(4)" class="h-14 rounded-xl bg-gradient-to-br from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 border border-amber-400 font-mono font-black text-xl text-brand-dark active:scale-95 transition flex flex-col items-center justify-center shadow-lg shadow-amber-500/20">
+                  <span>4</span>
+                  <span class="text-[9px] font-sans font-bold text-brand-dark/90">FOUR!</span>
+                </button>
+                <button onclick="recordBall(6)" class="h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border border-emerald-300 font-mono font-black text-xl text-brand-dark active:scale-95 transition flex flex-col items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <span>6</span>
+                  <span class="text-[9px] font-sans font-bold text-brand-dark/90">SIX! 🔥</span>
+                </button>
+              </div>
+
+              <!-- Extras & Dismissals -->
+              <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-800">
+                <button onclick="recordExtra('Wd')" class="py-2.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700 font-mono font-bold text-xs text-purple-300 active:scale-95 transition text-center">
+                  Wide (+1)
+                </button>
+                <button onclick="recordExtra('Nb')" class="py-2.5 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700 font-mono font-bold text-xs text-purple-300 active:scale-95 transition text-center">
+                  No Ball (+1)
+                </button>
+                <button onclick="recordExtra('B')" class="py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-mono font-bold text-xs text-slate-300 active:scale-95 transition text-center">
+                  Bye / Leg Bye
+                </button>
+                <button onclick="recordWicket()" class="py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 border border-red-500 font-mono font-black text-xs text-white active:scale-95 transition text-center shadow-lg shadow-red-500/25">
+                  WICKET! 🎯
+                </button>
+              </div>
+
+              <!-- Match Completion Action -->
+              <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <span class="text-[11px] text-slate-400">Match nearing completion?</span>
+                <button onclick="finalizeMatchAndOpenPOTM()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-head font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 transition">
+                  🏆 Finalize Match &amp; Generate POTM
+                </button>
+              </div>
+
+            </div>
+
+            <!-- Live Match Commentary Stream -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-4 shadow-xl">
+              <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Live Ball Commentary</div>
+              <div id="scorerCommentaryFeed" class="space-y-1.5 font-mono text-xs max-h-32 overflow-y-auto">
+                <!-- Dynamically populated commentary -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- TAB 4: POST-MATCH SUMMARY & POTM POSTER (#viewPostMatch)       -->
+      <!-- ============================================================== -->
+      <section id="viewPostMatch" class="space-y-6 hidden">
+
+        <!-- Match Result Winner Banner -->
+        <div class="bg-gradient-to-r from-emerald-950 via-slate-900 to-indigo-950 border-2 border-emerald-500/50 rounded-2xl p-5 shadow-2xl flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-brand-dark uppercase tracking-wider">
+                MATCH CONCLUDED
+              </span>
+              <span class="text-xs text-slate-400">2-Hour Pune Turf Arena • Pitch 1</span>
+            </div>
+            <h2 class="font-head font-black text-2xl sm:text-3xl text-white">Pune Strikers Won by 6 Wickets!</h2>
+            <p class="text-xs sm:text-sm text-emerald-400 font-medium mt-1">Chased down 143 in 11.4 overs with 2 balls remaining.</p>
+          </div>
+
+          <!-- Score Breakdown Pill -->
+          <div class="flex items-center gap-4 bg-slate-900/90 px-4 py-3 rounded-xl border border-slate-700">
+            <div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase">Baner Blasters</div>
+              <div class="font-mono text-base font-black text-white">142/6 <span class="text-xs font-normal text-slate-400">(12.0)</span></div>
+            </div>
+            <div class="text-slate-600 font-mono">VS</div>
+            <div>
+              <div class="text-[10px] text-emerald-400 font-bold uppercase">Pune Strikers</div>
+              <div class="font-mono text-base font-black text-amber-400">146/4 <span class="text-xs font-normal text-slate-400">(11.4)</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Columns: Elite POTM Poster Card (Left) vs Match Receipts & Stats (Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+          <!-- Left: Elite POTM Card Poster (6 Cols) -->
+          <div class="lg:col-span-6 bg-gradient-to-br from-slate-900 via-brand-card to-amber-950/40 border-2 border-amber-500/60 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+            
+            <!-- Holographic Gold Sheen -->
+            <div class="absolute -right-24 -top-24 w-72 h-72 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+            <!-- Card Top Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-amber-500/30 mb-5">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">👑</span>
+                <span class="font-head font-black text-xs uppercase tracking-widest text-amber-400">SELECTED SPORTS OFFICIAL AWARD</span>
+              </div>
+              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase font-mono">
+                MATCH #18
+              </span>
+            </div>
+
+            <!-- Player Hero & Big STR Badge -->
+            <div class="flex items-center gap-5 mb-6">
+              <div class="relative">
+                <div class="w-24 h-24 rounded-2xl bg-gradient-to-br from-amber-400 via-emerald-400 to-amber-600 p-1 shadow-2xl shadow-amber-500/40">
+                  <div class="w-full h-full bg-slate-950 rounded-[12px] flex items-center justify-center font-head font-black text-3xl text-amber-400">
+                    AD
+                  </div>
+                </div>
+                <div class="absolute -bottom-2 -right-1 px-2 py-0.5 rounded-full bg-amber-500 text-brand-dark text-[9px] font-black uppercase tracking-wider shadow">
+                  CAPTAIN
+                </div>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                    PLAYER OF THE MATCH
+                  </span>
+                  <span class="text-xs text-slate-400">Pune Strikers</span>
+                </div>
+                <h3 class="font-head font-black text-2xl sm:text-3xl text-white tracking-tight truncate">Aditya Deshmukh</h3>
+                <div class="flex items-center gap-3 mt-1">
+                  <span class="text-xs text-slate-300 font-medium">Top-Order All-Rounder</span>
+                  <span class="text-xs font-mono font-bold text-amber-400">⭐ STR 94.2 OVR</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dual-Discipline Metrics Highlight Box -->
+            <div class="bg-slate-950/80 rounded-2xl p-4 border border-amber-500/30 space-y-3 mb-6">
+              <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wider">Match-Winning Performance</div>
+              
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <!-- Batting Highlight -->
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div class="text-[10px] text-slate-400 uppercase font-bold">Batting Impact</div>
+                  <div class="font-mono text-xl font-black text-emerald-400 mt-0.5">58* <span class="text-xs font-normal text-slate-400">(26b)</span></div>
+                  <div class="text-[10px] text-slate-400 mt-1">4x4s • 5x6s • SR: 223.1</div>
+                </div>
+
+                <!-- Bowling Highlight -->
+                <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
+                  <div class="text-[10px] text-slate-400 uppercase font-bold">Bowling Impact</div>
+                  <div class="font-mono text-xl font-black text-amber-400 mt-0.5">2/14 <span class="text-xs font-normal text-slate-400">(2.0 ov)</span></div>
+                  <div class="text-[10px] text-slate-400 mt-1">Econ: 7.0 • 2 Wkts in 19th Ov</div>
+                </div>
+              </div>
+
+              <!-- Impact Score Indicator -->
+              <div class="pt-2 border-t border-slate-900 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Total Match Fantasy Impact:</span>
+                <span class="font-mono font-bold text-emerald-400">+148 Ranking Points</span>
+              </div>
+            </div>
+
+            <!-- One-Tap WhatsApp Share & Download Bar -->
+            <div class="grid grid-cols-2 gap-3">
+              <button onclick="sharePotmOnWhatsApp()" class="py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-head font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition transform active:scale-95">
+                <span>📲</span> <span>Share to WhatsApp</span>
+              </button>
+              <button onclick="copyMatchReceiptToClipboard()" class="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white font-head font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition active:scale-95">
+                <span>📋</span> <span>Copy Match Sheet</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Right: Complete Match Sheet & Leaderboard Sync (6 Cols) -->
+          <div class="lg:col-span-6 space-y-4">
+
+            <!-- Innings Breakdown Card -->
+            <div class="bg-brand-card border border-brand-border rounded-2xl p-5 shadow-xl space-y-4">
+              <div class="flex items-center justify-between">
+                <h4 class="font-head font-black text-base text-white">Full Match Scorecard Receipt</h4>
+                <span class="text-xs font-bold text-emerald-400">Verified by Scorer</span>
+              </div>
+
+              <!-- Innings 1 -->
+              <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800">
+                <div class="flex items-center justify-between text-xs font-bold text-white mb-1">
+                  <span>Baner Blasters (1st Innings)</span>
+                  <span class="font-mono text-amber-400">142/6 (12.0 ov)</span>
+                </div>
+                <div class="text-[11px] text-slate-400">
+                  Top Batsman: Kunal Thorat 46(21b) • Top Bowler: Aditya Deshmukh 2/14 (2.0)
+                </div>
+              </div>
+
+              <!-- Innings 2 -->
+              <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800">
+                <div class="flex items-center justify-between text-xs font-bold text-white mb-1">
+                  <span>Pune Strikers (2nd Innings)</span>
+                  <span class="font-mono text-emerald-400">146/4 (11.4 ov)</span>
+                </div>
+                <div class="text-[11px] text-slate-400">
+                  Top Batsman: Aditya Deshmukh 58*(26b) • Top Bowler: Nikhil Salunke 2/18 (1.4)
+                </div>
+              </div>
+
+              <!-- Sync to Pune Leaderboard Box -->
+              <div class="pt-3 border-t border-slate-800">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="text-xs font-bold text-slate-300">Push Stats to Pune Leaderboard</div>
+                  <span class="text-[10px] text-emerald-400 font-bold">11 Players Synced</span>
+                </div>
+                <p class="text-xs text-slate-400 mb-3">
+                  Pushes ball-by-ball individual strike rates, wickets, and STR ratings to the official Selected Sports Pune community leaderboard.
+                </p>
+                <button onclick="pushStatsToLeaderboard()" id="syncLeaderboardBtn" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-head font-black text-xs uppercase tracking-wider transition shadow-lg shadow-amber-500/20">
+                  ⚡ Push Match Stats to Community Leaderboard
+                </button>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- FLOATING TOAST NOTIFICATION CONTAINER -->
+  <div id="toastNotification" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl border border-amber-500/50 shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-3">
+    <span id="toastIcon" class="text-xl">⚡</span>
+    <span id="toastText" class="text-xs sm:text-sm font-bold">Notification text</span>
+  </div>
+
+  <!-- COMPLETE JAVASCRIPT ENGINE -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. PURE WEB AUDIO API SYNTHESIZER
+    // -------------------------------------------------------------
+    let audioCtx = null;
+    let audioMuted = false;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function toggleAudio() {
+      audioMuted = !audioMuted;
+      document.getElementById('audioIcon').textContent = audioMuted ? '🔇' : '🔊';
+      showToast(audioMuted ? 'Audio muted' : 'Audio unmuted', audioMuted ? '🔇' : '🔊');
+    }
+
+    function playTone(freq, type = 'sine', duration = 0.2, gainVol = 0.15) {
+      if (audioMuted) return;
+      try {
+        const ctx = getAudioContext();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(gainVol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      } catch (e) { console.warn(e); }
+    }
+
+    function playBidChime() {
+      if (audioMuted) return;
+      playTone(440, 'sine', 0.2, 0.15);
+      setTimeout(() => playTone(880, 'sine', 0.3, 0.2), 80);
+    }
+
+    function playHammerTap() {
+      if (audioMuted) return;
+      playTone(140, 'triangle', 0.12, 0.35);
+    }
+
+    function playSoldFanfare() {
+      if (audioMuted) return;
+      playHammerTap();
+      [587.33, 783.99, 1174.66].forEach((f, idx) => {
+        setTimeout(() => playTone(f, 'triangle', 0.5, 0.2), idx * 60);
+      });
+    }
+
+    function playCoinPing() {
+      if (audioMuted) return;
+      playTone(1800, 'sine', 0.3, 0.25);
+    }
+
+    function playBoundarySound(isSix = false) {
+      if (audioMuted) return;
+      if (isSix) {
+        [440, 554, 659, 880].forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'sine', 0.4, 0.22), idx * 50);
+        });
+      } else {
+        [523.25, 659.25, 783.99].forEach((f, idx) => {
+          setTimeout(() => playTone(f, 'sine', 0.3, 0.18), idx * 60);
+        });
+      }
+    }
+
+    function playWicketSound() {
+      if (audioMuted) return;
+      playTone(220, 'sawtooth', 0.4, 0.3);
+      setTimeout(() => playTone(160, 'sawtooth', 0.5, 0.3), 100);
+    }
+
+    // -------------------------------------------------------------
+    // 2. BATTLE OF CHAMPIONS AUCTIONEER DESK (RETAINED AS IS)
+    // -------------------------------------------------------------
+    const LOTS_DATA = [
+      { id: 24, name: 'Rohit Hegde', role: 'All-Rounder', tag: 'Top-Tier All-Rounder', style: 'Right Hand Bat • Right-Arm Fast-Medium', matches: 28, sr: 148.5, econ: 6.4, basePrice: 50000, currentBid: 450000, leaderId: 'pune', initials: 'RH' },
+      { id: 25, name: 'Aditya Deshmukh', role: 'Batsman', tag: 'Opening Specialist', style: 'Right Hand Bat • Classical Anchor', matches: 34, sr: 142.0, econ: 7.2, basePrice: 40000, currentBid: 320000, leaderId: 'baner', initials: 'AD' },
+      { id: 26, name: 'Nikhil Salunke', role: 'Bowler', tag: 'Pace Spearhead', style: 'Right-Arm Express Fast', matches: 31, sr: 110.4, econ: 5.8, basePrice: 40000, currentBid: 280000, leaderId: 'kothrud', initials: 'NS' }
+    ];
+
+    let currentLotIndex = 0;
+    const FRANCHISES = {
+      pune: { id: 'pune', name: 'Pune Strikers', color: '#6366F1', totalPurse: 10000000, spent: 5750000, squadCount: 11, squadTarget: 15 },
+      baner: { id: 'baner', name: 'Baner Blasters', color: '#F59E0B', totalPurse: 10000000, spent: 4200000, squadCount: 9, squadTarget: 15 },
+      kothrud: { id: 'kothrud', name: 'Kothrud Kings', color: '#10B981', totalPurse: 10000000, spent: 6900000, squadCount: 13, squadTarget: 15 },
+      wakad: { id: 'wakad', name: 'Wakad Warriors', color: '#EC4899', totalPurse: 10000000, spent: 8200000, squadCount: 12, squadTarget: 15 }
+    };
+
+    let selectedFranchiseId = 'baner';
+    let soldCount = 23;
+    let unsoldCount = 0;
+    let timerDuration = 15;
+    let timerRemaining = 15;
+    let timerInterval = null;
+    let isTimerPaused = false;
+    const FULL_CIRCUMFERENCE = 263.89;
+
+    function initAuctionDesk() {
+      renderCurrentLot();
+      renderFranchisePills();
+      renderFranchiseRosters();
+      startTimer();
+      logAudit(`DESK READY: Battle of Champions Auction Desk Online`);
+    }
+
+    function renderCurrentLot() {
+      const lot = LOTS_DATA[currentLotIndex];
+      document.getElementById('lotIndicatorText').textContent = `Lot #${lot.id} of 60`;
+      document.getElementById('playerAvatarText').textContent = lot.initials;
+      document.getElementById('playerNameText').textContent = lot.name;
+      document.getElementById('playerRoleTag').textContent = lot.tag;
+      document.getElementById('playerStyleText').textContent = lot.style;
+      document.getElementById('statMatches').textContent = lot.matches;
+      document.getElementById('statSR').textContent = lot.sr;
+      document.getElementById('statEcon').textContent = lot.econ;
+      document.getElementById('statBasePrice').textContent = `₹${lot.basePrice.toLocaleString('en-IN')}`;
+      updateBidDisplay(lot.currentBid, lot.leaderId);
+    }
+
+    function updateBidDisplay(amount, leaderId) {
+      document.getElementById('currentBidDisplay').textContent = `₹${Number(amount).toLocaleString('en-IN')}`;
+      const f = FRANCHISES[leaderId] || FRANCHISES.pune;
+      document.getElementById('currentLeaderName').textContent = f.name;
+      const badge = document.getElementById('currentLeaderBadge');
+      badge.textContent = `HOLDING: ${f.name}`;
+      badge.style.borderColor = f.color;
+      badge.style.color = f.color;
+    }
+
+    function renderFranchisePills() {
+      const c = document.getElementById('franchisePillsContainer');
+      c.innerHTML = '';
+      Object.values(FRANCHISES).forEach(f => {
+        const isSelected = f.id === selectedFranchiseId;
+        const btn = document.createElement('button');
+        btn.onclick = () => selectFranchise(f.id);
+        btn.className = `p-2.5 rounded-xl border text-xs font-bold transition flex items-center justify-between ${
+          isSelected ? 'bg-slate-800 border-amber-400 text-white shadow-md' : 'bg-slate-900/80 border-slate-700/80 text-slate-400 hover:text-white'
+        }`;
+        btn.innerHTML = `
+          <div class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${f.color}"></span>
+            <span class="truncate">${f.name}</span>
+          </div>
+          ${isSelected ? '<span class="text-amber-400">✓</span>' : ''}
+        `;
+        c.appendChild(btn);
+      });
+    }
+
+    function selectFranchise(id) {
+      selectedFranchiseId = id;
+      renderFranchisePills();
+      showToast(`Selected bidder: ${FRANCHISES[id].name}`, '🏢');
+    }
+
+    function renderFranchiseRosters() {
+      const c = document.getElementById('franchiseRostersContainer');
+      c.innerHTML = '';
+      Object.values(FRANCHISES).forEach(f => {
+        const remainingPurse = f.totalPurse - f.spent;
+        const remainingSlotsNeeded = Math.max(0, f.squadTarget - f.squadCount);
+        const slotsAfterCurrent = Math.max(0, remainingSlotsNeeded - 1);
+        const minReserveRequired = slotsAfterCurrent * 1000;
+        const maxAllowableBid = Math.max(0, remainingPurse - minReserveRequired);
+        const pct = Math.min(100, Math.round((f.spent / f.totalPurse) * 100));
+
+        const item = document.createElement('div');
+        item.className = 'bg-slate-900/90 rounded-xl p-3 border border-slate-800 space-y-2';
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-md" style="background-color: ${f.color}"></span>
+              <span class="font-head font-extrabold text-sm text-white">${f.name}</span>
+            </div>
+            <span class="font-mono text-xs font-bold text-amber-400">
+              ₹${(remainingPurse / 100000).toFixed(1)}L / 100L
+            </span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-500" style="width: ${pct}%; background-color: ${f.color}"></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Squad: <strong class="text-slate-200">${f.squadCount}/${f.squadTarget}</strong> slots</span>
+            <span>Max Bid: <strong class="text-emerald-400">₹${(maxAllowableBid / 100000).toFixed(1)}L</strong></span>
+          </div>
+        `;
+        c.appendChild(item);
+      });
+    }
+
+    function applyIncrement(delta) {
+      const lot = LOTS_DATA[currentLotIndex];
+      const buyer = FRANCHISES[selectedFranchiseId];
+      const nextBid = lot.currentBid + delta;
+
+      const remainingPurse = buyer.totalPurse - buyer.spent;
+      const slotsAfter = Math.max(0, buyer.squadTarget - buyer.squadCount - 1);
+      const reserveFloor = slotsAfter * 1000;
+      const maxBid = remainingPurse - reserveFloor;
+
+      if (nextBid > maxBid) {
+        showToast(`❌ BID BLOCKED: Exceeds ${buyer.name}'s reserve purse limit!`, '⚠️');
+        logAudit(`⚠️ BLOCKED BID: ${buyer.name} bid of ₹${nextBid.toLocaleString('en-IN')} exceeds allowable limit`);
+        return;
+      }
+
+      lot.currentBid = nextBid;
+      lot.leaderId = buyer.id;
+      timerRemaining = timerDuration;
+      updateTimerUI();
+      updateBidDisplay(lot.currentBid, lot.leaderId);
+      playBidChime();
+
+      logAudit(`BID: ${buyer.name} raised bid to ₹${lot.currentBid.toLocaleString('en-IN')} (+₹${(delta/1000)}k)`);
+      showToast(`${buyer.name} BID: ₹${lot.currentBid.toLocaleString('en-IN')}`, '🔨');
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (isTimerPaused) return;
+        if (timerRemaining > 0) {
+          timerRemaining--;
+          updateTimerUI();
+          if (timerRemaining === 7) logAudit(`CLOCK: Going ONCE at ₹${LOTS_DATA[currentLotIndex].currentBid.toLocaleString('en-IN')}`);
+          else if (timerRemaining === 3) {
+            logAudit(`CLOCK: Going TWICE at ₹${LOTS_DATA[currentLotIndex].currentBid.toLocaleString('en-IN')}`);
+            playHammerTap();
+          }
+        } else {
+          clearInterval(timerInterval);
+          logAudit(`HAMMER TIME: 15s expired on Lot #${LOTS_DATA[currentLotIndex].id}`);
+          showToast(`⏱ Hammer clock expired! Confirm Sold or Unsold.`, '⚠️');
+        }
+      }, 1000);
+    }
+
+    function updateTimerUI() {
+      const label = document.getElementById('timerSecondsText');
+      const ring = document.getElementById('timerProgressRing');
+      const stage = document.getElementById('timerStageLabel');
+      const container = document.getElementById('timerContainer');
+
+      label.textContent = `${timerRemaining}s`;
+      const progress = timerRemaining / timerDuration;
+      ring.style.strokeDashoffset = FULL_CIRCUMFERENCE * (1 - progress);
+
+      if (timerRemaining <= 3) {
+        ring.setAttribute('stroke', '#EF4444');
+        label.className = 'font-mono text-3xl font-black text-red-500 leading-none animate-pulse';
+        stage.textContent = 'GOING TWICE!';
+        stage.className = 'text-[9px] font-extrabold uppercase tracking-widest text-red-400 mt-1';
+        container.classList.add('glow-danger');
+      } else if (timerRemaining <= 7) {
+        ring.setAttribute('stroke', '#F59E0B');
+        label.className = 'font-mono text-3xl font-black text-amber-400 leading-none';
+        stage.textContent = 'GOING ONCE';
+        stage.className = 'text-[9px] font-extrabold uppercase tracking-widest text-amber-400 mt-1';
+        container.classList.remove('glow-danger');
+      } else {
+        ring.setAttribute('stroke', '#10B981');
+        label.className = 'font-mono text-3xl font-black text-emerald-400 leading-none';
+        stage.textContent = 'BIDDING';
+        stage.className = 'text-[9px] font-extrabold uppercase tracking-widest text-slate-400 mt-1';
+        container.classList.remove('glow-danger');
+      }
+    }
+
+    function toggleTimerPause() {
+      isTimerPaused = !isTimerPaused;
+      const btn = document.getElementById('pauseTimerBtn');
+      btn.textContent = isTimerPaused ? '▶ Resume' : '⏸ Pause';
+      btn.className = isTimerPaused ? 'px-2.5 py-1 rounded-lg bg-amber-600 text-brand-dark text-xs font-bold' : 'px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-700';
+      logAudit(isTimerPaused ? 'PAUSE: Auctioneer paused countdown clock' : 'RESUME: Countdown resumed');
+    }
+
+    function resetTimer() {
+      timerRemaining = timerDuration;
+      updateTimerUI();
+      startTimer();
+      logAudit('RESET: 15s hammer timer reset by auctioneer');
+    }
+
+    function handleHammerAction(action) {
+      const lot = LOTS_DATA[currentLotIndex];
+      const buyer = FRANCHISES[lot.leaderId];
+
+      if (action === 'sold') {
+        playSoldFanfare();
+        buyer.spent += lot.currentBid;
+        buyer.squadCount += 1;
+        soldCount++;
+        document.getElementById('soldCounter').textContent = soldCount;
+        renderFranchiseRosters();
+        logAudit(`🔨 SOLD! Lot #${lot.id} ${lot.name} sold to ${buyer.name} for ₹${lot.currentBid.toLocaleString('en-IN')}`);
+        showToast(`SOLD to ${buyer.name} for ₹${lot.currentBid.toLocaleString('en-IN')}!`, '🎉');
+        setTimeout(() => nextLot(), 1400);
+      } else if (action === 'unsold') {
+        unsoldCount++;
+        document.getElementById('unsoldCounter').textContent = unsoldCount;
+        logAudit(`🚫 UNSOLD: Lot #${lot.id} ${lot.name} passed unsold at base price`);
+        showToast(`Lot #${lot.id} marked UNSOLD`, '🚫');
+        setTimeout(() => nextLot(), 1200);
+      } else if (action === 'reopen') {
+        lot.currentBid = lot.basePrice;
+        updateBidDisplay(lot.currentBid, lot.leaderId);
+        resetTimer();
+        logAudit(`🔄 RE-OPENED: Lot #${lot.id} ${lot.name} re-opened at base price`);
+        showToast(`Lot #${lot.id} re-opened at base price`, '🔄');
+      }
+    }
+
+    function nextLot() {
+      currentLotIndex = (currentLotIndex + 1) % LOTS_DATA.length;
+      renderCurrentLot();
+      resetTimer();
+      logAudit(`NAV: Switched to Lot #${LOTS_DATA[currentLotIndex].id}`);
+    }
+
+    function prevLot() {
+      currentLotIndex = (currentLotIndex - 1 + LOTS_DATA.length) % LOTS_DATA.length;
+      renderCurrentLot();
+      resetTimer();
+      logAudit(`NAV: Returned to Lot #${LOTS_DATA[currentLotIndex].id}`);
+    }
+
+    function logAudit(msg) {
+      const feed = document.getElementById('auditLogFeed');
+      if (!feed) return;
+      const time = new Date().toTimeString().split(' ')[0];
+      const item = document.createElement('div');
+      item.className = 'flex items-start gap-2 leading-relaxed';
+      item.innerHTML = `
+        <span class="text-slate-500 flex-shrink-0">[${time}]</span>
+        <span class="${msg.includes('SOLD') ? 'text-emerald-400 font-bold' : msg.includes('BLOCKED') ? 'text-red-400 font-bold' : msg.includes('BID:') ? 'text-amber-300' : 'text-slate-300'}">${msg}</span>
+      `;
+      feed.prepend(item);
+    }
+
+    function clearAuditLog() {
+      document.getElementById('auditLogFeed').innerHTML = '';
+      logAudit('Audit log reset');
+    }
+
+    // -------------------------------------------------------------
+    // 3. TOSS & 11-PLAYER PITCH LINEUP BOARD LOGIC
+    // -------------------------------------------------------------
+    const FIELD_POSITIONS = [
+      { id: 'wk', name: 'Wicketkeeper', short: 'WK', x: 50, y: 76, color: '#F59E0B' },
+      { id: 'slips', name: 'Slips', short: 'SLIP', x: 62, y: 78, color: '#38BDF8' },
+      { id: 'point', name: 'Backward Point', short: 'PNT', x: 80, y: 56, color: '#38BDF8' },
+      { id: 'cover', name: 'Extra Cover', short: 'COV', x: 82, y: 38, color: '#38BDF8' },
+      { id: 'mid_off', name: 'Mid Off', short: 'M-OFF', x: 65, y: 28, color: '#38BDF8' },
+      { id: 'bowler', name: 'Bowler', short: 'BOWL', x: 50, y: 32, color: '#10B981' },
+      { id: 'mid_on', name: 'Mid On', short: 'M-ON', x: 35, y: 28, color: '#38BDF8' },
+      { id: 'mid_wicket', name: 'Mid Wicket', short: 'M-WKT', x: 18, y: 38, color: '#38BDF8' },
+      { id: 'square_leg', name: 'Square Leg', short: 'SQ-LEG', x: 20, y: 56, color: '#38BDF8' },
+      { id: 'fine_leg', name: 'Short Fine Leg', short: 'F-LEG', x: 34, y: 78, color: '#38BDF8' },
+      { id: 'third_man', name: 'Third Man', short: '3RD-M', x: 68, y: 88, color: '#38BDF8' }
+    ];
+
+    let SQUAD_PLAYING_XI = [
+      { id: 'p1', num: 1, name: 'Aditya Deshmukh', role: 'C', spec: 'Top-Order Bat', upi: true },
+      { id: 'p2', num: 2, name: 'Tanmay Joshi', role: 'WK', spec: 'Wicketkeeper Bat', upi: true },
+      { id: 'p3', num: 3, name: 'Nikhil Salunke', role: 'BOWL', spec: 'Right-Arm Fast', upi: true },
+      { id: 'p4', num: 4, name: 'Varun Kulkarni', role: 'ALL', spec: 'RH Bat • Off Spin', upi: true },
+      { id: 'p5', num: 5, name: 'Sanket Shinde', role: 'BAT', spec: 'Middle-Order Bat', upi: true },
+      { id: 'p6', num: 6, name: 'Rohan Kadam', role: 'ALL', spec: 'LH Bat • Fast-Med', upi: true },
+      { id: 'p7', num: 7, name: 'Pranav More', role: 'BOWL', spec: 'Left-Arm Orthodox', upi: true },
+      { id: 'p8', num: 8, name: 'Omkar Jadhav', role: 'BAT', spec: 'Finisher Bat', upi: true },
+      { id: 'p9', num: 9, name: 'Amit Gaikwad', role: 'BOWL', spec: 'Right-Arm Medium', upi: true },
+      { id: 'p10', num: 10, name: 'Suraj Mane', role: 'BOWL', spec: 'Leg Spinner', upi: true },
+      { id: 'p11', num: 11, name: 'Akshay Patil', role: 'BAT', spec: 'Tailender Bat', upi: true }
+    ];
+
+    let BENCH_RESERVES = [
+      { id: 'b1', name: 'Chetan Bhalerao', spec: 'Right-Arm Medium', upi: true },
+      { id: 'b2', name: 'Sagar Jagtap', spec: 'Finisher Bat', upi: true },
+      { id: 'b3', name: 'Kunal Thorat', spec: 'Left-Arm Spinner', upi: true }
+    ];
+
+    let fieldAssignments = {};
+    let userCoinCall = 'HEADS';
+    let tossOutcome = 'HEADS';
+    let tossWinner = 'Pune Strikers';
+    let tossDecision = 'Batting';
+    let isFlipping = false;
+
+    function initTossAndPitch() {
+      autoPlaceFielders();
+      renderPlayingXIRoster();
+      renderBench();
+    }
+
+    function setCoinCall(call) {
+      userCoinCall = call;
+      document.getElementById('callHeadsBtn').className = call === 'HEADS'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-brand-dark border border-amber-400'
+        : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white';
+      document.getElementById('callTailsBtn').className = call === 'TAILS'
+        ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-brand-dark border border-amber-400'
+        : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white';
+      showToast(`Toss call: ${call}`, '🪙');
+    }
+
+    function flipCoin() {
+      if (isFlipping) return;
+      isFlipping = true;
+
+      const coin = document.getElementById('coinElement');
+      const btn = document.getElementById('flipActionBtn');
+      btn.disabled = true;
+      btn.textContent = 'SPINNING COIN...';
+      playCoinPing();
+
+      const isHeads = Math.random() < 0.5;
+      tossOutcome = isHeads ? 'HEADS' : 'TAILS';
+      const targetDeg = isHeads ? 1800 : 1980;
+
+      coin.style.setProperty('--final-deg', `${targetDeg}deg`);
+      coin.classList.add('coin-spinning');
+
+      setTimeout(() => {
+        coin.classList.remove('coin-spinning');
+        coin.style.transform = `rotateX(${targetDeg}deg)`;
+        isFlipping = false;
+        btn.disabled = false;
+        btn.textContent = '🪙 FLIP 3D COIN';
+        playCoinPing();
+
+        const wonCall = userCoinCall === tossOutcome;
+        tossWinner = wonCall ? 'Pune Strikers' : 'Baner Blasters';
+
+        document.getElementById('tossStatusBadge').textContent = `${tossOutcome} • WON BY ${tossWinner.toUpperCase()}`;
+        document.getElementById('tossStatusBadge').className = wonCall 
+          ? 'px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' 
+          : 'px-2 py-0.5 rounded text-[10px] font-black bg-indigo-500/20 text-indigo-400 border border-indigo-500/40';
+
+        document.getElementById('tossResultStatement').textContent = 
+          `🎉 ${tossOutcome}! ${tossWinner} won the toss and elected to ${tossDecision.toLowerCase()} first.`;
+
+        showToast(`${tossWinner} won the toss!`, '🪙');
+      }, 1800);
+    }
+
+    function setTossDecision(decision) {
+      tossDecision = decision;
+      document.getElementById('electBatBtn').className = decision === 'Batting'
+        ? 'py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-400 flex items-center justify-center gap-1.5 shadow'
+        : 'py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white flex items-center justify-center gap-1.5';
+      document.getElementById('electBowlBtn').className = decision === 'Bowling'
+        ? 'py-2 px-3 rounded-lg text-xs font-bold bg-emerald-600 text-white border border-emerald-400 flex items-center justify-center gap-1.5 shadow'
+        : 'py-2 px-3 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700 hover:text-white flex items-center justify-center gap-1.5';
+
+      document.getElementById('tossResultStatement').textContent = 
+        `🎉 ${tossOutcome}! ${tossWinner} won the toss and elected to ${tossDecision.toLowerCase()} first.`;
+
+      showToast(`Decision set: Elected to ${decision}`, '🏏');
+    }
+
+    function autoPlaceFielders() {
+      fieldAssignments = {};
+      FIELD_POSITIONS.forEach((pos, idx) => {
+        if (SQUAD_PLAYING_XI[idx]) {
+          fieldAssignments[pos.id] = SQUAD_PLAYING_XI[idx];
+        }
+      });
+      renderFieldPins();
+      showToast('11 fielding positions auto-aligned to turf', '⚡');
+    }
+
+    function renderFieldPins() {
+      const c = document.getElementById('fieldPinsContainer');
+      c.innerHTML = '';
+      FIELD_POSITIONS.forEach(pos => {
+        const player = fieldAssignments[pos.id];
+        const pin = document.createElement('div');
+        pin.className = 'absolute -translate-x-1/2 -translate-y-1/2 field-pin flex flex-col items-center';
+        pin.style.left = `${pos.x}%`;
+        pin.style.top = `${pos.y}%`;
+        pin.onclick = () => openAssignModal(pos);
+        pin.innerHTML = `
+          <div class="w-8 h-8 rounded-full border-2 border-white shadow-xl flex items-center justify-center font-bold text-[10px] text-brand-dark" style="background-color: ${pos.color}">
+            ${pos.short}
+          </div>
+          <span class="mt-1 px-1.5 py-0.5 rounded bg-slate-950/90 text-white text-[9px] font-bold whitespace-nowrap shadow border border-slate-700">
+            ${player ? player.name.split(' ')[0] : 'Unassigned'}
+          </span>
+        `;
+        c.appendChild(pin);
+      });
+    }
+
+    function openAssignModal(pos) {
+      const modal = document.getElementById('positionAssignModal');
+      modal.classList.remove('hidden');
+      document.getElementById('assignModalTitle').textContent = `Assign Position: ${pos.name} (${pos.short})`;
+      const list = document.getElementById('assignModalPlayersList');
+      list.innerHTML = '';
+      SQUAD_PLAYING_XI.forEach(p => {
+        const btn = document.createElement('button');
+        btn.onclick = () => {
+          fieldAssignments[pos.id] = p;
+          renderFieldPins();
+          closeAssignModal();
+          showToast(`Assigned ${p.name} to ${pos.name}`, '📍');
+        };
+        btn.className = 'px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white whitespace-nowrap flex-shrink-0';
+        btn.textContent = `${p.num}. ${p.name} (${p.role})`;
+        list.appendChild(btn);
+      });
+    }
+
+    function closeAssignModal() {
+      document.getElementById('positionAssignModal').classList.add('hidden');
+    }
+
+    function renderPlayingXIRoster() {
+      const c = document.getElementById('playingXiRosterContainer');
+      c.innerHTML = '';
+      SQUAD_PLAYING_XI.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 flex items-center justify-between gap-3';
+        row.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 font-mono font-bold text-xs flex items-center justify-center flex-shrink-0">${p.num}</span>
+            <div class="min-w-0">
+              <div class="font-head font-extrabold text-xs sm:text-sm text-white truncate flex items-center gap-1.5">
+                <span>${p.name}</span>
+                ${p.role === 'C' ? '<span class="px-1.5 py-0.2 rounded bg-amber-500 text-brand-dark text-[9px] font-black">C</span>' : ''}
+                ${p.role === 'WK' ? '<span class="px-1.5 py-0.2 rounded bg-blue-500 text-white text-[9px] font-black">WK</span>' : ''}
+              </div>
+              <div class="text-[11px] text-slate-400">${p.spec}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-950 text-emerald-400 border border-emerald-800/80">UPI ✅</span>
+            <button onclick="toggleRole('${p.id}')" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-400 text-xs" title="Toggle Captain / WK role">👑</button>
+          </div>
+        `;
+        c.appendChild(row);
+      });
+    }
+
+    function toggleRole(id) {
+      const p = SQUAD_PLAYING_XI.find(x => x.id === id);
+      if (!p) return;
+      if (p.role === 'C') p.role = 'WK';
+      else if (p.role === 'WK') p.role = 'BAT';
+      else p.role = 'C';
+      renderPlayingXIRoster();
+      autoPlaceFielders();
+      showToast(`${p.name} role changed to ${p.role}`, '👑');
+    }
+
+    function renderBench() {
+      const c = document.getElementById('benchContainer');
+      c.innerHTML = '';
+      BENCH_RESERVES.forEach(b => {
+        const item = document.createElement('div');
+        item.className = 'bg-slate-900/60 rounded-xl p-2 border border-slate-800 text-center';
+        item.innerHTML = `
+          <div class="font-head font-bold text-xs text-white truncate">${b.name.split(' ')[0]}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">${b.spec}</div>
+          <button onclick="swapWithBench('${b.id}')" class="mt-1.5 w-full py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] font-bold text-amber-400">⇄ Swap</button>
+        `;
+        c.appendChild(item);
+      });
+    }
+
+    function swapWithBench(benchId) {
+      const bIdx = BENCH_RESERVES.findIndex(b => b.id === benchId);
+      if (bIdx === -1) return;
+      const benchPlayer = BENCH_RESERVES[bIdx];
+      const swappedXi = SQUAD_PLAYING_XI[10];
+
+      SQUAD_PLAYING_XI[10] = { id: benchPlayer.id, num: 11, name: benchPlayer.name, role: 'BAT', spec: benchPlayer.spec, upi: true };
+      BENCH_RESERVES[bIdx] = { id: swappedXi.id, name: swappedXi.name, spec: swappedXi.spec, upi: true };
+
+      renderPlayingXIRoster();
+      renderBench();
+      autoPlaceFielders();
+      showToast(`Swapped in ${benchPlayer.name} for ${swappedXi.name}`, '⇄');
+    }
+
+    function copyTossSheetToClipboard() {
+      const text = `🏏 *SELECTED SPORTS — MATCHDAY TOSS & SQUAD RECEIPT*
+──────────────────────
+📍 *Venue*: Koregaon Turf Arena (Pitch 1)
+🕒 *Slot*: Today • 08:00 PM - 10:00 PM (2-Hr Slot)
+⚔️ *Clash*: Pune Strikers vs Baner Blasters
+──────────────────────
+🪙 *TOSS RESULT*:
+• Outcome: *${tossOutcome}*
+• Winner: *${tossWinner}*
+• Decision: *Elected to ${tossDecision} First*
+──────────────────────
+📋 *PLAYING XI SQUAD*:
+${SQUAD_PLAYING_XI.map(p => `${p.num}. ${p.name} (${p.role === 'C' ? '👑 Captain' : p.role === 'WK' ? '🧤 Wicketkeeper' : p.role}) — UPI ✅`).join('\n')}
+──────────────────────
+🛡️ *Field Positions Set*: 11/11 Placed
+✅ *Payment Clearance*: 11/11 Verified (₹250/player)
+📱 *Live Portal*: https://selectedsports.com`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        document.getElementById('copyIcon').textContent = '✓';
+        document.getElementById('copyBtnText').textContent = 'Copied to Clipboard!';
+        showToast('WhatsApp Toss Sheet copied to clipboard!', '📋');
+        setTimeout(() => {
+          document.getElementById('copyIcon').textContent = '📋';
+          document.getElementById('copyBtnText').textContent = 'Export Toss Sheet';
+        }, 2500);
+      }).catch(() => showToast('Clipboard permissions denied', '⚠️'));
+    }
+
+    // -------------------------------------------------------------
+    // 4. TOUCH-OPTIMIZED TURF SCORER (#viewScorer) ENGINE
+    // -------------------------------------------------------------
+    let matchScore = {
+      runs: 118,
+      wickets: 3,
+      legalBalls: 58, // 9.4 overs (9 * 6 + 4)
+      target: 143,
+      totalOversLimit: 12,
+      strikerIndex: 0, // 0 = Aditya Deshmukh, 1 = Rohit Hegde
+      currentOverBalls: [
+        { label: '1', runs: 1, isLegal: true },
+        { label: '4', runs: 4, isLegal: true },
+        { label: '0', runs: 0, isLegal: true },
+        { label: 'Wd', runs: 1, isLegal: false },
+        { label: '6', runs: 6, isLegal: true }
+      ],
+      ballHistory: [] // Stack for undo
+    };
+
+    let batters = [
+      { id: 'b1', name: 'Aditya Deshmukh', runs: 58, balls: 26, fours: 4, sixes: 5, isOnStrike: true },
+      { id: 'b2', name: 'Rohit Hegde', runs: 32, balls: 17, fours: 3, sixes: 1, isOnStrike: false }
+    ];
+
+    let bowler = {
+      name: 'Nikhil Salunke',
+      overs: '1.4',
+      maidens: 0,
+      runsConceded: 18,
+      wickets: 2
+    };
+
+    function initScorerView() {
+      updateScorerUI();
+    }
+
+    function recordBall(runValue) {
+      // Save state to undo history
+      saveScorerSnapshot();
+
+      matchScore.runs += runValue;
+      matchScore.legalBalls += 1;
+
+      // Update active striker stats
+      const striker = batters[matchScore.strikerIndex];
+      striker.runs += runValue;
+      striker.balls += 1;
+      if (runValue === 4) striker.fours += 1;
+      if (runValue === 6) striker.sixes += 1;
+
+      // Update bowler stats
+      bowler.runsConceded += runValue;
+
+      // Add to over trail
+      matchScore.currentOverBalls.push({
+        label: String(runValue),
+        runs: runValue,
+        isLegal: true
+      });
+
+      // Sound effect
+      if (runValue === 6) playBoundarySound(true);
+      else if (runValue === 4) playBoundarySound(false);
+      else playTone( runValue === 0 ? 300 : 500, 'sine', 0.15, 0.15 );
+
+      // If odd runs, rotate strike
+      if (runValue % 2 !== 0) {
+        matchScore.strikerIndex = matchScore.strikerIndex === 0 ? 1 : 0;
+      }
+
+      // Check if over completed (6 legal balls)
+      const legalInOver = matchScore.currentOverBalls.filter(b => b.isLegal).length;
+      if (legalInOver >= 6) {
+        logCommentary(`End of over: ${matchScore.currentOverBalls.map(b => b.label).join(' ')}`);
+        matchScore.currentOverBalls = [];
+        matchScore.strikerIndex = matchScore.strikerIndex === 0 ? 1 : 0; // Rotate strike on over end
+        showToast('Over complete! Strike rotated.', '🔄');
+      }
+
+      logCommentary(`Ball ${formatOvers(matchScore.legalBalls)}: ${striker.name} hits ${runValue} run${runValue === 1 ? '' : 's'}.`);
+      updateScorerUI();
+      checkTargetReached();
+    }
+
+    function recordExtra(type) {
+      saveScorerSnapshot();
+
+      matchScore.runs += 1;
+      bowler.runsConceded += 1;
+
+      matchScore.currentOverBalls.push({
+        label: type,
+        runs: 1,
+        isLegal: false // Wide and No ball don't count towards 6 legal balls
+      });
+
+      playTone(400, 'triangle', 0.2, 0.2);
+      logCommentary(`Ball ${formatOvers(matchScore.legalBalls)}: Extra (${type} +1 run)`);
+      updateScorerUI();
+      checkTargetReached();
+    }
+
+    function recordWicket() {
+      saveScorerSnapshot();
+
+      matchScore.wickets += 1;
+      matchScore.legalBalls += 1;
+      bowler.wickets += 1;
+
+      const outBatter = batters[matchScore.strikerIndex];
+      outBatter.balls += 1;
+
+      matchScore.currentOverBalls.push({
+        label: 'WKT',
+        runs: 0,
+        isLegal: true
+      });
+
+      playWicketSound();
+      logCommentary(`🎯 WICKET! ${outBatter.name} dismissed for ${outBatter.runs} (${outBatter.balls}b).`);
+      showToast(`🎯 WICKET! ${outBatter.name} is OUT!`, '🔴');
+
+      // Bring in next batter
+      batters[matchScore.strikerIndex] = {
+        id: 'new_bat',
+        name: 'Sanket Shinde',
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOnStrike: true
+      };
+
+      updateScorerUI();
+    }
+
+    function rotateStrike() {
+      matchScore.strikerIndex = matchScore.strikerIndex === 0 ? 1 : 0;
+      updateScorerUI();
+      showToast('Strike rotated manually', '⇄');
+    }
+
+    function undoLastBall() {
+      if (matchScore.ballHistory.length === 0) {
+        showToast('Nothing to undo', '⚠️');
+        return;
+      }
+      const prev = matchScore.ballHistory.pop();
+      matchScore.runs = prev.score.runs;
+      matchScore.wickets = prev.score.wickets;
+      matchScore.legalBalls = prev.score.legalBalls;
+      matchScore.strikerIndex = prev.score.strikerIndex;
+      matchScore.currentOverBalls = prev.score.currentOverBalls;
+      batters = prev.batters;
+      bowler = prev.bowler;
+
+      playTone(280, 'sine', 0.2, 0.2);
+      updateScorerUI();
+      showToast('Last ball undone', '↶');
+      logCommentary(`Scorer adjusted: Last ball undone.`);
+    }
+
+    function saveScorerSnapshot() {
+      matchScore.ballHistory.push({
+        score: {
+          runs: matchScore.runs,
+          wickets: matchScore.wickets,
+          legalBalls: matchScore.legalBalls,
+          strikerIndex: matchScore.strikerIndex,
+          currentOverBalls: JSON.parse(JSON.stringify(matchScore.currentOverBalls))
+        },
+        batters: JSON.parse(JSON.stringify(batters)),
+        bowler: JSON.parse(JSON.stringify(bowler))
+      });
+      if (matchScore.ballHistory.length > 15) matchScore.ballHistory.shift();
+    }
+
+    function formatOvers(balls) {
+      const ov = Math.floor(balls / 6);
+      const rem = balls % 6;
+      return `${ov}.${rem}`;
+    }
+
+    function updateScorerUI() {
+      // Scoreboard Banner
+      document.getElementById('scoreTotalRuns').textContent = matchScore.runs;
+      document.getElementById('scoreTotalWickets').textContent = matchScore.wickets;
+      const oversStr = formatOvers(matchScore.legalBalls);
+      document.getElementById('scoreTotalOvers').textContent = `(${oversStr} / ${matchScore.totalOversLimit} ov)`;
+
+      // Run Rate Engine
+      const oversFraction = matchScore.legalBalls / 6;
+      const crr = oversFraction > 0 ? (matchScore.runs / oversFraction).toFixed(2) : '0.00';
+      document.getElementById('scorerCRR').textContent = crr;
+
+      const remainingRuns = Math.max(0, matchScore.target - matchScore.runs);
+      const remainingBalls = Math.max(0, (matchScore.totalOversLimit * 6) - matchScore.legalBalls);
+      const rrr = remainingBalls > 0 ? ((remainingRuns / remainingBalls) * 6).toFixed(2) : '0.00';
+      document.getElementById('scorerRRR').textContent = rrr;
+      document.getElementById('scorerEquation').textContent = `Need ${remainingRuns} off ${remainingBalls}b`;
+
+      const pct = Math.min(100, Math.round((matchScore.runs / matchScore.target) * 100));
+      document.getElementById('scorerTargetProgressBar').style.width = `${pct}%`;
+
+      // Striker 1
+      const b1 = batters[0];
+      document.getElementById('striker1Name').textContent = b1.name;
+      document.getElementById('striker1Runs').textContent = `${b1.runs}*`;
+      document.getElementById('striker1Balls').textContent = b1.balls;
+      document.getElementById('striker1Fours').textContent = b1.fours;
+      document.getElementById('striker1Sixes').textContent = b1.sixes;
+      const sr1 = b1.balls > 0 ? ((b1.runs / b1.balls) * 100).toFixed(1) : '0.0';
+      document.getElementById('striker1SR').textContent = sr1;
+
+      // Striker 2
+      const b2 = batters[1];
+      document.getElementById('striker2Name').textContent = b2.name;
+      document.getElementById('striker2Runs').textContent = b2.runs;
+      document.getElementById('striker2Balls').textContent = b2.balls;
+      document.getElementById('striker2Fours').textContent = b2.fours;
+      document.getElementById('striker2Sixes').textContent = b2.sixes;
+      const sr2 = b2.balls > 0 ? ((b2.runs / b2.balls) * 100).toFixed(1) : '0.0';
+      document.getElementById('striker2SR').textContent = sr2;
+
+      // Highlight active striker card
+      const c1 = document.getElementById('strikerCard1');
+      const c2 = document.getElementById('strikerCard2');
+      if (matchScore.strikerIndex === 0) {
+        c1.className = 'p-3 rounded-xl bg-slate-900 border-2 border-emerald-500/80 flex items-center justify-between shadow';
+        c2.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between opacity-80';
+      } else {
+        c1.className = 'p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between opacity-80';
+        c2.className = 'p-3 rounded-xl bg-slate-900 border-2 border-emerald-500/80 flex items-center justify-between shadow';
+      }
+
+      // Bowler
+      document.getElementById('bowlerName').textContent = bowler.name;
+      document.getElementById('bowlerFigures').textContent = `${oversStr}-0-${bowler.runsConceded}-${bowler.wickets}`;
+      const bowEcon = oversFraction > 0 ? (bowler.runsConceded / oversFraction).toFixed(1) : '0.0';
+      document.getElementById('bowlerEcon').textContent = bowEcon;
+
+      // Render current over trail
+      const trail = document.getElementById('overBallTrailContainer');
+      trail.innerHTML = '';
+      if (matchScore.currentOverBalls.length === 0) {
+        trail.innerHTML = '<span class="text-xs text-slate-500 italic">Start of over — no balls recorded yet</span>';
+      } else {
+        matchScore.currentOverBalls.forEach(b => {
+          const badge = document.createElement('span');
+          let colorClass = 'bg-slate-800 border-slate-700 text-slate-200';
+          if (b.label === '4') colorClass = 'bg-amber-500/20 border-amber-500 text-amber-400 font-black';
+          else if (b.label === '6') colorClass = 'bg-emerald-500/20 border-emerald-500 text-emerald-400 font-black';
+          else if (b.label === 'Wd' || b.label === 'Nb') colorClass = 'bg-purple-900/40 border-purple-600 text-purple-300 font-bold';
+          else if (b.label === 'WKT') colorClass = 'bg-red-600 border-red-400 text-white font-black';
+          
+          badge.className = `w-8 h-8 rounded-lg border flex items-center justify-center font-mono text-xs shadow-sm flex-shrink-0 ${colorClass}`;
+          badge.textContent = b.label;
+          trail.appendChild(badge);
+        });
+      }
+    }
+
+    function checkTargetReached() {
+      if (matchScore.runs >= matchScore.target) {
+        playSoldFanfare();
+        showToast('🎉 TARGET REACHED! Pune Strikers Win!', '🏆');
+        logCommentary(`🏆 MATCH WON: Pune Strikers reached ${matchScore.runs} runs!`);
+        setTimeout(() => finalizeMatchAndOpenPOTM(), 1500);
+      }
+    }
+
+    function logCommentary(txt) {
+      const feed = document.getElementById('scorerCommentaryFeed');
+      if (!feed) return;
+      const p = document.createElement('div');
+      p.className = 'text-slate-300 border-l-2 border-emerald-500 pl-2 py-0.5 leading-snug';
+      p.textContent = txt;
+      feed.prepend(p);
+    }
+
+    function finalizeMatchAndOpenPOTM() {
+      switchMainTab('postmatch');
+      showToast('Match finalized! Displaying POTM award poster', '🏆');
+    }
+
+    // -------------------------------------------------------------
+    // 5. POST-MATCH SUMMARY & PLAYER OF THE MATCH (POTM) ENGINE
+    // -------------------------------------------------------------
+    function sharePotmOnWhatsApp() {
+      const potmText = `🏆 *SELECTED SPORTS PUNE — PLAYER OF THE MATCH*
+──────────────────────
+⚔️ *Match*: Pune Strikers vs Baner Blasters
+📍 *Venue*: Koregaon Turf Arena (Pitch 1)
+👑 *Player of the Match*: *Aditya Deshmukh* (Captain)
+⭐ *STR Rating*: *94.2 OVR* (Tier 1 Elite)
+──────────────────────
+🏏 *MATCH-WINNING METRICS*:
+• *Batting*: 58* off 26 balls (SR: 223.1)
+  └ 4x Fours, 5x Sixes
+• *Bowling*: 2/14 in 2.0 overs (Econ: 7.0)
+  └ Crucial 19th over scalps
+• *Result*: Pune Strikers won by 6 wickets!
+──────────────────────
+📱 *View Full Turf Leaderboard*: https://selectedsports.com`;
+
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(potmText)}`, '_blank');
+      showToast('Opening WhatsApp with pre-formatted POTM card...', '📲');
+    }
+
+    function copyMatchReceiptToClipboard() {
+      const receipt = `🏏 *SELECTED SPORTS — OFFICIAL MATCH RECEIPT*
+──────────────────────
+⚔️ *Clash*: Pune Strikers (146/4) beat Baner Blasters (142/6)
+📍 *Ground*: Koregaon Turf Arena • Pitch 1
+🕒 *Slot*: Today • 08:00 PM - 10:00 PM (2-Hr Slot)
+👑 *Player of the Match*: Aditya Deshmukh (58* & 2/14)
+──────────────────────
+📊 *Innings 1*: Baner Blasters 142/6 (12.0 ov)
+📊 *Innings 2*: Pune Strikers 146/4 (11.4 ov)
+✅ *Status*: Finalized & Verified on Portal
+📱 *Match Center*: https://selectedsports.com`;
+
+      navigator.clipboard.writeText(receipt).then(() => {
+        showToast('Full Match Sheet copied to clipboard!', '📋');
+      }).catch(() => showToast('Clipboard denied', '⚠️'));
+    }
+
+    function pushStatsToLeaderboard() {
+      const btn = document.getElementById('syncLeaderboardBtn');
+      btn.disabled = true;
+      btn.textContent = 'SYNCING WITH PUNE LEADERBOARD...';
+      playSoldFanfare();
+
+      setTimeout(() => {
+        btn.textContent = '✅ PUSHED TO COMMUNITY LEADERBOARD!';
+        btn.className = 'w-full py-2.5 rounded-xl bg-emerald-600 text-white font-head font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/25';
+        showToast('Match stats & STR ratings synced to Pune Leaderboard!', '🌟');
+      }, 1200);
+    }
+
+    // -------------------------------------------------------------
+    // 6. GLOBAL TAB & VIEWPORT SWITCHER
+    // -------------------------------------------------------------
+    function switchMainTab(tab) {
+      const tabs = {
+        auction: { view: 'auctionView', btn: 'tabAuctionBtn', activeClass: 'bg-amber-500 text-brand-dark' },
+        toss: { view: 'tossLineupView', btn: 'tabTossBtn', activeClass: 'bg-emerald-500 text-brand-dark' },
+        scorer: { view: 'viewScorer', btn: 'tabScorerBtn', activeClass: 'bg-emerald-500 text-brand-dark' },
+        postmatch: { view: 'viewPostMatch', btn: 'tabPostMatchBtn', activeClass: 'bg-amber-500 text-brand-dark' }
+      };
+
+      Object.keys(tabs).forEach(t => {
+        const v = document.getElementById(tabs[t].view);
+        const b = document.getElementById(tabs[t].btn);
+        if (t === tab) {
+          v.classList.remove('hidden');
+          b.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm whitespace-nowrap ${tabs[t].activeClass}`;
+        } else {
+          v.classList.add('hidden');
+          b.className = 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white whitespace-nowrap';
+        }
+      });
+    }
+
+    function showToast(text, icon = '⚡') {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastText').textContent = text;
+      toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-3');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100', 'translate-y-0');
+        toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-3');
+      }, 2600);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initAuctionDesk();
+      initTossAndPitch();
+      initScorerView();
+    });
+  </script>
+</body>
+</html>
