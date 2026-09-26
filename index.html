@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <script>
+      // 1. Force unregister any service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+        }).catch(function() {});
+      }
+      // 2. Clear all cache storage
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var i = 0; i < keys.length; i++) { caches.delete(keys[i]); }
+        }).catch(function() {});
+      }
+      // 3. If native app was updated to load the live web bundle directly
+      try {
+        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal && localStorage.getItem('ss_use_live_web') === 'true') {
+          var v = localStorage.getItem('ss_installed_v') || Date.now();
+          window.location.replace('https://selectedsports.in/?_v=' + v);
+        }
+      } catch (e) {}
+
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Selected Sports - Play. Compete. Get Recognised.</title>
+
+    <!-- Google Fonts Preconnect & Async Load -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" />
+
+    <!-- Asset Preload for Instant FCP -->
+    <link rel="preload" as="image" href="/logo-full.png" />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#0B3D2E" />
+    <meta name="description" content="Sports Team Management App" />
+
+    <!-- Android PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SelSports" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+
+    <!-- Splash screen color for iOS -->
+    <meta name="msapplication-TileColor" content="#0B3D2E" />
+    <script type="module" crossorigin src="/assets/index-DOG-mzos.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-Dxt8JWib.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-BUgTx0zs.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-THty8Kz6.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
