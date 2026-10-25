@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Privacy Policy - Selected Sports</title>
+  <meta name="description" content="Privacy Policy for Selected Sports - Play, Compete, and Get Recognised. Learn how we handle and protect your cricket profile, match stats, and personal data." />
+  <meta name="theme-color" content="#090D16" />
+
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+
+  <!-- Google Fonts: Poppins (Headings) & Inter (Body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" />
+
+  <style>
+    :root {
+      --font-head: "Poppins", sans-serif;
+      --font-body: "Inter", sans-serif;
+      --bg-dark: #090D16;
+      --card-bg: rgba(15, 23, 42, 0.85);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --emerald: #10B981;
+      --emerald-dark: #166534;
+      --amber: #F59E0B;
+      --amber-gold: #FCD34D;
+      --text-main: #FFFFFF;
+      --text-sub: #CBD5E1;
+      --text-muted: #94A3B8;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-dark);
+      background-image:
+        radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, transparent 600px),
+        radial-gradient(circle at 85% 20%, rgba(245, 158, 11, 0.08) 0%, transparent 500px),
+        radial-gradient(circle at 15% 70%, rgba(16, 185, 129, 0.06) 0%, transparent 500px);
+      background-attachment: fixed;
+      color: var(--text-sub);
+      line-height: 1.7;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation */
+    .top-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 17, 32, 0.94);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-logo-ring {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      padding: 2px;
+      background: linear-gradient(135deg, var(--amber-gold), #B8860B);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-logo-ring img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-head);
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: -0.3px;
+      color: #FFFFFF;
+      line-height: 1.2;
+    }
+
+    .brand-text span {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--amber);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      color: #FFFFFF;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--font-head);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--emerald-dark);
+      border-color: var(--emerald);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .main-wrap {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 18px 60px;
+    }
+
+    /* Hero Header Card */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0.95) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 22px;
+      padding: 32px 24px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: var(--emerald);
+      padding: 4px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+    }
+
+    .hero-card h2 {
+      font-family: var(--font-head);
+      font-size: 30px;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .hero-card p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* Content Card */
+    .content-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--card-border);
+      border-radius: 22px;
+      padding: 36px 30px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .intro-text {
+      font-size: 15px;
+      color: #E2E8F0;
+      margin-bottom: 28px;
+      line-height: 1.8;
+      padding-bottom: 22px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .intro-text strong {
+      color: #FFFFFF;
+    }
+
+    /* Section Styles */
+    .section-block {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-family: var(--font-head);
+      font-size: 18px;
+      font-weight: 800;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .section-title .sec-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: var(--emerald);
+      font-size: 12px;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: var(--text-sub);
+      font-size: 14.5px;
+    }
+
+    ul {
+      margin: 10px 0 16px 20px;
+    }
+
+    li {
+      margin-bottom: 8px;
+      color: var(--text-sub);
+      font-size: 14px;
+    }
+
+    li strong {
+      color: #FFFFFF;
+    }
+
+    /* Highlight Callouts */
+    .highlight-pill {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin: 14px 0 20px;
+    }
+
+    .highlight-pill .pill-title {
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .highlight-pill p {
+      margin: 0;
+      font-size: 13.5px;
+      color: #CBD5E1;
+    }
+
+    /* Contact Box */
+    .contact-card {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(30, 41, 59, 0.7) 100%);
+      border: 1.5px solid rgba(16, 185, 129, 0.25);
+      border-radius: 16px;
+      padding: 22px 24px;
+      margin-top: 24px;
+    }
+
+    .contact-card h4 {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 12px;
+      font-size: 13.5px;
+    }
+
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-sub);
+    }
+
+    .contact-item strong {
+      color: #FFFFFF;
+      min-width: 85px;
+    }
+
+    a {
+      color: var(--emerald);
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.15s ease;
+    }
+
+    a:hover {
+      color: #4ADE80;
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer {
+      background: rgba(10, 17, 32, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 28px 20px;
+      text-align: center;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-top: auto;
+    }
+
+    footer .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    footer .footer-links a {
+      color: var(--text-sub);
+      font-size: 13px;
+    }
+
+    footer .footer-links a:hover {
+      color: var(--emerald);
+    }
+
+    @media (max-width: 640px) {
+      .hero-card {
+        padding: 24px 18px;
+      }
+      .hero-card h2 {
+        font-size: 24px;
+      }
+      .content-card {
+        padding: 24px 18px;
+      }
+      .section-title {
+        font-size: 16.5px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Sticky Navigation -->
+  <header class="top-nav">
+    <a href="https://selectedsports.in" class="brand-link">
+      <div class="brand-logo-ring">
+        <img src="/logo.png?v=2" alt="Selected Sports Logo" />
+      </div>
+      <div class="brand-text">
+        <h1>Selected Sports</h1>
+        <span>Play • Compete • Grow</span>
+      </div>
+    </a>
+    <a href="https://selectedsports.in" class="nav-btn">
+      <span>← Back to Home</span>
+    </a>
+  </header>
+
+  <!-- Main Policy Content -->
+  <main class="main-wrap">
+    
+    <!-- Hero Header -->
+    <div class="hero-card">
+      <div class="hero-badge">🛡️ Official Privacy Statement</div>
+      <h2>Privacy Policy</h2>
+      <p>Last Updated: September 2026 • Effective for all Selected Sports Web & Mobile Platform Users</p>
+    </div>
+
+    <!-- Content Card -->
+    <div class="content-card">
+      <div class="intro-text">
+        Welcome to <strong>Selected Sports</strong> ("we", "our", or "us"), available at <a href="https://selectedsports.in">https://selectedsports.in</a>. We are fully committed to safeguarding your privacy and ensuring your personal and athletic data is treated with utmost care, transparency, and top-tier security standards. This Privacy Policy details what information we collect, how it is utilized, and the rights you maintain over your data across our web application and mobile experiences.
+      </div>
+
+      <!-- Section 1 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">1</span>
+          Information We Collect
+        </h3>
+        <p>When you register, schedule matches, or participate in cricket fixtures on the Selected Sports platform, we collect information required to operate sports fixtures, team rosters, and player profiles:</p>
+        <ul>
+          <li><strong>Personal & Identity Information:</strong> Full name, verified mobile/WhatsApp number, city, date of birth, jersey number, and jersey size.</li>
+          <li><strong>Player Profile Photograph:</strong> Optional digital player photographs uploaded and cropped by you for your official digital player ID card, match scorecard displays, and team lineups.</li>
+          <li><strong>Cricket & Performance Information:</strong> Playing role (Batsman, Bowler, All-rounder, Wicketkeeper), batting/bowling styles, match availability, runs, wickets, tournament statistics, and awards.</li>
+          <li><strong>Tournament & Auction Data:</strong> Franchise team rosters, points, base prices, player draft entries, and match scheduling records.</li>
+        </ul>
+      </section>
+
+      <!-- Section 2 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">2</span>
+          Device & Application Permissions
+        </h3>
+        <p>The Selected Sports web and mobile app may request the following device permissions:</p>
+        <ul>
+          <li><strong>Camera & Photo Gallery:</strong> Accessed strictly when you choose to take or upload a profile picture or team badge. We never scan, browse, or read your photo gallery without explicit action.</li>
+          <li><strong>Internet & Network State:</strong> Essential for synchronizing live match squads, player availability statuses, scorecards, and live team fixtures with our secure cloud servers.</li>
+        </ul>
+      </section>
+
+      <!-- Section 3 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">3</span>
+          How We Use Your Information
+        </h3>
+        <p>We process your data exclusively for legitimate sports management and operational needs:</p>
+        <ul>
+          <li>To authenticate and manage your player, organizer, or admin account safely.</li>
+          <li>To schedule turf fixtures, coordinate team rosters, and track confirmed player attendance.</li>
+          <li>To generate verified digital player ID cards, public scorecard summaries, and city rankings.</li>
+          <li>To send match notifications, confirmation updates, and timing alerts via WhatsApp or SMS.</li>
+          <li>To prevent fraudulent registrations, duplicate accounts, and maintain fair play across matches.</li>
+        </ul>
+        <div class="highlight-pill">
+          <div class="pill-title">🔒 Zero Advertising Data Selling</div>
+          <p>We do NOT sell, rent, monetize, or trade your personal information, phone numbers, or match history to third-party advertising networks or commercial data brokers.</p>
+        </div>
+      </section>
+
+      <!-- Section 4 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">4</span>
+          Data Storage & Security Standards
+        </h3>
+        <p>All user information and match data are securely housed in Supabase (PostgreSQL) enterprise infrastructure equipped with:</p>
+        <ul>
+          <li><strong>End-to-End SSL/TLS Encryption:</strong> All communications between your device and our servers are encrypted using modern cryptographic protocols.</li>
+          <li><strong>Row-Level Security (RLS):</strong> Database-level policies ensure organizers, players, and viewers only access information permitted by their specific roles.</li>
+          <li><strong>Strict Session Protections:</strong> PINs and authentication tokens are kept safe and never stored as plaintext in unauthorized storage.</li>
+        </ul>
+      </section>
+
+      <!-- Section 5 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">5</span>
+          Third-Party Service Providers
+        </h3>
+        <p>We partner only with industry-standard, compliant infrastructure providers:</p>
+        <ul>
+          <li><strong>Supabase:</strong> Cloud database, storage, and authentication provider.</li>
+          <li><strong>Google Maps Platform:</strong> For cricket venue mapping, turf coordinates, and ground discovery in Pune and surrounding regions.</li>
+        </ul>
+      </section>
+
+      <!-- Section 6 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">6</span>
+          Account & Data Deletion Rights
+        </h3>
+        <p>You have full ownership and rights over your personal data. At any time, you may:</p>
+        <ul>
+          <li>Review and update your profile details (name, city, jersey number, profile photo) directly in your Profile tab.</li>
+          <li>Request permanent deletion of your account, player records, profile images, and phone registration.</li>
+        </ul>
+        <p>To request permanent account deletion, email our administrative team at <a href="mailto:selectedsportsindia@gmail.com">selectedsportsindia@gmail.com</a> with your registered mobile number. Complete purge requests are processed within 7 business days.</p>
+      </section>
+
+      <!-- Section 7 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">7</span>
+          Children's Privacy
+        </h3>
+        <p>Our platform facilitates community and competitive cricket. For youth tournaments or Under-19 leagues, registration should be conducted with the guidance and consent of a parent, guardian, or official academy coach.</p>
+      </section>
+
+      <!-- Section 8 -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">8</span>
+          Updates to This Privacy Policy
+        </h3>
+        <p>We may periodically update this policy to reflect new platform features, tournament rules, or regulatory guidelines. Any modifications will be posted here with an updated revision date.</p>
+      </section>
+
+      <!-- Section 9: Contact Card -->
+      <section class="section-block">
+        <h3 class="section-title">
+          <span class="sec-num">9</span>
+          Contact & Legal Inquiries
+        </h3>
+        <p>If you have any questions, security notices, or data inquiries regarding this Privacy Policy, please reach out to us:</p>
+        
+        <div class="contact-card">
+          <h4>🏏 Selected Sports Management</h4>
+          <div class="contact-grid">
+            <div class="contact-item">
+              <strong>Founder:</strong>
+              <span>Md Zeeshan Bagwan</span>
+            </div>
+            <div class="contact-item">
+              <strong>Official Site:</strong>
+              <span><a href="https://selectedsports.in" target="_blank">https://selectedsports.in</a></span>
+            </div>
+            <div class="contact-item">
+              <strong>Email:</strong>
+              <span><a href="mailto:selectedsportsindia@gmail.com">selectedsportsindia@gmail.com</a></span>
+            </div>
+            <div class="contact-item">
+              <strong>Support:</strong>
+              <span><a href="https://wa.me/919897439743" target="_blank">+91 9897439743 (WhatsApp)</a></span>
+            </div>
+            <div class="contact-item">
+              <strong>Location:</strong>
+              <span>Pune, Maharashtra, India</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-links">
+      <a href="https://selectedsports.in">Home</a>
+      <a href="https://selectedsports.in/#/login">Sign In</a>
+      <a href="https://selectedsports.in/#/register">Create Account</a>
+      <a href="https://selectedsports.in/privacy-policy.html">Privacy Policy</a>
+    </div>
+    <div>&copy; 2026 Selected Sports. All rights reserved. • <a href="https://selectedsports.in">https://selectedsports.in</a></div>
+  </footer>
+
+</body>
+</html>
