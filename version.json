@@ -1,0 +1,13 @@
+{
+  "version": "1.2.5",
+  "latestVersion": "1.2.5",
+  "versionCode": 11,
+  "minVersionCode": 11,
+  "v": 1794488000000,
+  "webV": 1794488000000,
+  "forceUpdate": true,
+  "title": "App Update Required",
+  "message": "Selected Sports v1.2.5 is here! Featuring our new Selected Sports app icon & branding, redesigned navigation drawer & profile editor, smooth pull-to-refresh, real-time match & expense split alerts, and scrolling fixes across every screen. You must update the app to continue.",
+  "playStoreUrl": "https://play.google.com/store/apps/details?id=com.selectedsports.app",
+  "apkUrl": "https://selectedsports.in/app-release.apk"
+}
