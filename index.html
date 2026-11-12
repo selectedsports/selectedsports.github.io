@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <script>
+      // 1. Force unregister any service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+        }).catch(function() {});
+      }
+      // 2. Clear all cache storage
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var i = 0; i < keys.length; i++) { caches.delete(keys[i]); }
+        }).catch(function() {});
+      }
+      // 3. If native app was updated to load the live web bundle directly, preserve exact route/hash
+      try {
+        var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal && localStorage.getItem('ss_use_live_web') === 'true') {
+          var v = localStorage.getItem('ss_installed_v') || Date.now();
+          var path = window.location.pathname || '/';
+          var search = window.location.search ? (window.location.search + '&_v=' + v) : ('?_v=' + v);
+          var hash = window.location.hash || '';
+          window.location.replace('https://selectedsports.in' + path + search + hash);
+        }
+      } catch (e) {}
+
+    </script>
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png?v=3" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=3" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Selected Sports: Cricket Hub - Play. Compete. Get Recognised.</title>
+
+    <!-- Google Fonts Preconnect & Async Load -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap" />
+
+    <!-- Asset Preload for Instant FCP -->
+    <link rel="preload" as="image" href="/logo.png?v=3" />
+    <link rel="preload" as="image" href="/logo-full.png?v=3" />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#031E17" />
+    <meta name="description" content="Selected Sports Cricket Hub - Auctions, Matches, Squads & Grounds" />
+
+    <!-- Android PWA -->
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- iOS PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Selected Sports" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=3" />
+
+    <!-- Splash screen color for iOS -->
+    <meta name="msapplication-TileColor" content="#031E17" />
+    <script type="module" crossorigin src="/assets/index-CMwgJGz7.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-C20xswXd.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-BUgTx0zs.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BSNbydxA.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
