@@ -1,0 +1,13 @@
+{
+  "version": "1.2.6",
+  "latestVersion": "1.2.6",
+  "versionCode": 12,
+  "minVersionCode": 12,
+  "v": 1795100000000,
+  "webV": 1795100000000,
+  "forceUpdate": true,
+  "title": "App Update Required",
+  "message": "Selected Sports v1.2.6 is live! Featuring multi-sport auctions & tournaments (Cricket, Football & more), real-time match invitation reminders, payment verification, and performance enhancements. You must update the app on Google Play Store to continue.",
+  "playStoreUrl": "https://play.google.com/store/apps/details?id=com.selectedsports.app",
+  "apkUrl": "https://selectedsports.in/app-release.apk"
+}
