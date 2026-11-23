@@ -1,0 +1,14 @@
+{
+  "version": "1.2.6",
+  "latestVersion": "1.2.6",
+  "versionCode": 12,
+  "minVersionCode": 12,
+  "minVersion": "1.2.6",
+  "v": 1795100000000,
+  "webV": 1795360000000,
+  "forceUpdate": false,
+  "title": "Selected Sports",
+  "message": "Selected Sports is up to date.",
+  "playStoreUrl": "https://play.google.com/store/apps/details?id=com.selectedsports.app",
+  "apkUrl": "https://selectedsports.in/app-release.apk"
+}
