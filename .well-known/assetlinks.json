@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.selectedsports.app",
+      "sha256_cert_fingerprints": [
+        "B4:4B:8B:D0:8B:2D:C3:D4:1C:11:E2:F1:21:0F:1B:B3:A1:63:F5:8A:EB:52:22:30:6A:E4:72:77:82:EB:B7:CA",
+        "CC:79:13:FC:A5:E7:6D:8C:E0:05:60:CD:03:0F:BB:87:15:72:04:2E:EB:FE:9D:39:B4:0B:2E:1D:24:50:C8:0B"
+      ]
+    }
+  }
+]
